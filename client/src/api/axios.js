@@ -34,12 +34,17 @@ function getAuthHeaders() {
 }
 
 async function handleResponse(res) {
-  const data = await res.json();
+  let data;
+  try { data = await res.json(); } catch { throw new Error('Server not reachable. Please try again.'); }
   if (res.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-    throw new Error('Session expired');
+    const hadToken = !!localStorage.getItem('token');
+    if (hadToken) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+    throw new Error(data.message || 'Invalid credentials');
   }
   if (!res.ok) throw new Error(data.message || 'Something went wrong');
   return data;

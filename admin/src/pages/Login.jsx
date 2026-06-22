@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { login as loginApi } from '../api/endpoints/auth';
 import { useAuth } from '../context/AuthContext';
@@ -21,9 +21,14 @@ export default function Login() {
       if (res.data.user.role === 'super_admin') { toast.error('Super Admins must use the Super Admin portal.'); return; }
       if (res.data.user.role !== 'doctor') { toast.error('This portal is for doctors only.'); return; }
       login(res.data.accessToken, res.data.user);
-      toast.success('Welcome, Doctor!');
-      navigate('/');
-    } catch (err) { toast.error(err.message || 'Login failed'); }
+      const status = res.data.user.approvalStatus;
+      if (status && status !== 'approved' && status !== 'not_applicable') {
+        navigate('/pending-approval');
+      } else {
+        toast.success('Welcome, Doctor!');
+        navigate('/');
+      }
+    } catch (err) { toast.error(err?.message || 'Login failed. Check your credentials.'); }
     finally { setLoading(false); }
   };
 
@@ -55,6 +60,7 @@ export default function Login() {
             <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required />
             <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</Button>
           </form>
+          <p className="text-center text-sm text-[#64748b] mt-6">Don't have an account? <Link to="/register" className="text-[#255946] font-medium hover:underline">Register</Link></p>
         </div>
       </div>
     </div>

@@ -40,13 +40,25 @@ function getAuthHeaders() {
 }
 
 async function handleResponse(res) {
-  const data = await res.json();
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Server not reachable. Please try again.');
+  }
 
   if (res.status === 401) {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.location.href = '/login';
-    throw new Error('Session expired');
+    // Only clear session + redirect if the user was previously logged in.
+    // Login/register attempts naturally get 401 for wrong credentials — those
+    // should just throw an error, not redirect.
+    const hadToken = !!localStorage.getItem('token');
+    if (hadToken) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+    throw new Error(data.message || 'Invalid credentials');
   }
 
   if (!res.ok) {

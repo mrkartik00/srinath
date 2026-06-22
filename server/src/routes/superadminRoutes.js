@@ -19,6 +19,11 @@ router.patch('/doctors/:id', ...guard, c.updateDoctor);
 router.delete('/doctors/:id', ...guard, c.deactivateDoctor);
 router.get('/doctors/:id/activity', ...guard, c.getDoctorActivity);
 
+// Doctor Registrations
+router.get('/registrations', ...guard, c.getRegistrations);
+router.patch('/registrations/:id/approve', ...guard, c.approveDoctor);
+router.patch('/registrations/:id/reject', ...guard, c.rejectDoctor);
+
 // Patients (cross-doctor)
 router.get('/patients', ...guard, c.getPatients);
 

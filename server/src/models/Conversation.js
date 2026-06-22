@@ -23,6 +23,10 @@ const conversationSchema = new mongoose.Schema({
     escalationReason: { type: String, default: null },
   },
   aiMessagesCount: { type: Number, default: 0 },
+  // Monotonic per-conversation message sequence source.
+  // Incremented atomically ($inc) on every send so concurrent sends can never
+  // collide on the same sequence number. See socket message:send handler.
+  messageSeq: { type: Number, default: 0 },
 }, { timestamps: true });
 
 conversationSchema.index({ patientId: 1, doctorId: 1, organizationId: 1 }, { unique: true });

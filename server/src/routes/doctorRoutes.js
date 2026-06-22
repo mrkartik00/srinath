@@ -3,10 +3,12 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 const tenantScope = require('../middleware/tenantScope');
+const { doctorApprovedGate } = require('../middleware/gates');
 const doctorController = require('../controllers/doctorController');
 const { ROLES } = require('../config/constants');
 
-const guard = [protect, authorize(ROLES.DOCTOR), tenantScope];
+// doctorApprovedGate is a no-op until FEATURE_DOCTOR_APPROVAL is enabled.
+const guard = [protect, authorize(ROLES.DOCTOR), tenantScope, doctorApprovedGate];
 
 router.get('/patients', ...guard, doctorController.getMyPatients);
 router.post('/patients', ...guard, doctorController.addPatient);

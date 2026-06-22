@@ -76,7 +76,7 @@ export default function Layout() {
         <div className="px-3 pb-4 border-t border-white/10 pt-3">
           <div className="px-3 py-2 rounded-lg bg-white/5">
             <p className="text-xs font-medium truncate">{user?.name}</p>
-            <p className="text-[10px] text-white/40">Super Admin</p>
+            <p className="text-[10px] text-white/40 truncate">{user?.email || 'Super Admin'}</p>
           </div>
         </div>
       </aside>

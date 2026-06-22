@@ -18,12 +18,11 @@ router.get('/:id/adherence', protect, authorize(ROLES.DOCTOR, ROLES.SUPER_ADMIN)
 // PDF download
 router.get('/:id/pdf', protect, tenantScope, (req, res, next) => {
   const Prescription = require('../models/Prescription');
-  const path = require('path');
-  const fs = require('fs');
-  Prescription.findById(req.params.id).then((rx) => {
+  const storageService = require('../services/storageService');
+  Prescription.findById(req.params.id).then(async (rx) => {
     if (!rx || !rx.pdfPath) return res.status(404).json({ success: false, message: 'PDF not found' });
-    if (!fs.existsSync(rx.pdfPath)) return res.status(404).json({ success: false, message: 'PDF file missing' });
-    res.download(rx.pdfPath, `prescription-${rx._id}.pdf`);
+    const sent = await storageService.sendDownload(res, rx.pdfPath, `prescription-${rx._id}.pdf`);
+    if (!sent) return res.status(404).json({ success: false, message: 'PDF file missing' });
   }).catch(next);
 });
 

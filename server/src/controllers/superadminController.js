@@ -69,6 +69,40 @@ const getDoctorActivity = asyncHandler(async (req, res) => {
   apiResponse.success(res, activity, 'Activity fetched');
 });
 
+// === DOCTOR REGISTRATIONS ===
+const getRegistrations = asyncHandler(async (req, res) => {
+  const { status } = req.query;
+  const filter = { organizationId: req.scope.organizationId, role: ROLES.DOCTOR };
+  if (status) filter.approvalStatus = status;
+  else filter.approvalStatus = 'pending_approval';
+  const doctors = await User.find(filter).sort({ createdAt: -1 }).lean();
+  const profiles = await DoctorProfile.find({ userId: { $in: doctors.map(d => d._id) } }).lean();
+  const result = doctors.map(d => ({ ...d, profile: profiles.find(p => p.userId.toString() === d._id.toString()) }));
+  apiResponse.success(res, result, 'Registrations fetched');
+});
+
+const approveDoctor = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, organizationId: req.scope.organizationId });
+  if (!user) return apiResponse.error(res, 'Doctor not found', 404);
+  if (user.approvalStatus === 'approved') return apiResponse.error(res, 'Already approved', 400);
+  user.isActive = true;
+  user.approvalStatus = 'approved';
+  await user.save({ validateBeforeSave: false });
+  await DoctorProfile.findOneAndUpdate({ userId: user._id }, { applicationStatus: 'approved', approvedBy: req.user.id, approvedAt: new Date() });
+  await SystemLog.create({ actorId: req.user.id, actorName: req.user.email, action: 'doctor.approved', target: user.email, details: { name: user.name } });
+  apiResponse.success(res, null, 'Doctor approved');
+});
+
+const rejectDoctor = asyncHandler(async (req, res) => {
+  const user = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, organizationId: req.scope.organizationId });
+  if (!user) return apiResponse.error(res, 'Doctor not found', 404);
+  user.approvalStatus = 'rejected';
+  await user.save({ validateBeforeSave: false });
+  await DoctorProfile.findOneAndUpdate({ userId: user._id }, { applicationStatus: 'rejected', rejectionReason: req.body.reason || 'Not specified' });
+  await SystemLog.create({ actorId: req.user.id, actorName: req.user.email, action: 'doctor.rejected', target: user.email, details: { reason: req.body.reason } });
+  apiResponse.success(res, null, 'Doctor rejected');
+});
+
 // === PATIENTS (cross-doctor) ===
 const getPatients = asyncHandler(async (req, res) => {
   const { search, page, limit } = req.query;
@@ -188,6 +222,7 @@ const getLogs = asyncHandler(async (req, res) => {
 
 module.exports = {
   getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, getDoctorActivity,
+  getRegistrations, approveDoctor, rejectDoctor,
   getPatients, getAppointments, getPrescriptions, getAnalytics,
   getPlans, getPlanFeatures, createPlan, updatePlan, togglePlan, deletePlan,
   getSettings, upsertSetting, getLogs,

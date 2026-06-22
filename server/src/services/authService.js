@@ -31,7 +31,7 @@ const register = async (data) => {
   const refreshToken = generateRefreshToken(user);
 
   return {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId },
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, approvalStatus: user.approvalStatus },
     accessToken,
     refreshToken,
   };
@@ -40,7 +40,9 @@ const register = async (data) => {
 const login = async (email, password) => {
   const user = await User.findOne({ email }).select('+password');
   if (!user) throw new UnauthorizedError('Invalid email or password');
-  if (!user.isActive) throw new UnauthorizedError('Account is deactivated');
+  if (!user.isActive && user.approvalStatus !== 'pending_approval' && user.approvalStatus !== 'rejected') {
+    throw new UnauthorizedError('Account is deactivated');
+  }
 
   const isMatch = await user.comparePassword(password);
   if (!isMatch) throw new UnauthorizedError('Invalid email or password');
@@ -52,7 +54,7 @@ const login = async (email, password) => {
   const refreshToken = generateRefreshToken(user);
 
   return {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, doctorId: user.doctorId },
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, doctorId: user.doctorId, approvalStatus: user.approvalStatus },
     accessToken,
     refreshToken,
   };

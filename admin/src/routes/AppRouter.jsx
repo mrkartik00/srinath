@@ -4,6 +4,8 @@ import { AuthProvider } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Login from '../pages/Login';
+import Register from '../pages/Register';
+import PendingApproval from '../pages/PendingApproval';
 import Dashboard from '../pages/Dashboard';
 import Patients from '../pages/Patients';
 import PatientDetail from '../pages/PatientDetail';
@@ -21,6 +23,8 @@ export default function AppRouter() {
         <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/pending-approval" element={<PendingApproval />} />
           <Route path="/" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="patients" element={<Patients />} />
@@ -29,7 +33,6 @@ export default function AppRouter() {
             <Route path="appointments/:id" element={<AppointmentDetail />} />
             <Route path="prescriptions" element={<Prescriptions />} />
             <Route path="prescriptions/:id" element={<PrescriptionDetail />} />
-            {/* Coming Soon */}
             <Route path="reminders" element={<ComingSoon title="Patient Reminders" icon="🔔" />} />
             <Route path="chat" element={<Chat />} />
             <Route path="medical-vault" element={<ComingSoon title="Medical Vault" icon="🗄️" />} />

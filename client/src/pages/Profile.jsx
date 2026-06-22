@@ -48,7 +48,7 @@ export default function Profile() {
 
   if (loading) return <Spinner size="lg" />;
 
-  const selectClass = "w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#255946]/30 focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946]";
+  const selectClass = "w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#36565F]/30 focus:outline-none focus:ring-2 focus:ring-[#36565F]/20 focus:border-[#36565F]";
 
   return (
     <div className="space-y-6">

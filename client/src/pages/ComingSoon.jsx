@@ -1,7 +1,7 @@
 export default function ComingSoon({ title, description, phase, icon = '🚀' }) {
   return (
     <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 border border-[#255946]/10 flex items-center justify-center text-3xl mb-6">
+      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#36565F]/10 to-[#36565F]/5 border border-[#36565F]/10 flex items-center justify-center text-3xl mb-6">
         {icon}
       </div>
       <h1 className="text-2xl font-serif font-semibold text-[#1e293b] mb-2">{title}</h1>

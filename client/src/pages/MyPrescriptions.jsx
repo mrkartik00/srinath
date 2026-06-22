@@ -43,7 +43,7 @@ export default function MyPrescriptions() {
                   onClick={() => setExpanded(expanded === rx._id ? null : rx._id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 border border-[#255946]/10 flex items-center justify-center text-sm">💊</div>
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#36565F]/10 to-[#36565F]/5 border border-[#36565F]/10 flex items-center justify-center text-sm">💊</div>
                     <div>
                       <p className="text-sm font-medium text-[#1e293b]">{rx.diagnosis || 'Prescription'}</p>
                       <p className="text-xs text-[#64748b]">
@@ -53,7 +53,7 @@ export default function MyPrescriptions() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={statusVariant[rx.status]} dot>{rx.status}</Badge>
-                    <button onClick={(e) => { e.stopPropagation(); navigate(`/prescriptions/${rx._id}`); }} className="text-xs text-[#255946] font-medium hover:text-[#1a3f32]">View →</button>
+                    <button onClick={(e) => { e.stopPropagation(); navigate(`/prescriptions/${rx._id}`); }} className="text-xs text-[#36565F] font-medium hover:text-[#253F47]">View →</button>
                     <span className="text-xs text-[#64748b]">{expanded === rx._id ? '▲' : '▼'}</span>
                   </div>
                 </div>
@@ -69,7 +69,7 @@ export default function MyPrescriptions() {
                       </div>
                     ))}
                     {rx.notes && <p className="text-xs text-[#64748b] italic mt-2">Note: {rx.notes}</p>}
-                    <button onClick={(e) => { e.stopPropagation(); const token = localStorage.getItem('token'); fetch(`/api/v1/my/prescriptions/${rx._id}/pdf`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.blob() : Promise.reject()).then(b => { const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `prescription-${rx._id}.pdf`; a.click(); URL.revokeObjectURL(u); }).catch(() => alert('PDF not available yet')); }} className="mt-3 text-xs px-3 py-1.5 bg-[#255946] text-white rounded-lg hover:bg-[#1a3f32]">📄 Download PDF</button>
+                    <button onClick={(e) => { e.stopPropagation(); const token = localStorage.getItem('token'); fetch(`/api/v1/my/prescriptions/${rx._id}/pdf`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.ok ? r.blob() : Promise.reject()).then(b => { const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = `prescription-${rx._id}.pdf`; a.click(); URL.revokeObjectURL(u); }).catch(() => alert('PDF not available yet')); }} className="mt-3 text-xs px-3 py-1.5 bg-[#36565F] text-white rounded-lg hover:bg-[#253F47]">📄 Download PDF</button>
                   </div>
                 )}
               </CardContent>

@@ -1,8 +1,8 @@
 export function Button({ children, variant = 'primary', size = 'md', className = '', disabled = false, ...props }) {
   const base = 'inline-flex items-center justify-center font-medium rounded-[10px] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.97]';
   const variants = {
-    primary: 'bg-[#255946] text-white hover:bg-[#1a3f32] shadow-[0_2px_8px_rgba(37,89,70,0.2)] hover:shadow-[0_4px_12px_rgba(37,89,70,0.3)] focus:ring-[#255946]/40',
-    secondary: 'bg-white text-[#1e293b] border border-[#E8E5DE] hover:bg-[#F8F6F0] hover:border-[#255946]/30 focus:ring-[#255946]/20',
+    primary: 'bg-[#36565F] text-white hover:bg-[#253F47] shadow-[0_2px_8px_rgba(37,89,70,0.2)] hover:shadow-[0_4px_12px_rgba(37,89,70,0.3)] focus:ring-[#36565F]/40',
+    secondary: 'bg-white text-[#1e293b] border border-[#E8E5DE] hover:bg-[#F8F6F0] hover:border-[#36565F]/30 focus:ring-[#36565F]/20',
     danger: 'bg-[#C62828] text-white hover:bg-[#B71C1C] shadow-[0_2px_8px_rgba(198,40,40,0.2)] focus:ring-[#C62828]/40',
     ghost: 'text-[#64748b] hover:text-[#1e293b] hover:bg-[#F8F6F0]',
   };
@@ -19,7 +19,7 @@ export function Input({ label, error, className = '', ...props }) {
     <div className={className}>
       {label && <label className="block text-sm font-medium text-[#1e293b] mb-1.5">{label}</label>}
       <input
-        className={`w-full px-3.5 py-2.5 bg-white border rounded-[10px] text-sm transition-all duration-200 placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946] ${error ? 'border-[#C62828]' : 'border-[#E8E5DE] hover:border-[#255946]/30'}`}
+        className={`w-full px-3.5 py-2.5 bg-white border rounded-[10px] text-sm transition-all duration-200 placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#36565F]/20 focus:border-[#36565F] ${error ? 'border-[#C62828]' : 'border-[#E8E5DE] hover:border-[#36565F]/30'}`}
         {...props}
       />
       {error && <p className="mt-1.5 text-xs text-[#C62828]">{error}</p>}
@@ -69,7 +69,7 @@ export function Spinner({ size = 'md' }) {
   const sizes = { sm: 'h-4 w-4 border-2', md: 'h-8 w-8 border-[3px]', lg: 'h-12 w-12 border-[3px]' };
   return (
     <div className="flex items-center justify-center p-8">
-      <div className={`${sizes[size]} animate-spin rounded-full border-[#E8E5DE] border-t-[#255946]`} />
+      <div className={`${sizes[size]} animate-spin rounded-full border-[#E8E5DE] border-t-[#36565F]`} />
     </div>
   );
 }

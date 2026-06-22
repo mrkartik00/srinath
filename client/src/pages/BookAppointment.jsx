@@ -36,7 +36,7 @@ export default function BookAppointment() {
     finally { setLoading(false); }
   };
 
-  const selectClass = "w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#255946]/30 focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946]";
+  const selectClass = "w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#36565F]/30 focus:outline-none focus:ring-2 focus:ring-[#36565F]/20 focus:border-[#36565F]";
 
   return (
     <div className="space-y-6">
@@ -77,7 +77,7 @@ export default function BookAppointment() {
             </div>
             <div>
               <label className="block text-sm font-medium text-[#1e293b] mb-1.5">Notes (optional)</label>
-              <textarea name="notes" className="w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#255946]/30 focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946] placeholder:text-[#94a3b8]" rows={3} value={form.notes} onChange={handleChange} placeholder="Any notes for the doctor..." />
+              <textarea name="notes" className="w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm transition-all duration-200 hover:border-[#36565F]/30 focus:outline-none focus:ring-2 focus:ring-[#36565F]/20 focus:border-[#36565F] placeholder:text-[#94a3b8]" rows={3} value={form.notes} onChange={handleChange} placeholder="Any notes for the doctor..." />
             </div>
             <Button type="submit" size="lg" disabled={loading}>{loading ? 'Booking...' : 'Confirm Booking →'}</Button>
           </form>

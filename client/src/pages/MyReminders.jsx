@@ -49,7 +49,7 @@ export default function MyReminders() {
             <Card key={r._id} hover>
               <CardContent className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm border ${r.status === 'acknowledged' ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#2E7D32]' : r.status === 'missed' ? 'bg-[#FEF2F2] border-[#FECACA] text-[#C62828]' : 'bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 border-[#255946]/10'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm border ${r.status === 'acknowledged' ? 'bg-[#ECFDF5] border-[#A7F3D0] text-[#2E7D32]' : r.status === 'missed' ? 'bg-[#FEF2F2] border-[#FECACA] text-[#C62828]' : 'bg-gradient-to-br from-[#36565F]/10 to-[#36565F]/5 border-[#36565F]/10'}`}>
                     {r.status === 'acknowledged' ? '✓' : r.status === 'missed' ? '✕' : '💊'}
                   </div>
                   <div>

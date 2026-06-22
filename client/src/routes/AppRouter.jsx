@@ -2,19 +2,33 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
-import PatientLayout from '../components/layout/PatientLayout';
+
+// Layout
+import MainLayout from '../components/layout/MainLayout';
+
+// Auth pages
 import Login from '../pages/Login';
 import Register from '../pages/Register';
-import Dashboard from '../pages/Dashboard';
-import Profile from '../pages/Profile';
-import BookAppointment from '../pages/BookAppointment';
-import MyAppointments from '../pages/MyAppointments';
-import AppointmentDetail from '../pages/AppointmentDetail';
-import MyPrescriptions from '../pages/MyPrescriptions';
-import PrescriptionDetail from '../pages/PrescriptionDetail';
-import MyReminders from '../pages/MyReminders';
-import Chat from '../pages/Chat';
-import ComingSoon from '../pages/ComingSoon';
+
+// Public pages
+import HomePage from '../pages/Home';
+import AboutPage from '../pages/About';
+import ServicesPage from '../pages/Services';
+import ContactPage from '../pages/Contact';
+
+// Flattened Dashboard pages
+import AppointmentsPage from '../pages/Appointments';
+import AppointmentDetailPage from '../pages/Appointments/Detail';
+import BookAppointmentPage from '../pages/BookAppointment';
+import ProfilePage from '../pages/Profile';
+import PrescriptionsPage from '../pages/Prescriptions';
+import PrescriptionDetailPage from '../pages/Prescriptions/Detail';
+import RemindersPage from '../pages/Reminders';
+import MedicalRecordsPage from '../pages/MedicalRecords';
+import ChatPage from '../pages/Chat';
+import PaymentsPage from '../pages/Payments';
+import VIPPage from '../pages/VIP';
+import HealthFeedPage from '../pages/HealthFeed';
 
 export default function AppRouter() {
   return (
@@ -22,27 +36,34 @@ export default function AppRouter() {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/" element={<ProtectedRoute><PatientLayout /></ProtectedRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="book-appointment" element={<BookAppointment />} />
-            <Route path="appointments" element={<MyAppointments />} />
-            <Route path="appointments/:id" element={<AppointmentDetail />} />
-            <Route path="prescriptions" element={<MyPrescriptions />} />
-            <Route path="prescriptions/:id" element={<PrescriptionDetail />} />
-            <Route path="reminders" element={<MyReminders />} />
-            {/* Coming Soon */}
-            <Route path="medical-vault" element={<ComingSoon title="Medical Vault" icon="🗄️" />} />
-            <Route path="chat" element={<Chat />} />
-            <Route path="subscription" element={<ComingSoon title="VIP Subscription" icon="💎" />} />
-            <Route path="vip-card" element={<ComingSoon title="Digital VIP Card" icon="🪪" />} />
-            <Route path="payments" element={<ComingSoon title="My Payments" icon="💳" />} />
-            <Route path="health-feed" element={<ComingSoon title="Health Feed" icon="📚" />} />
-            <Route path="referrals" element={<ComingSoon title="Refer & Earn" icon="🎁" />} />
+          <Route element={<MainLayout />}>
+            {/* ─── Public Routes ─── */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/services" element={<ServicesPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+
+            {/* ─── Auth Routes ─── */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* ─── Protected Routes (Flattened) ─── */}
+            <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
+            <Route path="/appointments/:id" element={<ProtectedRoute><AppointmentDetailPage /></ProtectedRoute>} />
+            <Route path="/book-appointment" element={<ProtectedRoute><BookAppointmentPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/prescriptions" element={<ProtectedRoute><PrescriptionsPage /></ProtectedRoute>} />
+            <Route path="/prescriptions/:id" element={<ProtectedRoute><PrescriptionDetailPage /></ProtectedRoute>} />
+            <Route path="/reminders" element={<ProtectedRoute><RemindersPage /></ProtectedRoute>} />
+            <Route path="/medical-records" element={<ProtectedRoute><MedicalRecordsPage /></ProtectedRoute>} />
+            <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
+            <Route path="/vip" element={<ProtectedRoute><VIPPage /></ProtectedRoute>} />
+            <Route path="/health-feed" element={<ProtectedRoute><HealthFeedPage /></ProtectedRoute>} />
+
+            {/* ─── Catch-all ─── */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

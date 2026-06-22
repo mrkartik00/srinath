@@ -115,7 +115,7 @@ export default function Chat() {
             <div key={c._id} onClick={() => selectConversation(c)} className={`px-4 py-3 cursor-pointer border-b border-[#E8E5DE]/30 hover:bg-[#F8F6F0] ${activeId === c._id ? 'bg-[#F8F6F0]' : ''}`}>
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-[#1e293b] truncate">{c.doctorId?.name || 'Doctor'}</p>
-                {c.unreadByPatient > 0 && <span className="w-5 h-5 rounded-full bg-[#255946] text-white text-[10px] flex items-center justify-center">{c.unreadByPatient}</span>}
+                {c.unreadByPatient > 0 && <span className="w-5 h-5 rounded-full bg-[#36565F] text-white text-[10px] flex items-center justify-center">{c.unreadByPatient}</span>}
               </div>
               <p className="text-xs text-[#64748b] truncate mt-0.5">{c.lastMessagePreview || 'No messages yet'}</p>
             </div>
@@ -139,7 +139,7 @@ export default function Chat() {
                 const isMine = (m.senderId?._id || m.senderId) === user?.id;
                 return (
                   <div key={m._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${isMine ? 'bg-[#255946] text-white rounded-br-md' : 'bg-[#F8F6F0] text-[#1e293b] rounded-bl-md border border-[#E8E5DE]'}`}>
+                    <div className={`max-w-[70%] px-4 py-2 rounded-2xl text-sm ${isMine ? 'bg-[#36565F] text-white rounded-br-md' : 'bg-[#F8F6F0] text-[#1e293b] rounded-bl-md border border-[#E8E5DE]'}`}>
                       <p>{m.body}</p>
                       <div className={`flex items-center gap-1 mt-1 ${isMine ? 'justify-end' : ''}`}>
                         <span className={`text-[10px] ${isMine ? 'text-white/60' : 'text-[#64748b]'}`}>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -153,8 +153,8 @@ export default function Chat() {
               <div ref={messagesEndRef} />
             </div>
             <form onSubmit={sendMessage} className="px-5 py-3 border-t border-[#E8E5DE] flex gap-2">
-              <input value={input} onChange={handleTyping} placeholder="Type a message..." className="flex-1 px-4 py-2.5 bg-[#F8F6F0] border border-[#E8E5DE] rounded-full text-sm focus:outline-none focus:border-[#255946]" />
-              <button type="submit" className="px-5 py-2.5 bg-[#255946] text-white rounded-full text-sm font-medium hover:bg-[#1a3f32]">Send</button>
+              <input value={input} onChange={handleTyping} placeholder="Type a message..." className="flex-1 px-4 py-2.5 bg-[#F8F6F0] border border-[#E8E5DE] rounded-full text-sm focus:outline-none focus:border-[#36565F]" />
+              <button type="submit" className="px-5 py-2.5 bg-[#36565F] text-white rounded-full text-sm font-medium hover:bg-[#253F47]">Send</button>
             </form>
           </>
         )}

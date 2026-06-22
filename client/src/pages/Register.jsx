@@ -45,7 +45,7 @@ export default function Register() {
       const res = await register({ ...form, role: 'patient' });
       login(res.data.accessToken, res.data.user);
       toast.success('Welcome to SurgiRise!');
-      navigate('/');
+      navigate('/appointments');
     } catch (err) {
       toast.error(err.message || 'Registration failed');
     } finally {
@@ -56,7 +56,7 @@ export default function Register() {
   return (
     <div className="min-h-screen flex">
       {/* Left Hero with DNA */}
-      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[#255946] via-[#1e4d3d] to-[#0f2a20] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[45%] bg-gradient-to-br from-[#36565F] via-[#1e4d3d] to-[#0f2a20] relative overflow-hidden">
         <DnaVisual />
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <div className="flex items-center gap-2.5">
@@ -82,8 +82,8 @@ export default function Register() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#255946] text-white flex items-center justify-center text-sm font-bold">S+</div>
-              <span className="text-lg font-serif font-bold text-[#255946]">SurgiRise</span>
+              <div className="w-8 h-8 rounded-lg bg-[#36565F] text-white flex items-center justify-center text-sm font-bold">S+</div>
+              <span className="text-lg font-serif font-bold text-[#36565F]">SurgiRise</span>
             </div>
           </div>
 
@@ -104,7 +104,7 @@ export default function Register() {
 
           <p className="text-center text-sm text-[#64748b] mt-6">
             Already have an account?{' '}
-            <Link to="/login" className="text-[#255946] font-medium hover:text-[#1a3f32] transition-colors">Sign In</Link>
+            <Link to="/login" className="text-[#36565F] font-medium hover:text-[#253F47] transition-colors">Sign In</Link>
           </p>
         </div>
       </div>

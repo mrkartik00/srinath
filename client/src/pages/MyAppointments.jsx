@@ -55,7 +55,7 @@ export default function MyAppointments() {
             <Card key={apt._id} hover>
               <CardContent className="flex items-center justify-between cursor-pointer" onClick={() => navigate(`/appointments/${apt._id}`)}>
                 <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 border border-[#255946]/10 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#36565F]/10 to-[#36565F]/5 border border-[#36565F]/10 flex items-center justify-center">
                     <span className="text-sm">📅</span>
                   </div>
                   <div>

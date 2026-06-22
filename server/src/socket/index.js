@@ -6,6 +6,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const pushService = require('../services/pushService');
 const logger = require('../config/logger');
+const { withOptionalTransaction } = require('../utils/dbUtils');
 
 const onlineUsers = new Map();
 const messageCooldowns = new Map(); // userId -> lastMessageTime (rate limiting)
@@ -84,33 +85,43 @@ const initializeSocket = (server) => {
         const isParticipant = conversation.patientId.toString() === userId || conversation.doctorId.toString() === userId;
         if (!isParticipant) return socket.emit('error', { message: 'Not a participant' });
 
-        // ATOMIC sequence number using findOneAndUpdate + $inc on a counter
-        // This prevents race conditions where two concurrent messages get same sequence
-        const seqDoc = await Conversation.findByIdAndUpdate(
-          conversationId,
-          { $inc: { __v: 1 } }, // use __v as atomic increment source
-          { new: true, select: '__v' }
-        );
-        // Get actual max sequence to stay consistent
-        const lastSeqMsg = await Message.findOne({ conversationId }).sort({ sequence: -1 }).select('sequence').lean();
-        const sequence = (lastSeqMsg?.sequence || 0) + 1;
-
-        const message = await Message.create({
-          conversationId, senderId: userId, senderRole: socket.user.role,
-          body: body.trim(), type, idempotencyKey, sequence,
-        });
-
-        // Update conversation
         const isDoctor = conversation.doctorId.toString() === userId;
-        await Conversation.findByIdAndUpdate(conversationId, {
-          $set: {
-            lastMessageAt: new Date(),
-            lastMessagePreview: body.trim().slice(0, 100),
-            ...(conversation.status === 'open' && isDoctor ? { status: 'active' } : {}),
-          },
-          $inc: isDoctor ? { unreadByPatient: 1 } : { unreadByDoctor: 1 },
+
+        // Atomically assign a race-free sequence and persist the message.
+        // The $inc on messageSeq is a single-document atomic operation, so two
+        // concurrent sends always receive distinct, gap-free sequence numbers
+        // (the previous "read max sequence" approach could hand out duplicates).
+        // When a replica set is available, the conversation update + message
+        // insert run in one transaction for all-or-nothing consistency.
+        const message = await withOptionalTransaction(async (session) => {
+          const opts = session ? { session } : {};
+          const updatedConv = await Conversation.findByIdAndUpdate(
+            conversationId,
+            {
+              $inc: {
+                messageSeq: 1,
+                ...(isDoctor ? { unreadByPatient: 1 } : { unreadByDoctor: 1 }),
+              },
+              $set: {
+                lastMessageAt: new Date(),
+                lastMessagePreview: body.trim().slice(0, 100),
+                ...(conversation.status === 'open' && isDoctor ? { status: 'active' } : {}),
+              },
+            },
+            { new: true, select: 'messageSeq', ...opts }
+          );
+
+          const [created] = await Message.create(
+            [{
+              conversationId, senderId: userId, senderRole: socket.user.role,
+              body: body.trim(), type, idempotencyKey, sequence: updatedConv.messageSeq,
+            }],
+            opts
+          );
+          return created;
         });
 
+        const sequence = message.sequence;
         const populated = await Message.findById(message._id).populate('senderId', 'name role');
 
         // Emit to conversation room

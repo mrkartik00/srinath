@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protect } = require('../middleware/auth');
 const tenantScope = require('../middleware/tenantScope');
+const { requireActiveSubscription } = require('../middleware/gates');
 const asyncHandler = require('../utils/asyncHandler');
 const apiResponse = require('../utils/apiResponse');
 const Conversation = require('../models/Conversation');
@@ -9,7 +10,7 @@ const Message = require('../models/Message');
 const DoctorPatient = require('../models/DoctorPatient');
 const { ROLES, DOCTOR_PATIENT_STATUS } = require('../config/constants');
 
-router.get('/conversations', protect, tenantScope, asyncHandler(async (req, res) => {
+router.get('/conversations', protect, tenantScope, requireActiveSubscription, asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const filter = { organizationId: req.scope.organizationId };
   if (req.user.role === ROLES.DOCTOR) filter.doctorId = userId;
@@ -20,7 +21,7 @@ router.get('/conversations', protect, tenantScope, asyncHandler(async (req, res)
   apiResponse.success(res, conversations, 'Conversations fetched');
 }));
 
-router.post('/conversations', protect, tenantScope, asyncHandler(async (req, res) => {
+router.post('/conversations', protect, tenantScope, requireActiveSubscription, asyncHandler(async (req, res) => {
   const { doctorId } = req.body;
   const patientId = req.user.role === ROLES.PATIENT ? req.user.id : req.body.patientId;
   const docId = req.user.role === ROLES.DOCTOR ? req.user.id : doctorId;
@@ -35,7 +36,7 @@ router.post('/conversations', protect, tenantScope, asyncHandler(async (req, res
   apiResponse.success(res, conversation, 'Conversation ready');
 }));
 
-router.get('/conversations/:id/messages', protect, tenantScope, asyncHandler(async (req, res) => {
+router.get('/conversations/:id/messages', protect, tenantScope, requireActiveSubscription, asyncHandler(async (req, res) => {
   const conversation = await Conversation.findById(req.params.id);
   if (!conversation) return res.status(404).json({ success: false, message: 'Not found' });
 
@@ -50,7 +51,7 @@ router.get('/conversations/:id/messages', protect, tenantScope, asyncHandler(asy
   apiResponse.success(res, messages.reverse(), 'Messages fetched');
 }));
 
-router.patch('/conversations/:id/resolve', protect, tenantScope, asyncHandler(async (req, res) => {
+router.patch('/conversations/:id/resolve', protect, tenantScope, requireActiveSubscription, asyncHandler(async (req, res) => {
   const conversation = await Conversation.findOne({ _id: req.params.id, doctorId: req.user.id });
   if (!conversation) return res.status(404).json({ success: false, message: 'Not found' });
   conversation.status = 'resolved';

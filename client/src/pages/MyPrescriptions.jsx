@@ -47,7 +47,7 @@ export default function MyPrescriptions() {
                     <div>
                       <p className="text-sm font-medium text-[#1e293b]">{rx.diagnosis || 'Prescription'}</p>
                       <p className="text-xs text-[#64748b]">
-                        Dr. {rx.doctorId?.name || 'Doctor'} • {new Date(rx.issuedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {rx.medicines.length} medicine(s)
+                        Dr. {(rx.doctorId?.name || 'Doctor').replace(/^Dr\.?\s*/i, '')} • {new Date(rx.issuedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} • {rx.medicines.length} medicine(s)
                       </p>
                     </div>
                   </div>

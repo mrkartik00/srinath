@@ -36,7 +36,8 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
 
   const handleLogout = () => { logout(); navigate('/login'); };
-  const initials = (user?.name || 'D').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  const cleanName = (user?.name || 'Doctor').replace(/^Dr\.?\s*/i, '');
+  const initials = cleanName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <div className="h-screen flex overflow-hidden bg-[#F8F6F0]">
@@ -73,8 +74,8 @@ export default function DashboardLayout() {
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 border border-white/20 flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{initials}</div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{user?.name || 'Doctor'}</p>
-                <p className="text-[10px] text-white/40 truncate">Doctor</p>
+                <p className="text-xs font-medium truncate">Dr. {cleanName.split(' ')[0]}</p>
+                <p className="text-[10px] text-white/40 truncate">{user?.email}</p>
               </div>
             )}
           </div>
@@ -84,7 +85,7 @@ export default function DashboardLayout() {
         <header className="h-16 bg-white border-b border-[#E8E5DE]/60 flex items-center justify-between px-8 shadow-[0_1px_3px_rgba(37,89,70,0.03)]">
           <p className="text-xs text-[#64748b] uppercase tracking-wider font-medium">Doctor Portal</p>
           <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-[#1e293b]">Dr. {user?.name?.split(' ')[0]}</span>
+            <span className="text-sm font-medium text-[#1e293b]">Dr. {cleanName.split(' ')[0]}</span>
             <button onClick={handleLogout} className="text-xs text-[#C62828] hover:text-[#B71C1C] font-medium px-3 py-1.5 rounded-lg hover:bg-[#FEF2F2] transition-colors">Logout</button>
           </div>
         </header>

@@ -28,7 +28,7 @@ export default function Login() {
         toast.success('Welcome, Doctor!');
         navigate('/');
       }
-    } catch (err) { toast.error(err.message || 'Login failed'); }
+    } catch (err) { toast.error(err?.message || 'Login failed. Check your credentials.'); }
     finally { setLoading(false); }
   };
 

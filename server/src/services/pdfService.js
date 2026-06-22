@@ -1,19 +1,20 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-const logger = require('../config/logger');
-
-const uploadsDir = path.resolve(__dirname, '../../uploads/prescriptions');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const storageService = require('./storageService');
 
 const generatePrescriptionPdf = async (prescription, doctorProfile) => {
-  const fileName = `${prescription._id}.pdf`;
-  const filePath = path.join(uploadsDir, fileName);
+  const key = `prescriptions/${prescription._id}.pdf`;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
-    const stream = fs.createWriteStream(filePath);
-    doc.pipe(stream);
+    const chunks = [];
+    doc.on('data', (c) => chunks.push(c));
+    doc.on('error', reject);
+    doc.on('end', () => {
+      storageService
+        .save(key, Buffer.concat(chunks), 'application/pdf')
+        .then((storedKey) => resolve(storedKey))
+        .catch(reject);
+    });
 
     const doctorName = prescription.doctorId?.name || 'Doctor';
     const patientName = prescription.patientId?.userId?.name || 'Patient';
@@ -78,8 +79,6 @@ const generatePrescriptionPdf = async (prescription, doctorProfile) => {
     doc.fontSize(8).text(`Prescription ID: ${prescription._id}`, 50, footerY + 38);
 
     doc.end();
-    stream.on('finish', () => resolve(filePath));
-    stream.on('error', reject);
   });
 };
 

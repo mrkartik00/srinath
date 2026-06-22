@@ -35,13 +35,14 @@ export default function Dashboard() {
 
   const s = stats || {};
   const greeting = new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
+  const displayName = (user?.name || 'Doctor').replace(/^Dr\.?\s*/i, '').split(' ')[0];
 
   return (
     <div className="space-y-8">
       {/* Hero Greeting */}
       <div>
         <h1 className="text-2xl font-serif font-semibold text-[#1e293b]">
-          {greeting}, Dr. {user?.name?.split(' ')[0] || 'Admin'}
+          {greeting}, Dr. {displayName}
         </h1>
         <p className="text-sm text-[#64748b] mt-1">Here's what's happening at your practice today.</p>
       </div>

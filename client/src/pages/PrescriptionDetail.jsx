@@ -54,7 +54,7 @@ export default function PrescriptionDetail() {
           <div>
             <h1 className="text-xl font-serif font-semibold text-[#1e293b]">{rx.diagnosis || 'Prescription'}</h1>
             <p className="text-xs text-[#64748b]">
-              Dr. {rx.doctorId?.name || 'Doctor'} • Issued {new Date(rx.issuedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+              Dr. {(rx.doctorId?.name || 'Doctor').replace(/^Dr\.?\s*/i, '')} • Issued {new Date(rx.issuedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
           </div>
         </div>

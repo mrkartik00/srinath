@@ -8,6 +8,7 @@ const paginate = require('../utils/pagination');
 const auditService = require('./auditService');
 const { NotFoundError, ConflictError } = require('../utils/apiError');
 const { PRESCRIPTION_STATUS, REMINDER_STATUS, AUDIT_ACTIONS } = require('../config/constants');
+const { withOptionalTransaction } = require('../utils/dbUtils');
 const eventBus = require('../events/eventBus');
 
 let reminderQueue, pdfQueue;
@@ -45,47 +46,53 @@ const create = async (doctorId, data, scope) => {
     return { ...m, startDate, endDate };
   });
 
-  // Create prescription
-  const prescription = await Prescription.create({
-    doctorId, patientId: data.patientId, organizationId: scope.organizationId,
-    appointmentId: data.appointmentId || null, diagnosis: data.diagnosis || '',
-    medicines, notes: data.notes || '', idempotencyKey,
-  });
+  // Create prescription + all reminders atomically. On a replica set this is a
+  // single transaction (all-or-nothing); on standalone MongoDB it runs inline.
+  const prescription = await withOptionalTransaction(async (session) => {
+    const opts = session ? { session } : {};
+    const [rx] = await Prescription.create([{
+      doctorId, patientId: data.patientId, organizationId: scope.organizationId,
+      appointmentId: data.appointmentId || null, diagnosis: data.diagnosis || '',
+      medicines, notes: data.notes || '', idempotencyKey,
+    }], opts);
 
-  // Generate reminders
-  const reminders = [];
-  for (const med of medicines) {
-    for (let day = 0; day < med.duration; day++) {
-      for (const timing of med.timings) {
-        const [hours, minutes] = timing.split(':').map(Number);
-        const scheduledAt = new Date(med.startDate);
-        scheduledAt.setDate(scheduledAt.getDate() + day);
-        scheduledAt.setHours(hours, minutes, 0, 0);
+    // Generate reminders
+    const reminders = [];
+    for (const med of medicines) {
+      for (let day = 0; day < med.duration; day++) {
+        for (const timing of med.timings) {
+          const [hours, minutes] = timing.split(':').map(Number);
+          const scheduledAt = new Date(med.startDate);
+          scheduledAt.setDate(scheduledAt.getDate() + day);
+          scheduledAt.setHours(hours, minutes, 0, 0);
 
-        const reminderKey = `${prescription._id}_${med.name}_${scheduledAt.toISOString()}`;
-        reminders.push({
-          prescriptionId: prescription._id,
-          patientId: data.patientId,
-          doctorId,
-          organizationId: scope.organizationId,
-          medicineName: med.name,
-          dosage: med.dosage,
-          scheduledAt,
-          idempotencyKey: crypto.createHash('md5').update(reminderKey).digest('hex'),
-        });
+          const reminderKey = `${rx._id}_${med.name}_${scheduledAt.toISOString()}`;
+          reminders.push({
+            prescriptionId: rx._id,
+            patientId: data.patientId,
+            doctorId,
+            organizationId: scope.organizationId,
+            medicineName: med.name,
+            dosage: med.dosage,
+            scheduledAt,
+            idempotencyKey: crypto.createHash('md5').update(reminderKey).digest('hex'),
+          });
+        }
       }
     }
-  }
 
-  // Batch insert reminders (prevent OOM on large prescriptions)
-  if (reminders.length > 0) {
+    // Batch insert reminders (prevent OOM on large prescriptions). Inside the
+    // transaction we use ordered:true and do NOT swallow errors so a failure
+    // rolls back the prescription too.
     for (let i = 0; i < reminders.length; i += BATCH_SIZE) {
       const batch = reminders.slice(i, i + BATCH_SIZE);
-      await MedicineReminder.insertMany(batch, { ordered: false }).catch(() => {});
+      await MedicineReminder.insertMany(batch, { ordered: true, ...opts });
     }
-  }
 
-  // Queue BullMQ delayed jobs
+    return rx;
+  });
+
+  // Queue BullMQ delayed jobs (post-commit: external side-effect, not part of txn)
   if (reminderQueue) {
     const insertedReminders = await MedicineReminder.find({ prescriptionId: prescription._id }).select('_id scheduledAt').lean();
     for (const r of insertedReminders) {

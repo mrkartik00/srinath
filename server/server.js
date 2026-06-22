@@ -7,6 +7,10 @@ const redis = require('./src/config/redis');
 const start = async () => {
   await connectDB();
 
+  // Detect replica set once (enables/disables transactions globally).
+  const { detectReplicaSet } = require('./src/utils/dbUtils');
+  await detectReplicaSet();
+
   // Start queue workers only if Redis is available
   if (redis.status === 'ready') {
     const { startWorker: startReminderWorker } = require('./src/queues/reminderQueue');

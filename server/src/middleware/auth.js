@@ -18,7 +18,11 @@ const protect = async (req, res, next) => {
     const user = await User.findById(decoded.id);
 
     if (!user) return next(new UnauthorizedError('User no longer exists'));
-    if (!user.isActive) return next(new UnauthorizedError('Account is deactivated'));
+    // Allow pending_approval / rejected doctors to authenticate (they see
+    // the waiting/rejection screen). Only truly deactivated accounts are blocked.
+    if (!user.isActive && user.approvalStatus !== 'pending_approval' && user.approvalStatus !== 'rejected') {
+      return next(new UnauthorizedError('Account is deactivated'));
+    }
 
     req.user = {
       id: user._id,
@@ -26,6 +30,10 @@ const protect = async (req, res, next) => {
       email: user.email,
       organizationId: user.organizationId,
       doctorId: user.doctorId,
+      // Denormalized status used by gating middleware (gates.js) — avoids an
+      // extra DB read per request. Kept in sync on approval/subscription change.
+      approvalStatus: user.approvalStatus,
+      subscriptionStatus: user.subscriptionStatus,
     };
     next();
   } catch (error) {

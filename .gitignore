@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.production
+dist/
+.expo/
+.DS_Store
+*.log
+coverage/
+# Added by code-review-graph
+.code-review-graph/
+/app

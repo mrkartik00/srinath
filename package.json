@@ -1,0 +1,25 @@
+{
+  "name": "digital-clinic",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,client,admin,superadmin -c teal,blue,purple,yellow \"npm run dev --workspace=server\" \"npm run dev --workspace=client\" \"npm run dev --workspace=admin\" \"npm run dev --workspace=superadmin\"",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:admin": "npm run dev --workspace=admin",
+    "dev:superadmin": "npm run dev --workspace=superadmin",
+    "kill": "lsof -ti:5001 -ti:5173 -ti:5174 -ti:5175 | xargs kill -9 2>/dev/null; echo 'Ports cleared'",
+    "build": "npm run build --workspace=client && npm run build --workspace=admin && npm run build --workspace=superadmin",
+    "test": "npm test --workspace=server",
+    "seed": "npm run seed --workspace=server"
+  },
+  "workspaces": [
+    "server",
+    "client",
+    "admin",
+    "superadmin"
+  ],
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

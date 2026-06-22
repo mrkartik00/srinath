@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Agreement — Digital Clinic Ecosystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens ── */
+    :root {
+      --teal: #008080;
+      --teal-light: #e0f2f1;
+      --teal-mid: #b2dfdb;
+      --ink: #1a1a1a;
+      --ink-light: #3a3a3a;
+      --ink-muted: #6b7c8d;
+      --bg: #ffffff;
+      --surface: #f5f5f5;
+      --border: #dde3e3;
+      --border-strong: #b0c4c4;
+      --font-body: 'EB Garamond', Georgia, serif;
+      --font-sans: 'Lato', Arial, sans-serif;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* ── Print ── */
+    @page { 
+      size: A4; 
+      margin: 0; /* Forces browser to remove its own headers/footers */
+    }
+    @media print {
+      body { 
+        padding: 20mm 22mm; /* Replaces the page margin */
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact; 
+      }
+      .page-break { page-break-before: always; padding-top: 20mm; }
+      .no-break { page-break-inside: avoid; }
+    }
+
+    /* ── Base ── */
+    html { font-size: 15px; }
+    body {
+      font-family: var(--font-sans);
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.75;
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 0; /* Handled by print padding */
+    }
+
+    /* ── Cover ── */
+    .cover {
+      text-align: center;
+      padding: 52px 0 40px;
+      margin-bottom: 36px;
+      border-bottom: 2px solid var(--teal);
+    }
+    .cover__badge {
+      display: inline-block;
+      font-family: var(--font-sans);
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--teal);
+      border: 1.5px solid var(--teal);
+      padding: 4px 18px;
+      margin-bottom: 24px;
+    }
+    .cover__title {
+      font-family: var(--font-body);
+      font-size: 2.6rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 8px;
+      letter-spacing: 0.01em;
+    }
+    .cover__subtitle {
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      color: var(--ink-muted);
+      margin-bottom: 32px;
+      letter-spacing: 0.03em;
+    }
+    .cover__rule {
+      width: 56px;
+      height: 3px;
+      background: var(--teal);
+      margin: 0 auto 28px;
+    }
+    .cover__meta {
+      display: flex;
+      justify-content: center;
+      gap: 52px;
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      color: var(--ink-light);
+    }
+    .cover__meta strong {
+      display: block;
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 3px;
+    }
+
+    /* ── Parties ── */
+    .parties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin-bottom: 40px;
+      border: 1px solid var(--border-strong);
+      page-break-after: always; /* Ensure Sections start on a new page after parties */
+    }
+    .party { padding: 22px 26px; }
+    .party:first-child { border-right: 1px solid var(--border-strong); }
+    .party__label {
+      font-family: var(--font-sans);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1.5px solid var(--teal-light);
+    }
+    .party__name {
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 1.15rem;
+      color: var(--ink);
+      margin-bottom: 5px;
+    }
+    .party__detail {
+      font-family: var(--font-sans);
+      font-size: 0.79rem;
+      color: var(--ink-muted);
+      line-height: 1.65;
+    }
+
+    /* ── Section ── */
+    .section { 
+      margin-bottom: 38px; 
+      page-break-before: always; 
+      padding-top: 20mm; /* Space at top of new page */
+    }
+    .section:first-of-type {
+      page-break-before: auto; /* Allow Overview to stay on same page as Parties if needed, or force break */
+      page-break-before: always; 
+    }
+    .section__number {
+      font-family: var(--font-sans);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 0;
+    }
+    .section__title {
+      font-family: var(--font-body);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 18px;
+      padding: 8px 12px 8px 16px;
+      background: var(--teal-light);
+      border-left: 4px solid var(--teal);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── Module Block ── */
+    .module { margin-bottom: 24px; }
+    .module__title {
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--teal);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .module__title .num {
+      font-family: var(--font-sans);
+      background: var(--teal);
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Feature List ── */
+    .features { list-style: none; margin: 0; padding: 0; }
+    .features li {
+      position: relative;
+      padding: 4px 0 4px 20px;
+      font-size: 0.88rem;
+      color: var(--ink-light);
+      line-height: 1.65;
+    }
+    .features li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      top: 4px;
+      color: var(--teal);
+      font-size: 0.8rem;
+    }
+    .features li strong { color: var(--ink); font-weight: 700; }
+
+    /* ── Table ── */
+    .tbl { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    .tbl th, .tbl td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tbl th {
+      background: var(--teal-light);
+      color: var(--ink);
+      font-family: var(--font-sans);
+      font-weight: 700;
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 2px solid var(--teal-mid);
+    }
+    .tbl td { font-family: var(--font-sans); color: var(--ink-light); }
+    .tbl td:first-child { color: var(--ink); font-weight: 700; }
+    .tbl tr:last-child td { border-bottom: none; }
+    .tbl tr:nth-child(even) td { background: #f9fdfd; }
+    .tbl-wrap {
+      border: 1px solid var(--border-strong);
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+
+    /* ── Clause ── */
+    .clause {
+      font-family: var(--font-sans);
+      font-size: 0.88rem;
+      color: var(--ink-light);
+      line-height: 1.82;
+      margin-bottom: 12px;
+      text-align: justify;
+    }
+    .clause strong { color: var(--ink); font-weight: 700; }
+
+    /* ── Signature ── */
+    .signatures {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      margin-top: 48px;
+      padding-top: 36px;
+      border-top: 2px solid var(--teal);
+    }
+    .sig__label {
+      font-family: var(--font-sans);
+      font-size: 0.6rem;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--teal);
+      margin-bottom: 48px;
+    }
+    .sig__line {
+      border-top: 1px solid var(--ink);
+      padding-top: 8px;
+      margin-bottom: 5px;
+    }
+    .sig__name {
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--ink);
+    }
+    .sig__date {
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--ink-muted);
+      margin-top: 3px;
+    }
+
+    /* ── Footer ── */
+    .doc-footer {
+      text-align: center;
+      margin-top: 44px;
+      padding-top: 14px;
+      border-top: 1px solid var(--teal-mid);
+      font-family: var(--font-sans);
+      font-size: 0.7rem;
+      color: var(--ink-muted);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Highlight Box ── */
+    .highlight-box {
+      background: var(--teal-light);
+      border-left: 4px solid var(--teal);
+      padding: 16px 20px;
+      margin: 14px 0 20px;
+      font-family: var(--font-sans);
+      font-size: 0.83rem;
+      color: var(--ink-light);
+      line-height: 1.7;
+    }
+    .highlight-box strong { color: var(--ink); font-weight: 700; }
+
+    /* ── Annexure ── */
+    .annexure-title {
+      text-align: center;
+      font-family: var(--font-body);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+      padding-top: 8px;
+    }
+    .annexure-rule {
+      width: 100%;
+      height: 2px;
+      background: var(--teal);
+      margin: 0 0 28px;
+    }
+  </style>
+</head>
+<body>
+
+
+  <!-- ══════════ COVER ══════════ -->
+  <header class="cover">
+    <div class="cover__badge">Confidential Agreement</div>
+    <h1 class="cover__title">Statement of Work</h1>
+    <p class="cover__subtitle">Digital Clinic Ecosystem — Full-Stack Development</p>
+    <div class="cover__rule"></div>
+    <div class="cover__meta">
+      <div><strong>Document Version</strong>1.0</div>
+      <div><strong>Effective Date</strong>May 03, 2026</div>
+      <div><strong>Prepared</strong>May 2026</div>
+    </div>
+  </header>
+
+  <!-- ══════════ PARTIES ══════════ -->
+  <div class="parties">
+    <div class="party">
+      <div class="party__label">The Client</div>
+      <p class="party__name">Dr. Srinath Shankar Rathod</p>
+      <p class="party__detail">
+        Associate Director — General and Laparoscopic Surgery<br />
+        Livasa Hospital, Mohali<br />
+        Email: srinath226@gmail.com
+      </p>
+    </div>
+    <div class="party">
+      <div class="party__label">The Developer</div>
+      <p class="party__name">Kartik.</p>
+      <p class="party__detail">
+        Full-Stack Developer / Lead<br />
+        PAN: MKMPK3940D<br />
+        Email: kartikgoutam7@gmail.com
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════ 1. OVERVIEW ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 01</div>
+    <h2 class="section__title">Project Overview</h2>
+    <p class="clause">
+      This Statement of Work ("Agreement") outlines the scope, deliverables, timeline, and terms for the design, development, and deployment of a comprehensive <strong>Digital Clinic Ecosystem</strong>. The ecosystem encompasses a patient-facing mobile application (iOS & Android), a surgeon & assistant admin dashboard (Web), a patient-facing web portal, and all supporting backend infrastructure and integrations described herein.
+    </p>
+    <p class="clause">
+      Both parties agree that this document constitutes the complete understanding of the project scope. Any features, modules, or integrations not explicitly listed in this Agreement are considered <strong>out of scope</strong> and will require a separate change order.
+    </p>
+  </div>
+
+  <!-- ══════════ 2. SCOPE ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 02</div>
+    <h2 class="section__title">Scope of Work — Deliverables</h2>
+
+    <!-- Module 1 -->
+    <div class="module no-break">
+      <h3 class="module__title"><span class="num">1</span> Authentication & Onboarding</h3>
+      <ul class="features">
+        <li><strong>Passwordless Login:</strong> OTP-based login via SMS/WhatsApp for frictionless entry.</li>
+        <li><strong>Role-Based Access Control (RBAC):</strong> Distinct login portals for Surgeons, Assistants, and Patients.</li>
+        <li><strong>Smart Patient Onboarding:</strong> Digital intake forms capturing basic medical history and consent during initial signup.</li>
+      </ul>
+    </div>
+
+    <!-- Module 2 -->
+    <div class="module no-break">
+      <h3 class="module__title"><span class="num">2</span> Patient Mobile App (iOS & Android)</h3>
+      <ul class="features">
+        <li><strong>Dashboard & Unified Hub:</strong> Home screen displaying upcoming appointments, current prescriptions, and active subscription status.</li>
+        <li><strong>VIP Subscription Portal:</strong> Tiered membership checkout (integrated with Stripe/Razorpay) with auto-renewal.</li>
+        <li><strong>Digital VIP Care Card:</strong> A premium, glassmorphism-styled digital membership card with a scannable patient QR code.</li>
+        <li><strong>Secure Medical Vault:</strong> Camera integration to snap and store lab reports, X-rays, and past prescriptions.</li>
+        <li><strong>Triage Chat System:</strong> Asynchronous messaging with automated screening questions before the message reaches the surgeon.</li>
+        <li><strong>Telemedicine Video Consults:</strong> Integrated secure video calling for remote check-ups.</li>
+        <li><strong>"Health Drop" Content Feed:</strong> A continuous, scrollable feed of the surgeon's micro-videos and health tips.</li>
+        <li><strong>Automated Push Reminders:</strong> System-triggered alerts for medication schedules, follow-up bookings, and upcoming local camps.</li>
+        <li><strong>1-Click Appointment Booking:</strong> Calendar sync to book available in-clinic or virtual slots.</li>
+        <li><strong>Referral Engine:</strong> Unique invite codes allowing patients to earn discounts by referring friends.</li>
+      </ul>
+    </div>
+
+    <!-- Module 3 -->
+    <div class="module no-break">
+      <h3 class="module__title"><span class="num">3</span> Surgeon & Assistant Admin Dashboard (Web)</h3>
+      <ul class="features">
+        <li><strong>Unified Patient CRM:</strong> Centralized database to search, filter, and view full patient histories and uploaded vault documents.</li>
+        <li><strong>1-Click Digital Prescriptions:</strong> Dropdown-driven Rx generator that outputs a branded, e-signed PDF.</li>
+        <li><strong>WhatsApp Auto-Delivery:</strong> Instant dispatch of generated PDF prescriptions directly to the patient's WhatsApp.</li>
+        <li><strong>"Office Hours" Chat Manager:</strong> Inbox that automatically sends "out of office" replies when patients message outside clinic hours.</li>
+        <li><strong>Smart Reply Snippets:</strong> Pre-saved text blocks for one-click answers to common post-op or diet queries.</li>
+        <li><strong>Voice-to-Text Clinical Notes:</strong> Microphone integration to dictate consultation notes directly into the CRM.</li>
+        <li><strong>Revenue & MRR Analytics:</strong> Visual charts tracking subscription growth, one-off payments, and total revenue.</li>
+        <li><strong>"Camp Mode" Offline Sync:</strong> Ability to log new rural patient data offline on a tablet, which auto-syncs to the server when Wi-Fi is restored.</li>
+        <li><strong>Content Management System (CMS):</strong> Simple upload portal to push new videos or announcements to the patient app.</li>
+        <li><strong>Automated Monthly Practice Reports:</strong> An automatic email sent on the 1st of the month summarizing clinic growth and metrics.</li>
+      </ul>
+    </div>
+
+    <!-- Module 4 -->
+    <div class="module no-break">
+      <h3 class="module__title"><span class="num">4</span> Patient-Facing Web Portal & Growth Engine</h3>
+      <ul class="features">
+        <li><strong>"Tech-Luxury" Landing Page:</strong> Premium, high-trust aesthetic showcasing the surgeon's authority.</li>
+        <li><strong>Camp Locator & Pre-Registration:</strong> Interactive map and signup form to capture leads for upcoming rural medical camps.</li>
+        <li><strong>Web Booking Engine:</strong> Browser-based appointment scheduling for non-app users.</li>
+        <li><strong>Masterclass Video Library:</strong> A responsive web gallery hosting long-form educational medical content.</li>
+        <li><strong>Automated Review Funnel:</strong> System that automatically requests a Google Review via SMS 24 hours after a successful 5-star consultation.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════ 3. DELIVERABLE SUMMARY ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 03</div>
+    <h2 class="section__title">Deliverable Summary</h2>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Platform</th>
+            <th>Features</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Authentication & Onboarding</td>
+            <td>Cross-Platform</td>
+            <td>3 features</td>
+          </tr>
+          <tr>
+            <td>Patient Mobile App</td>
+            <td>iOS & Android</td>
+            <td>10 features</td>
+          </tr>
+          <tr>
+            <td>Admin Dashboard</td>
+            <td>Web</td>
+            <td>10 features</td>
+          </tr>
+          <tr>
+            <td>Web Portal & Growth Engine</td>
+            <td>Web</td>
+            <td>5 features</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="highlight-box">
+      <strong>Total: 28 features</strong> across 4 modules covering mobile apps, web dashboard, patient portal, and cross-platform authentication infrastructure.
+    </div>
+  </div>
+
+  <!-- ══════════ 4. TIMELINE ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 04</div>
+    <h2 class="section__title">Project Timeline & Milestones</h2>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th style="width: 20%;">Timeline</th>
+            <th>Focus Area & Deliverables</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Month <br /> 1</td>
+            <td><strong>Website Launch:</strong> Architecture setup, authentication system, admin dashboard, patient web portal with booking engine, and landing page — live and deployed.</td>
+          </tr>
+          <tr>
+            <td>Months <br /> 2 — 3</td>
+            <td><strong>Mobile App Launch:</strong> Patient app (iOS & Android) — dashboard, VIP subscriptions, medical vault, appointment booking, triage chat, and push notifications — submitted to App Store & Play Store.</td>
+          </tr>
+          <tr>
+            <td>Months <br /> 4 — 6</td>
+            <td><strong>Feature Expansion:</strong> Digital prescriptions with WhatsApp delivery, referral engine, "Health Drop" content feed, and masterclass video library.</td>
+          </tr>
+          <tr>
+            <td>Months <br /> 7 — 9</td>
+            <td><strong>Automation & Analytics:</strong> Revenue dashboards, automated review funnels, monthly practice reports, smart reply snippets, "Camp Mode" offline sync, and CMS portal.</td>
+          </tr>
+          <tr>
+            <td>Months <br /> 10 — 12</td>
+            <td><strong>Optimization & Scaling:</strong> Performance tuning, security audits, UI/UX refinements, user scaling, and system-wide polish based on real-world usage data.</td>
+          </tr>
+          <tr>
+            <td>Ongoing</td>
+            <td><strong>Ongoing Management:</strong> Continuous support, bug fixes, new feature iterations, infrastructure scaling, and platform evolution based on growth.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════ 5. PAYMENT ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 05</div>
+    <h2 class="section__title">Monthly Retainer & Long-Term Terms</h2>
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Payment Item</th>
+            <th>Schedule / Frequency</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Monthly Retainer Fee</td>
+            <td>1st of every month</td>
+            <td style="font-weight:700; color: var(--teal);">₹ 1,00,000 / month</td>
+          </tr>
+          <tr>
+            <td>Contract Term</td>
+            <td>5 Years (Total)</td>
+            <td>1 Year (Fixed Rate)</td>
+          </tr>
+          <tr>
+            <td colspan="2" style="font-weight:700; color: var(--ink);">Total Annual Investment (Year 1)</td>
+            <td style="font-weight:700; color: var(--teal);">₹ 12,00,000</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="clause">
+      The Client agrees to a total contract term of <strong>five (5) years</strong>. The monthly retainer is fixed at <strong>₹ 1,00,000 (One Lakh Rupees)</strong> for the <strong>first (1st) year</strong> (initial 12 months).
+    </p>
+    <p class="clause">
+      <strong>Annual Performance-Based Increment:</strong> For years 2 through 5, the monthly retainer will be subject to an <strong>annual increment</strong>. This increment will be mutually agreed upon at the end of each 12-month period, based on system growth, project complexity, and overall performance. The continuation of the 5-year term is contingent upon mutual agreement on these annual increments.
+    </p>
+    <p class="clause">
+      Payments are due on the <strong>1st day of each month</strong>. Late payments beyond 5 business days may result in a temporary pause of services until the balance is settled.
+    </p>
+  </div>
+
+  <!-- ══════════ 6. TERMS ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 06</div>
+    <h2 class="section__title">Terms & Conditions</h2>
+
+    <p class="clause"><strong>6.1 Intellectual Property —</strong> Upon receipt of full payment, all source code, designs, and assets created under this Agreement shall be transferred to the Client. Until full payment is received, all IP remains with the Developer.</p>
+
+    <p class="clause"><strong>6.2 Revisions —</strong> Each milestone includes up to <strong>two (2) rounds of revisions</strong>. Additional revisions beyond this allowance will be billed at a mutually agreed hourly rate.</p>
+
+    <p class="clause"><strong>6.3 Scope Changes —</strong> Any feature, integration, or modification not explicitly listed in Section 02 of this Agreement shall be treated as a Change Request and will require a separate written estimate and approval before work begins.</p>
+
+    <p class="clause"><strong>6.4 Confidentiality —</strong> Both parties agree to keep all shared information, including but not limited to business plans, patient data schemas, and technical architecture, strictly confidential. This obligation survives termination of this Agreement.</p>
+
+    <p class="clause"><strong>6.5 Termination —</strong> Either party may terminate this Agreement with <strong>14 days' written notice</strong>. In the event of termination, the Client shall pay for all work completed up to the termination date, and all completed deliverables shall be handed over.</p>
+
+    <p class="clause"><strong>6.6 Third-Party Services —</strong> Costs for third-party services (e.g., Stripe/Razorpay transaction fees, SMS gateway credits, cloud hosting, Apple/Google developer accounts) are the responsibility of the Client unless otherwise agreed in writing.</p>
+
+    <p class="clause"><strong>6.7 Liability —</strong> The Developer's total liability under this Agreement shall not exceed the total fees paid by the Client. The Developer shall not be liable for indirect, incidental, or consequential damages arising from the use of the delivered software.</p>
+  </div>
+
+  <!-- ══════════ 7. ACCEPTANCE ══════════ -->
+  <div class="section">
+    <div class="section__number">Section 07</div>
+    <h2 class="section__title">Acceptance & Authorization</h2>
+    <p class="clause">
+      By signing below, both parties acknowledge that they have read, understood, and agree to the terms, scope, and conditions outlined in this Statement of Work. This Agreement becomes effective on the date of the last signature.
+    </p>
+
+    <div class="signatures">
+      <div>
+        <div class="sig__label">The Client</div>
+        <div class="sig__line"></div>
+        <p class="sig__name">Name: Dr. Srinath Shankar Rathod</p>
+        <p class="sig__date">Date: May 03, 2026</p>
+      </div>
+      <div>
+        <div class="sig__label">The Developer</div>
+        <div class="sig__line"></div>
+        <p class="sig__name">Name: Kartik.</p>
+        <p class="sig__date">Date: May 03, 2026</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ FOOTER ══════════ -->
+  <footer class="doc-footer">
+    <p>This document is confidential and intended solely for the named parties. — Prepared May 2026</p>
+  </footer>
+
+</body>
+</html>

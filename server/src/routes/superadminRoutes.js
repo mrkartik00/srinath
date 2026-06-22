@@ -1,0 +1,49 @@
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/auth');
+const { authorize } = require('../middleware/rbac');
+const tenantScope = require('../middleware/tenantScope');
+const c = require('../controllers/superadminController');
+const { ROLES } = require('../config/constants');
+
+const guard = [protect, authorize(ROLES.SUPER_ADMIN), tenantScope];
+
+// Dashboard
+router.get('/dashboard', ...guard, c.getDashboard);
+
+// Doctors
+router.get('/doctors', ...guard, c.getDoctors);
+router.get('/doctors/:id', ...guard, c.getDoctor);
+router.post('/doctors', ...guard, c.addDoctor);
+router.patch('/doctors/:id', ...guard, c.updateDoctor);
+router.delete('/doctors/:id', ...guard, c.deactivateDoctor);
+router.get('/doctors/:id/activity', ...guard, c.getDoctorActivity);
+
+// Patients (cross-doctor)
+router.get('/patients', ...guard, c.getPatients);
+
+// Appointments (platform-wide)
+router.get('/appointments', ...guard, c.getAppointments);
+
+// Prescriptions (platform-wide)
+router.get('/prescriptions', ...guard, c.getPrescriptions);
+
+// Analytics
+router.get('/analytics', ...guard, c.getAnalytics);
+
+// Plans
+router.get('/plans', ...guard, c.getPlans);
+router.get('/plans/features', ...guard, c.getPlanFeatures);
+router.post('/plans', ...guard, c.createPlan);
+router.patch('/plans/:id', ...guard, c.updatePlan);
+router.patch('/plans/:id/toggle', ...guard, c.togglePlan);
+router.delete('/plans/:id', ...guard, c.deletePlan);
+
+// Settings
+router.get('/settings', ...guard, c.getSettings);
+router.post('/settings', ...guard, c.upsertSetting);
+
+// Logs
+router.get('/logs', ...guard, c.getLogs);
+
+module.exports = router;

@@ -1,0 +1,205 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                         SR+ PLATFORM — DATA MODEL                              ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           PRIMARY DB: sr_plus                                    │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐
+│   Organization   │  (1 per platform)
+│──────────────────│
+│ _id              │
+│ name             │
+│ ownerId ────────────────────────────┐
+│ settings         │                  │
+└──────────────────┘                  │
+        │                             │
+        │ organizationId              │
+        ▼                             ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│                              User                                         │
+│──────────────────────────────────────────────────────────────────────────│
+│ _id  │ name │ email │ password │ role │ organizationId │ isActive        │
+│──────────────────────────────────────────────────────────────────────────│
+│ Roles: super_admin │ doctor │ assistant │ patient                         │
+└──────────────────────────────────────────────────────────────────────────┘
+        │                    │                              │
+        │ (super_admin)      │ (doctor)                     │ (patient)
+        │                    │                              │
+        │                    ▼                              ▼
+        │         ┌──────────────────┐          ┌──────────────────┐
+        │         │  DoctorProfile   │          │     Patient      │
+        │         │──────────────────│          │──────────────────│
+        │         │ userId           │          │ userId           │
+        │         │ specialization   │          │ dateOfBirth      │
+        │         │ qualification    │          │ gender           │
+        │         │ consultationFee  │          │ bloodGroup       │
+        │         │ availableSlots   │          │ address          │
+        │         │ isOnline (toggle)│          │ allergies        │
+        │         │ subscriptionStatus          │ medicalHistory   │
+        │         └──────────────────┘          │ emergencyContact │
+        │                    │                  └──────────────────┘
+        │                    │                              │
+        │                    └───────────┬─────────────────┘
+        │                                │
+        │                                ▼
+        │              ┌─────────────────────────┐
+        │              │     DoctorPatient        │  ◄── M:N JUNCTION
+        │              │─────────────────────────│
+        │              │ doctorId ──► User(doctor)│
+        │              │ patientId ─► User(patient)
+        │              │ organizationId           │
+        │              │ status (active/inactive) │
+        │              └─────────────────────────┘
+        │                    │              │
+        │                    ▼              ▼
+        │    ┌───────────────────┐  ┌───────────────────┐
+        │    │    Appointment     │  │   Conversation    │
+        │    │───────────────────│  │───────────────────│
+        │    │ patientId (Patient)│  │ patientId (User)  │
+        │    │ doctorId (User)   │  │ doctorId (User)   │
+        │    │ dateTime          │  │ status            │
+        │    │ duration          │  │ unreadByDoctor    │
+        │    │ type (in_clinic/  │  │ unreadByPatient   │
+        │    │       virtual)    │  │ lastMessagePreview│
+        │    │ status (scheduled/│  └───────┬───────────┘
+        │    │  completed/       │          │
+        │    │  cancelled)       │          ▼
+        │    └───────────────────┘  ┌───────────────────┐
+        │                           │     Message        │
+        │                           │───────────────────│
+        │    ┌───────────────────┐  │ conversationId    │
+        │    │   Prescription    │  │ senderId (User)   │
+        │    │───────────────────│  │ senderRole        │
+        │    │ patientId (Patient)│ │ body              │
+        │    │ doctorId (User)   │  │ readAt (seen!)    │
+        │    │ diagnosis         │  │ idempotencyKey    │
+        │    │ medicines[]       │  └───────────────────┘
+        │    │ status            │
+        │    │ idempotencyKey    │
+        │    └───────┬───────────┘
+        │            │
+        │            ▼
+        │    ┌───────────────────┐      ┌───────────────────┐
+        │    │ MedicineReminder  │      │ ReminderAdherence │
+        │    │───────────────────│      │───────────────────│
+        │    │ prescriptionId    │      │ patientId         │
+        │    │ patientId (Patient)│     │ prescriptionId    │
+        │    │ medicineName      │      │ date              │
+        │    │ scheduledAt       │      │ taken / missed    │
+        │    │ status (pending/  │      │ adherencePercent  │
+        │    │  acknowledged/    │      └───────────────────┘
+        │    │  missed/snoozed)  │
+        │    └───────────────────┘
+        │
+        │    ┌───────────────────┐
+        │    │    AuditLog       │
+        │    │───────────────────│
+        │    │ actorId           │
+        │    │ action            │
+        │    │ targetType        │
+        │    │ changes           │
+        │    └───────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                        ANALYTICS DB: sr_plus_analytics                           │
+│                        (Super Admin only)                                        │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
+│ PlatformMetrics  │ │  DoctorActivity  │ │ SubscriptionPlan │
+│──────────────────│ │──────────────────│ │──────────────────│
+│ date (daily)     │ │ doctorId         │ │ name             │
+│ totalDoctors     │ │ action           │ │ price            │
+│ totalPatients    │ │ timestamp        │ │ interval         │
+│ totalAppointments│ │ metadata         │ │ features[]       │
+│ revenue          │ └──────────────────┘ │ maxPatients      │
+└──────────────────┘                      └──────────────────┘
+
+┌──────────────────┐ ┌──────────────────┐
+│PlatformSettings  │ │    SystemLog     │
+│──────────────────│ │──────────────────│
+│ key              │ │ actorId          │
+│ value            │ │ action           │
+│ category         │ │ target           │
+└──────────────────┘ │ timestamp        │
+                     └──────────────────┘
+
+
+════════════════════════════════════════════════════════════════════════════════════
+                            ROLE ACCESS MATRIX
+════════════════════════════════════════════════════════════════════════════════════
+
+┌────────────────────────┬──────────┬──────────┬──────────┬───────────┐
+│ Feature                │ Super    │ Doctor   │ Patient  │ Assistant │
+│                        │ Admin    │          │          │           │
+├────────────────────────┼──────────┼──────────┼──────────┼───────────┤
+│ Doctor CRUD            │ ✅ Full  │ ❌       │ ❌       │ ❌        │
+│ View all patients      │ ✅ Org   │ ✅ Own   │ ❌       │ ✅ Doctor │
+│ Patient profile        │ ✅ Read  │ ✅ R/W   │ ✅ Own   │ ✅ Read   │
+│ Appointments           │ ✅ All   │ ✅ Own   │ ✅ Own   │ ✅ Doctor │
+│ Book appointment       │ ❌       │ ❌       │ ✅       │ ❌        │
+│ Complete appointment   │ ❌       │ ✅       │ ❌       │ ❌        │
+│ Create prescription    │ ❌       │ ✅       │ ❌       │ ❌        │
+│ View prescriptions     │ ✅ All   │ ✅ Own   │ ✅ Own   │ ❌        │
+│ Medicine reminders     │ ❌       │ ❌       │ ✅ Own   │ ❌        │
+│ Chat (send/receive)    │ ❌       │ ✅       │ ✅       │ ❌        │
+│ Analytics              │ ✅       │ ❌       │ ❌       │ ❌        │
+│ Platform settings      │ ✅       │ ❌       │ ❌       │ ❌        │
+│ Subscription plans     │ ✅ CRUD  │ ✅ View  │ ❌       │ ❌        │
+│ System logs            │ ✅       │ ❌       │ ❌       │ ❌        │
+│ Online/Offline toggle  │ ❌       │ ✅       │ ❌       │ ❌        │
+└────────────────────────┴──────────┴──────────┴──────────┴───────────┘
+
+
+════════════════════════════════════════════════════════════════════════════════════
+                         DATA FLOW BETWEEN ROLES
+════════════════════════════════════════════════════════════════════════════════════
+
+SUPER ADMIN ──manages──► DOCTORS ◄──M:N──► PATIENTS
+     │                      │                   │
+     │ views all            │ prescribes        │ books
+     ▼                      ▼                   ▼
+ Analytics DB         Prescription ──► Reminders (push at scheduled time)
+                            │                   │
+                            │                   │ ack/snooze/miss
+                            ▼                   ▼
+                      PDF generated        Adherence tracked
+                            
+                     Doctor ◄───chat───► Patient
+                       │                    │
+                       │ sees unread        │ sees unread
+                       │ resolves           │ starts convo
+                       │ online toggle      │ sees read ✓✓
+                       ▼                    ▼
+                   Conversation (1 per doctor-patient pair)
+                        └──► Messages (ordered, idempotent, read receipts)
+
+
+════════════════════════════════════════════════════════════════════════════════════
+                              PORTALS
+════════════════════════════════════════════════════════════════════════════════════
+
+┌──────────────┬──────┬──────────────┬─────────────────────────────────────────┐
+│ Portal       │ Port │ Role         │ DB Access                               │
+├──────────────┼──────┼──────────────┼─────────────────────────────────────────┤
+│ Super Admin  │ 5175 │ super_admin  │ Primary (read all) + Analytics (full)   │
+│ Doctor       │ 5174 │ doctor       │ Primary (own patients/appts/rx/chat)    │
+│ Patient      │ 5173 │ patient      │ Primary (own data, all assigned doctors)│
+│ Mobile App   │ Expo │ patient      │ Same as Patient portal                  │
+│ Server API   │ 5001 │ —            │ Shared backend serving all portals      │
+└──────────────┴──────┴──────────────┴─────────────────────────────────────────┘
+
+
+════════════════════════════════════════════════════════════════════════════════════
+                           CREDENTIALS (Seed Data)
+════════════════════════════════════════════════════════════════════════════════════
+
+Super Admin:  admin@srplus.com     / admin123
+Doctor 1:     arun@srplus.com      / doctor123
+Doctor 2:     priya@srplus.com     / doctor123
+Patient 1:    rahul@patient.com    / patient123
+Patient 2:    sneha@patient.com    / patient123
+Patient 3:    amit@patient.com     / patient123

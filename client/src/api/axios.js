@@ -46,7 +46,22 @@ async function handleResponse(res) {
     }
     throw new Error(data.message || 'Invalid credentials');
   }
-  if (!res.ok) throw new Error(data.message || 'Something went wrong');
+  if (!res.ok) {
+    let errorMsg = data.message;
+    if (data.errors) {
+      if (Array.isArray(data.errors)) {
+        errorMsg = data.errors.join(', ');
+      } else if (typeof data.errors === 'object') {
+        errorMsg = Object.values(data.errors)
+          .map(e => (typeof e === 'string' ? e : e.message))
+          .filter(Boolean)
+          .join(', ') || errorMsg;
+      } else if (typeof data.errors === 'string') {
+        errorMsg = data.errors;
+      }
+    }
+    throw new Error(errorMsg || 'Something went wrong');
+  }
   return data;
 }
 

@@ -18,6 +18,8 @@ export default function Navbar() {
   };
 
   const isTransparent = location.pathname === '/' || location.pathname === '/services';
+  const isBookAppointment = location.pathname === '/book-appointment';
+  const elementColor = isBookAppointment ? '#36565F' : '#ffffff';
 
   const navbarStyle = {
     position: 'absolute',
@@ -25,17 +27,19 @@ export default function Navbar() {
     left: 0,
     width: '100%',
     height: '90px',
-    background: isTransparent ? 'transparent' : '#8db5c4',
+    background: isBookAppointment ? '#ffffff' : (isTransparent ? 'transparent' : '#8db5c4'),
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '0 40px',
     zIndex: 100,
     boxSizing: 'border-box',
+    boxShadow: isBookAppointment ? '0 4px 20px rgba(0, 0, 0, 0.02)' : 'none',
+    borderBottom: isBookAppointment ? '1px solid #f0f0f0' : 'none',
   };
 
   const linkStyle = {
-    color: '#ffffff',
+    color: elementColor,
     fontSize: '15px',
     fontWeight: 500,
     textDecoration: 'none',
@@ -47,7 +51,7 @@ export default function Navbar() {
   const dropdownButtonStyle = {
     background: 'transparent',
     border: 'none',
-    color: '#ffffff',
+    color: elementColor,
     fontSize: '15px',
     fontWeight: 500,
     display: 'flex',
@@ -78,7 +82,7 @@ export default function Navbar() {
       <nav style={navbarStyle} className="hp-animate-fade-up">
         {/* Brand Logo & Name */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={elementColor} strokeWidth="2.5">
             <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z"/>
             <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z"/>
             <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z"/>
@@ -90,7 +94,7 @@ export default function Navbar() {
               fontFamily: "'Figtree', sans-serif", 
               fontWeight: 700, 
               fontSize: '20px', 
-              color: '#ffffff', 
+              color: elementColor, 
               lineHeight: 1.1,
               letterSpacing: '-0.5px' 
             }}>
@@ -100,7 +104,7 @@ export default function Navbar() {
               fontFamily: "'Inter', sans-serif", 
               fontWeight: 500, 
               fontSize: '9px', 
-              color: '#ffffff', 
+              color: isBookAppointment ? '#6B7C84' : '#ffffff', 
               opacity: 0.85,
               letterSpacing: '1px',
               textTransform: 'uppercase'
@@ -128,6 +132,19 @@ export default function Navbar() {
           >
             Services
           </Link>
+
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Link 
+              to="/shop" 
+              style={linkStyle}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              onClick={e => e.preventDefault()}
+            >
+              Shop
+            </Link>
+            <span style={{ position: 'absolute', top: '-8px', right: '-35px', background: '#E56B55', color: '#fff', fontSize: '8px', padding: '2px 4px', borderRadius: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SOON</span>
+          </div>
           
           {user ? (
             <>
@@ -171,69 +188,14 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* Dropdown 2: My Account */}
-              <div 
-                className="relative"
-                onMouseEnter={() => setAccountHovered(true)}
-                onMouseLeave={() => setAccountHovered(false)}
-                style={{ display: 'inline-block' }}
+              <Link 
+                to="/chat" 
+                style={linkStyle}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
-                <button style={dropdownButtonStyle}>
-                  My Account <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
-                </button>
-                
-                {accountHovered && (
-                  <div style={dropdownMenuStyle}>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fcfcfc' }}>
-                      <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1a2b30', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</p>
-                      <p style={{ margin: 0, fontSize: '11px', color: '#6B7C84', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
-                    </div>
-                    {[
-                      { label: 'Profile', path: '/profile' },
-                      { label: 'Chat', path: '/chat' },
-                      { label: 'Reminders', path: '/reminders' },
-                      { label: 'VIP Membership', path: '/vip' },
-                      { label: 'Payments', path: '/payments' },
-                    ].map((item) => (
-                      <Link 
-                        key={item.label}
-                        to={item.path}
-                        style={{
-                          display: 'block',
-                          padding: '10px 16px',
-                          fontSize: '14px',
-                          color: '#36565f',
-                          textDecoration: 'none',
-                          transition: 'background-color 0.2s'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                    <hr style={{ border: 'none', borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
-                    <button 
-                      onClick={handleLogout}
-                      style={{
-                        width: '100%',
-                        textAlign: 'left',
-                        background: 'none',
-                        border: 'none',
-                        padding: '10px 16px',
-                        fontSize: '14px',
-                        color: '#C62828',
-                        cursor: 'pointer',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      Sign Out
-                    </button>
-                  </div>
-                )}
-              </div>
+                Chat
+              </Link>
             </>
           ) : (
             <Link 
@@ -245,35 +207,18 @@ export default function Navbar() {
               Patient Portal
             </Link>
           )}
-          
-          <Link 
-            to="/about" 
-            style={linkStyle}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            About
-          </Link>
-          <Link 
-            to="/contact" 
-            style={linkStyle}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            Contact
-          </Link>
         </div>
 
         {/* Right Actions (Desktop) */}
         <div className="hidden md:flex items-center gap-4">
-          <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
+          <button style={{ background: 'none', border: 'none', color: elementColor, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/>
               <line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
           </button>
           
-          <button style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
+          <button style={{ background: 'none', border: 'none', color: elementColor, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
               <line x1="3" y1="6" x2="21" y2="6"/>
@@ -281,36 +226,108 @@ export default function Navbar() {
             </svg>
           </button>
 
-          <Link 
-            to={user ? "/book-appointment" : "/login"}
-            style={{
-              border: '1px solid rgba(255,255,255,0.4)',
-              background: 'rgba(255,255,255,0.12)',
-              color: '#ffffff',
-              padding: '10px 24px',
-              borderRadius: '50px',
-              fontWeight: 600,
-              fontSize: '14px',
-              textDecoration: 'none',
-              transition: 'all 0.3s ease',
-              cursor: 'pointer'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = '#ffffff';
-              e.currentTarget.style.color = '#253a5a';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)';
-              e.currentTarget.style.color = '#ffffff';
-            }}
-          >
-            Book Online
-          </Link>
+          {user ? (
+            <div 
+              className="relative ml-2 pb-3"
+              onMouseEnter={() => setAccountHovered(true)}
+              onMouseLeave={() => setAccountHovered(false)}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: '#E2F0F0',
+                  color: '#36565F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  border: `2px solid ${isBookAppointment ? '#36565F' : 'rgba(255,255,255,0.4)'}`
+                }}>
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <span style={{ color: elementColor, fontSize: '14px', fontWeight: 600 }}>
+                  {user.name ? user.name.split(' ')[0] : 'Profile'}
+                </span>
+              </div>
+              
+              {accountHovered && (
+                <div style={{...dropdownMenuStyle, right: 0, left: 'auto', transform: 'none', top: '100%', marginTop: '4px'}}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fcfcfc' }}>
+                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1a2b30', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</p>
+                    <p style={{ margin: 0, fontSize: '11px', color: '#6B7C84', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
+                  </div>
+                  {[
+                    { label: 'Profile', path: '/profile' },
+                    { label: 'Chat', path: '/chat' },
+                    { label: 'Reminders', path: '/reminders' },
+                    { label: 'VIP Membership', path: '/vip' },
+                    { label: 'Payments', path: '/payments' },
+                  ].map((item) => (
+                    <Link 
+                      key={item.label}
+                      to={item.path}
+                      style={{
+                        display: 'block',
+                        padding: '10px 16px',
+                        fontSize: '14px',
+                        color: '#36565f',
+                        textDecoration: 'none',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  <hr style={{ border: 'none', borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+                  <button 
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'none',
+                      border: 'none',
+                      padding: '10px 16px',
+                      fontSize: '14px',
+                      color: '#C62828',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link 
+              to="/login"
+              style={{
+                border: isBookAppointment ? '1px solid #36565F' : '1px solid rgba(255,255,255,0.4)',
+                background: isBookAppointment ? '#36565F' : 'rgba(255,255,255,0.12)',
+                color: '#ffffff',
+                padding: '8px 20px',
+                borderRadius: '50px',
+                fontWeight: 600,
+                fontSize: '14px',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Sign In
+            </Link>
+          )}
         </div>
 
         {/* Mobile Hamburger */}
         <button 
-          className="md:hidden text-white p-2"
+          className={`md:hidden p-2 ${isBookAppointment ? 'text-[#36565F]' : 'text-white'}`}
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,8 +397,10 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <Link to="/about" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>About</Link>
-              <Link to="/contact" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Contact</Link>
+              <div style={{ position: 'relative', display: 'inline-block' }}>
+                <Link to="/shop" onClick={e => e.preventDefault()} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Shop</Link>
+                <span style={{ position: 'absolute', top: '-2px', right: '-35px', background: '#E56B55', color: '#fff', fontSize: '8px', padding: '2px 4px', borderRadius: '4px', fontWeight: 'bold' }}>SOON</span>
+              </div>
               <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{
                 textAlign: 'center',
                 background: '#36565F',

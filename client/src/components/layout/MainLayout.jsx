@@ -17,6 +17,8 @@ export default function MainLayout() {
     return <Outlet />;
   }
 
+  const isFullBleed = isHome || isServices || location.pathname === '/book-appointment' || location.pathname.startsWith('/appointments');
+
   return (
     <div 
       className="min-h-screen flex flex-col hp-global-bg" 
@@ -24,7 +26,7 @@ export default function MainLayout() {
       <Navbar />
       
       {/* Content wrapper with no artificial restriction so pages can span 1680px */}
-      <main className={`flex-1 w-full flex flex-col ${(!isHome && !isServices) ? 'pt-[120px]' : ''}`}>
+      <main className={`flex-1 w-full flex flex-col ${!isFullBleed ? 'pt-[120px]' : ''}`}>
         <Outlet />
       </main>
       <Footer />

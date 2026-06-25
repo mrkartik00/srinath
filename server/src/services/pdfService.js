@@ -23,7 +23,7 @@ const generatePrescriptionPdf = async (prescription, doctorProfile) => {
     const specialization = doctorProfile?.specialization || '';
 
     // Header
-    doc.fontSize(20).font('Helvetica-Bold').text('SR+ Clinic Platform', { align: 'center' });
+    doc.fontSize(20).font('Helvetica-Bold').text('Janki Care Platform', { align: 'center' });
     doc.fontSize(10).font('Helvetica').fillColor('#666').text('Digital Prescription', { align: 'center' });
     doc.moveDown(0.5);
     doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke('#255946');
@@ -74,7 +74,7 @@ const generatePrescriptionPdf = async (prescription, doctorProfile) => {
     doc.fontSize(9).font('Helvetica').fillColor('#666');
     doc.text(`Dr. ${doctorName}`, 50, footerY + 10);
     if (license) doc.text(`Reg. No: ${license}`, 50, footerY + 22);
-    doc.text('SR+ Clinic Platform', 400, footerY + 10, { align: 'right' });
+    doc.text('Janki Care Platform', 400, footerY + 10, { align: 'right' });
     doc.text('Digitally Generated — No signature required', 400, footerY + 22, { align: 'right' });
     doc.fontSize(8).text(`Prescription ID: ${prescription._id}`, 50, footerY + 38);
 

@@ -36,7 +36,7 @@ export default function Subscription() {
       {/* Plan Details */}
       <div className="bg-white border border-[#E8E5DE] rounded-xl p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-gray-800">SR+ Plan</h2>
+          <h2 className="font-semibold text-gray-800">Janki Care Plan</h2>
           <span className="text-[#255946] font-bold text-lg">₹299/month</span>
         </div>
         <ul className="space-y-2">

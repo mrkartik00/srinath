@@ -15,12 +15,12 @@ const seed = async () => {
 
   // 1. Organization with pricing
   const org = await Organization.create({
-    name: 'SR+ Clinic Platform',
+    name: 'Janki Care Platform',
     ownerId: new mongoose.Types.ObjectId(),
     settings: {
       maxDoctors: 50,
       maxPatients: 500,
-      branding: { clinicName: 'SR+ Clinic', primaryColor: '#255946' },
+      branding: { clinicName: 'Janki Care', primaryColor: '#255946' },
       doctorRegistrationFee: { amount: 99900, currency: 'INR', interval: 'monthly' },
       patientSubscriptionFee: { amount: 29900, currency: 'INR', interval: 'monthly' },
     },
@@ -29,7 +29,7 @@ const seed = async () => {
 
   // 2. Super Admin
   const admin = await User.create({
-    name: 'Dr. Srinath (Super Admin)', email: 'admin@srplus.com', password: 'admin123',
+    name: 'Dr. Srinath (Super Admin)', email: 'admin@jankicare.com', password: 'admin123',
     role: ROLES.SUPER_ADMIN, organizationId: org._id, phone: '+919876543210',
     approvalStatus: 'not_applicable', registrationSource: 'admin_created',
   });
@@ -39,7 +39,7 @@ const seed = async () => {
 
   // 3. Doctors (approved, admin-created)
   const doc1 = await User.create({
-    name: 'Dr. Arun Sharma', email: 'arun@srplus.com', password: 'doctor123',
+    name: 'Dr. Arun Sharma', email: 'arun@jankicare.com', password: 'doctor123',
     role: ROLES.DOCTOR, organizationId: org._id, phone: '+919876543211',
     approvalStatus: 'approved', registrationSource: 'admin_created',
   });
@@ -54,7 +54,7 @@ const seed = async () => {
   });
 
   const doc2 = await User.create({
-    name: 'Dr. Priya Mehta', email: 'priya@srplus.com', password: 'doctor123',
+    name: 'Dr. Priya Mehta', email: 'priya@jankicare.com', password: 'doctor123',
     role: ROLES.DOCTOR, organizationId: org._id, phone: '+919876543212',
     approvalStatus: 'approved', registrationSource: 'admin_created',
   });
@@ -145,7 +145,7 @@ const seed = async () => {
   ]);
 
   await PlatformSettings.create([
-    { key: 'platform.name', value: 'SR+ Clinic Platform', category: 'general', description: 'Platform display name' },
+    { key: 'platform.name', value: 'Janki Care Platform', category: 'general', description: 'Platform display name' },
     { key: 'ai.enabled', value: true, category: 'ai', description: 'Enable AI chat feature' },
     { key: 'branding.primaryColor', value: '#255946', category: 'branding', description: 'Primary brand color' },
   ]);
@@ -159,9 +159,9 @@ const seed = async () => {
   console.log('│  Super Admin:  http://localhost:5175          │');
   console.log('├─────────────────────────────────────────────┤');
   console.log('│  Credentials                                 │');
-  console.log('│  Super Admin:  admin@srplus.com / admin123   │');
-  console.log('│  Doctor 1:     arun@srplus.com / doctor123   │');
-  console.log('│  Doctor 2:     priya@srplus.com / doctor123  │');
+  console.log('│  Super Admin:  admin@jankicare.com / admin123   │');
+  console.log('│  Doctor 1:     arun@jankicare.com / doctor123   │');
+  console.log('│  Doctor 2:     priya@jankicare.com / doctor123  │');
   console.log('│  Patient:      rahul@patient.com / patient123│');
   console.log('└─────────────────────────────────────────────┘');
   await disconnectDB();

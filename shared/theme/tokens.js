@@ -1,5 +1,5 @@
 /**
- * SR+ Design Tokens — Single Source of Truth
+ * Janki Care Design Tokens — Single Source of Truth
  * Premium Medical UI Theme
  *
  * Consumed by:

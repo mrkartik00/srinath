@@ -33,8 +33,16 @@ router.get('/appointments', ...guard, c.getAppointments);
 // Prescriptions (platform-wide)
 router.get('/prescriptions', ...guard, c.getPrescriptions);
 
-// Analytics
-router.get('/analytics', ...guard, c.getAnalytics);
+// Analytics (comprehensive)
+const analytics = require('../controllers/analyticsController');
+router.get('/analytics/overview', ...guard, analytics.overview);
+router.get('/analytics/growth', ...guard, analytics.growth);
+router.get('/analytics/appointments', ...guard, analytics.appointments);
+router.get('/analytics/prescriptions', ...guard, analytics.prescriptions);
+router.get('/analytics/chat', ...guard, analytics.chat);
+router.get('/analytics/revenue', ...guard, analytics.revenue);
+router.get('/analytics/doctors', ...guard, analytics.doctorPerformance);
+router.get('/analytics/system', ...guard, analytics.systemHealth);
 
 // Plans
 router.get('/plans', ...guard, c.getPlans);

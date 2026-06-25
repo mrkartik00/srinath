@@ -1,8 +1,9 @@
 const Appointment = require('../models/Appointment');
 const Patient = require('../models/Patient');
 const paginate = require('../utils/pagination');
+const auditService = require('./auditService');
 const { NotFoundError, ConflictError, ValidationError } = require('../utils/apiError');
-const { APPOINTMENT_STATUS } = require('../config/constants');
+const { APPOINTMENT_STATUS, AUDIT_ACTIONS } = require('../config/constants');
 const eventBus = require('../events/eventBus');
 
 const checkConflict = async (doctorId, dateTime, duration, excludeId = null) => {
@@ -60,6 +61,7 @@ const create = async (patientUserId, data, scope) => {
   });
 
   eventBus.emit('appointment.created', { appointmentId: appointment._id, patientId: patient._id, doctorId, dateTime: data.dateTime });
+  auditService.log({ actorId: patientUserId, actorRole: 'patient', action: AUDIT_ACTIONS.APPOINTMENT_CREATED, targetType: 'Appointment', targetId: appointment._id, changes: { doctorId, dateTime: data.dateTime, type: data.type } });
   return Appointment.findById(appointment._id).populate('patientId').populate('doctorId', 'name email');
 };
 
@@ -129,6 +131,7 @@ const cancel = async (appointmentId, cancellationReason, scope = {}) => {
   await appointment.save();
 
   eventBus.emit('appointment.cancelled', { appointmentId: appointment._id, patientId: appointment.patientId, doctorId: appointment.doctorId, cancellationReason });
+  auditService.log({ actorId: scope.doctorId || scope.patientUserId, actorRole: scope.doctorId ? 'doctor' : 'patient', action: AUDIT_ACTIONS.APPOINTMENT_CANCELLED, targetType: 'Appointment', targetId: appointment._id, changes: { cancellationReason } });
   return appointment;
 };
 
@@ -143,6 +146,7 @@ const complete = async (appointmentId, scope = {}) => {
   await appointment.save();
 
   eventBus.emit('appointment.completed', { appointmentId: appointment._id, patientId: appointment.patientId, doctorId: appointment.doctorId });
+  auditService.log({ actorId: scope.doctorId, actorRole: 'doctor', action: 'appointment.completed', targetType: 'Appointment', targetId: appointment._id });
   return appointment;
 };
 

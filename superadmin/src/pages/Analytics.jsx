@@ -1,67 +1,350 @@
 import { useState, useEffect } from 'react';
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import api from '../api';
 
+const COLORS = ['#6366f1', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+const RANGES = [{ label: '7 days', value: '7d' }, { label: '30 days', value: '30d' }, { label: '90 days', value: '90d' }];
+
+function Card({ title, children, className = '' }) {
+  return (
+    <div className={`bg-[#1e293b] rounded-xl border border-white/10 p-5 ${className}`}>
+      <h3 className="text-sm font-semibold text-white mb-4">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function KPI({ label, value, suffix = '', sub }) {
+  return (
+    <div className="text-center">
+      <p className="text-2xl font-bold text-white">{value ?? '—'}{suffix}</p>
+      <p className="text-xs text-white/50 mt-1">{label}</p>
+      {sub && <p className="text-[10px] text-white/30 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+function RangeSelector({ range, setRange }) {
+  return (
+    <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+      {RANGES.map(r => (
+        <button key={r.value} onClick={() => setRange(r.value)} className={`px-3 py-1 text-xs rounded-md transition-all ${range === r.value ? 'bg-[#6366f1] text-white' : 'text-white/50 hover:text-white'}`}>{r.label}</button>
+      ))}
+    </div>
+  );
+}
+
 export default function Analytics() {
-  const [data, setData] = useState(null);
+  const [range, setRange] = useState('30d');
+  const [tab, setTab] = useState('overview');
+  const [data, setData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => { api.get('/api/v1/superadmin/analytics').then((r) => setData(r.data)).catch(() => {}).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    setLoading(true);
+    const endpoints = {
+      overview: '/api/v1/superadmin/analytics/overview',
+      growth: `/api/v1/superadmin/analytics/growth?range=${range}`,
+      appointments: `/api/v1/superadmin/analytics/appointments?range=${range}`,
+      prescriptions: `/api/v1/superadmin/analytics/prescriptions?range=${range}`,
+      chat: `/api/v1/superadmin/analytics/chat?range=${range}`,
+      doctors: `/api/v1/superadmin/analytics/doctors?range=${range}`,
+      system: '/api/v1/superadmin/analytics/system',
+    };
+    Promise.all(Object.entries(endpoints).map(([k, url]) => api.get(url).then(r => [k, r.data]).catch(() => [k, null])))
+      .then(results => { setData(Object.fromEntries(results)); setLoading(false); });
+  }, [range]);
 
-  if (loading) return <div className="text-white/50 text-center py-20">Loading...</div>;
-  const { patientGrowth = [], appointmentsByStatus = [], doctorPerformance = [] } = data || {};
+  if (loading) return <div className="text-white/50 text-center py-20">Loading analytics...</div>;
+
+  const tabs = [
+    { id: 'overview', label: '📊 Overview' },
+    { id: 'growth', label: '📈 Growth' },
+    { id: 'appointments', label: '📅 Appointments' },
+    { id: 'prescriptions', label: '💊 Prescriptions' },
+    { id: 'chat', label: '💬 Chat' },
+    { id: 'doctors', label: '👨‍⚕️ Doctors' },
+    { id: 'system', label: '⚙️ System' },
+  ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-bold text-white">Analytics</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-xl font-bold text-white">Analytics</h1>
+        <RangeSelector range={range} setRange={setRange} />
+      </div>
+      <div className="flex gap-1 overflow-x-auto pb-2">
+        {tabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} className={`px-3 py-2 text-xs rounded-lg whitespace-nowrap transition-all ${tab === t.id ? 'bg-[#6366f1] text-white' : 'bg-white/5 text-white/50 hover:text-white'}`}>{t.label}</button>
+        ))}
+      </div>
 
+      {tab === 'overview' && <OverviewTab data={data.overview} />}
+      {tab === 'growth' && <GrowthTab data={data.growth} />}
+      {tab === 'appointments' && <AppointmentsTab data={data.appointments} />}
+      {tab === 'prescriptions' && <PrescriptionsTab data={data.prescriptions} />}
+      {tab === 'chat' && <ChatTab data={data.chat} />}
+      {tab === 'doctors' && <DoctorsTab data={data.doctors} />}
+      {tab === 'system' && <SystemTab data={data.system} />}
+    </div>
+  );
+}
+
+function OverviewTab({ data: d }) {
+  if (!d) return <Empty />;
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <StatCard label="Total Doctors" value={d.totalDoctors} icon="👨‍⚕️" />
+      <StatCard label="Active Doctors" value={d.activeDoctors} icon="✅" />
+      <StatCard label="Pending Approvals" value={d.pendingApprovals} icon="⏳" accent={d.pendingApprovals > 0} />
+      <StatCard label="Total Patients" value={d.totalPatients} icon="🏥" />
+      <StatCard label="Total Appointments" value={d.totalAppointments} icon="📅" />
+      <StatCard label="Today's Appointments" value={d.todayAppointments} icon="📋" />
+      <StatCard label="Total Prescriptions" value={d.totalPrescriptions} icon="📝" />
+      <StatCard label="Active Prescriptions" value={d.activePrescriptions} icon="💊" />
+      <StatCard label="Today's Messages" value={d.todayMessages} icon="💬" />
+      <StatCard label="Active Conversations" value={d.activeConversations} icon="🗨️" />
+      <StatCard label="Reminders Today" value={d.todayReminders} icon="🔔" />
+      <StatCard label="Reminders Sent" value={d.remindersSent} icon="✓" />
+    </div>
+  );
+}
+
+function GrowthTab({ data: d }) {
+  if (!d) return <Empty />;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="New Doctors" value={d.doctorsGrowth?.reduce((s, x) => s + x.count, 0)} change={d.doctorsChange} />
+        <KPICard label="New Patients" value={d.patientsGrowth?.reduce((s, x) => s + x.count, 0)} change={d.patientsChange} />
+        <KPICard label="Approval Rate" value={d.approvalStats?.approved && d.approvalStats?.rejected ? Math.round(d.approvalStats.approved / (d.approvalStats.approved + d.approvalStats.rejected) * 100) : 100} suffix="%" />
+        <KPICard label="Avg Approval Time" value={d.avgApprovalTimeHours ?? '—'} suffix="h" />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Patient Growth */}
-        <div className="bg-[#1e293b] rounded-xl border border-white/10 p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Patient Growth (30 days)</h3>
-          {patientGrowth.length === 0 ? <p className="text-sm text-white/40">No data yet</p> : (
-            <div className="space-y-1">
-              {patientGrowth.map((d) => (
-                <div key={d._id} className="flex items-center gap-3">
-                  <span className="text-xs text-white/40 w-20">{d._id}</span>
-                  <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#6366f1] rounded-full" style={{ width: `${Math.min(100, d.count * 20)}%` }} />
-                  </div>
-                  <span className="text-xs text-white w-6 text-right">{d.count}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Appointment Status Breakdown */}
-        <div className="bg-[#1e293b] rounded-xl border border-white/10 p-5">
-          <h3 className="text-sm font-semibold text-white mb-4">Appointments by Status</h3>
-          <div className="space-y-3">
-            {appointmentsByStatus.map((s) => (
-              <div key={s._id} className="flex items-center justify-between">
-                <span className="text-sm text-white/60 capitalize">{s._id?.replace('_', ' ')}</span>
-                <span className="text-sm font-bold text-white">{s.count}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Doctor Performance */}
-        <div className="bg-[#1e293b] rounded-xl border border-white/10 p-5 lg:col-span-2">
-          <h3 className="text-sm font-semibold text-white mb-4">Top Doctors (by completed appointments)</h3>
-          {doctorPerformance.length === 0 ? <p className="text-sm text-white/40">No data yet</p> : (
-            <div className="space-y-2">
-              {doctorPerformance.map((d, i) => (
-                <div key={d._id} className="flex items-center gap-3">
-                  <span className="text-xs text-white/40 w-6">#{i + 1}</span>
-                  <span className="text-sm text-white flex-1">{d.name}</span>
-                  <span className="text-sm font-bold text-[#6366f1]">{d.completed}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <Card title="Patient Growth">
+          <ChartLine data={d.patientsGrowth} dataKey="count" color="#06b6d4" />
+        </Card>
+        <Card title="Doctor Growth">
+          <ChartLine data={d.doctorsGrowth} dataKey="count" color="#6366f1" />
+        </Card>
       </div>
     </div>
   );
+}
+
+function AppointmentsTab({ data: d }) {
+  if (!d) return <Empty />;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="Completion Rate" value={d.completionRate} suffix="%" />
+        <KPICard label="Cancellation Rate" value={d.cancellationRate} suffix="%" />
+        <KPICard label="No-Show Rate" value={d.noShowRate} suffix="%" />
+        <KPICard label="Avg Wait (days)" value={d.avgWaitDays} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card title="Daily Appointments">
+          <ChartLine data={d.trend} dataKey="count" color="#10b981" />
+        </Card>
+        <Card title="Status Breakdown">
+          <ChartPie data={d.statusBreakdown?.map(s => ({ name: s._id?.replace('_', ' '), value: s.count }))} />
+        </Card>
+        <Card title="Type Breakdown">
+          <ChartPie data={d.typeBreakdown?.map(s => ({ name: s._id?.replace('_', ' ') || 'unknown', value: s.count }))} />
+        </Card>
+        <Card title="Top Cancellation Reasons">
+          {d.cancellationReasons?.length ? (
+            <div className="space-y-2">{d.cancellationReasons.map((r, i) => (
+              <div key={i} className="flex justify-between text-sm"><span className="text-white/60">{r._id || 'No reason'}</span><span className="text-white font-bold">{r.count}</span></div>
+            ))}</div>
+          ) : <p className="text-sm text-white/40">No cancellations</p>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function PrescriptionsTab({ data: d }) {
+  if (!d) return <Empty />;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="Adherence Rate" value={d.adherenceRate} suffix="%" />
+        <KPICard label="Missed Rate" value={d.missedRate} suffix="%" />
+        <KPICard label="Avg Medicines/Rx" value={d.avgMedicinesPerPrescription} />
+        <KPICard label="Total Reminders" value={d.reminderStats?.total} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card title="Prescriptions Issued">
+          <ChartLine data={d.trend} dataKey="count" color="#8b5cf6" />
+        </Card>
+        <Card title="Adherence Trend">
+          <ChartLine data={d.adherenceTrend?.map(x => ({ _id: x._id, count: Math.round(x.avg) }))} dataKey="count" color="#10b981" />
+        </Card>
+        <Card title="Top Prescribed Medicines">
+          <div className="space-y-1.5 max-h-60 overflow-y-auto">{d.topMedicines?.map((m, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs text-white/40 w-5">#{i + 1}</span>
+              <span className="text-sm text-white flex-1 truncate">{m._id}</span>
+              <span className="text-xs font-bold text-[#6366f1]">{m.count}</span>
+            </div>
+          ))}</div>
+        </Card>
+        <Card title="Reminder Status">
+          <ChartPie data={Object.entries(d.reminderStats || {}).filter(([k]) => k !== 'total').map(([k, v]) => ({ name: k, value: v }))} />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function ChatTab({ data: d }) {
+  if (!d) return <Empty />;
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="Total Conversations" value={d.totalConversations} />
+        <KPICard label="Resolution Rate" value={d.resolutionRate} suffix="%" />
+        <KPICard label="Avg Response" value={d.avgResponseTimeMinutes ?? '—'} suffix=" min" />
+        <KPICard label="Active Now" value={d.topActiveConversations?.length || 0} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card title="Messages Per Day">
+          <ChartLine data={d.messageTrend} dataKey="count" color="#ec4899" />
+        </Card>
+        <Card title="Conversation Status">
+          <ChartPie data={d.conversationStatus?.map(s => ({ name: s._id, value: s.count }))} />
+        </Card>
+        <Card title="Active Conversations" className="lg:col-span-2">
+          {d.topActiveConversations?.length ? (
+            <div className="space-y-2">{d.topActiveConversations.map((c, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm">
+                <span className="text-white">{c.patientName}</span>
+                <span className="text-white/30">↔</span>
+                <span className="text-white">{c.doctorName}</span>
+                <span className="ml-auto text-xs text-white/40">{c.unreadByDoctor > 0 ? `${c.unreadByDoctor} unread` : c.status}</span>
+              </div>
+            ))}</div>
+          ) : <p className="text-sm text-white/40">No active conversations</p>}
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function DoctorsTab({ data: doctors }) {
+  if (!doctors?.length) return <Empty msg="No doctor data" />;
+  return (
+    <Card title="Doctor Performance Ranking" className="">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-white/40 text-xs border-b border-white/10">
+            <th className="pb-2">#</th><th className="pb-2">Name</th><th className="pb-2">Specialization</th><th className="pb-2 text-right">Patients</th><th className="pb-2 text-right">Appointments</th><th className="pb-2 text-right">Prescriptions</th>
+          </tr></thead>
+          <tbody>{doctors.map((d, i) => (
+            <tr key={d._id} className="border-b border-white/5 text-white/80">
+              <td className="py-2 text-white/40">{i + 1}</td>
+              <td className="py-2 font-medium text-white">{d.name}</td>
+              <td className="py-2 text-white/50">{d.specialization || '—'}</td>
+              <td className="py-2 text-right">{d.patients}</td>
+              <td className="py-2 text-right text-[#10b981]">{d.completedAppointments}</td>
+              <td className="py-2 text-right text-[#6366f1]">{d.prescriptions}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function SystemTab({ data: d }) {
+  if (!d) return <Empty />;
+  const mem = d.memoryUsage || {};
+  const mb = (b) => `${Math.round((b || 0) / 1048576)} MB`;
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card title="Database">
+        <div className="space-y-2 text-sm">
+          <Row label="Collections" value={d.database?.collections} />
+          <Row label="Data Size" value={mb(d.database?.dataSize)} />
+          <Row label="Storage Size" value={mb(d.database?.storageSize)} />
+          <Row label="Indexes" value={d.database?.indexes} />
+        </div>
+      </Card>
+      <Card title="Process">
+        <div className="space-y-2 text-sm">
+          <Row label="Uptime" value={`${Math.round((d.uptime || 0) / 60)} min`} />
+          <Row label="Heap Used" value={mb(mem.heapUsed)} />
+          <Row label="Heap Total" value={mb(mem.heapTotal)} />
+          <Row label="RSS" value={mb(mem.rss)} />
+        </div>
+      </Card>
+      <Card title="Queues" className="lg:col-span-2">
+        {Object.keys(d.queues || {}).length ? (
+          <div className="grid grid-cols-2 gap-4">{Object.entries(d.queues).map(([name, q]) => (
+            <div key={name} className="text-sm">
+              <p className="text-white font-medium capitalize mb-1">{name}</p>
+              <div className="space-y-1 text-white/60">
+                {q.waiting != null && <Row label="Waiting" value={q.waiting} />}
+                {q.delayed != null && <Row label="Delayed" value={q.delayed} />}
+                {q.failed != null && <Row label="Failed" value={q.failed} accent={q.failed > 0} />}
+              </div>
+            </div>
+          ))}</div>
+        ) : <p className="text-sm text-white/40">No queue data (Redis may be disconnected)</p>}
+      </Card>
+    </div>
+  );
+}
+
+// ─── Shared UI components ────────────────────────────────────────────────────
+function StatCard({ label, value, icon, accent }) {
+  return (
+    <div className={`bg-[#1e293b] rounded-xl border p-4 ${accent ? 'border-[#f59e0b]/40' : 'border-white/10'}`}>
+      <div className="flex items-center justify-between mb-2"><span className="text-lg">{icon}</span></div>
+      <p className="text-xl font-bold text-white">{value ?? 0}</p>
+      <p className="text-[11px] text-white/50 mt-1">{label}</p>
+    </div>
+  );
+}
+
+function KPICard({ label, value, suffix = '', change }) {
+  return (
+    <div className="bg-[#1e293b] rounded-xl border border-white/10 p-4 text-center">
+      <p className="text-2xl font-bold text-white">{value ?? '—'}{suffix}</p>
+      <p className="text-xs text-white/50 mt-1">{label}</p>
+      {change != null && <p className={`text-[10px] mt-1 ${change >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>{change >= 0 ? '↑' : '↓'} {Math.abs(change)}% vs prev period</p>}
+    </div>
+  );
+}
+
+function ChartLine({ data, dataKey, color }) {
+  if (!data?.length) return <p className="text-sm text-white/40 text-center py-6">No data</p>;
+  return (
+    <ResponsiveContainer width="100%" height={180}>
+      <AreaChart data={data}><defs><linearGradient id={`g-${color}`} x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={color} stopOpacity={0.3} /><stop offset="95%" stopColor={color} stopOpacity={0} /></linearGradient></defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#334155" /><XAxis dataKey="_id" tick={{ fill: '#64748b', fontSize: 10 }} tickFormatter={v => v?.slice(5)} /><YAxis tick={{ fill: '#64748b', fontSize: 10 }} /><Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }} />
+        <Area type="monotone" dataKey={dataKey} stroke={color} fill={`url(#g-${color})`} strokeWidth={2} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function ChartPie({ data }) {
+  if (!data?.length) return <p className="text-sm text-white/40 text-center py-6">No data</p>;
+  return (
+    <ResponsiveContainer width="100%" height={180}>
+      <PieChart><Pie data={data} cx="50%" cy="50%" outerRadius={65} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+        {data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+      </Pie><Tooltip contentStyle={{ background: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 }} /></PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function Row({ label, value, accent }) {
+  return <div className="flex justify-between"><span className="text-white/50">{label}</span><span className={accent ? 'text-[#ef4444] font-bold' : 'text-white'}>{value}</span></div>;
+}
+
+function Empty({ msg = 'No data available' }) {
+  return <p className="text-center text-white/40 py-12">{msg}</p>;
 }

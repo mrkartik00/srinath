@@ -61,7 +61,7 @@ const selfRegister = async (data) => {
 };
 
 const getAll = async (orgId, query = {}) => {
-  const filter = { organizationId: orgId, role: ROLES.DOCTOR, approvalStatus: 'approved' };
+  const filter = { organizationId: orgId, role: ROLES.DOCTOR, approvalStatus: { $in: ['approved', 'not_applicable'] } };
   return paginate(User, filter, { page: query.page, limit: query.limit });
 };
 

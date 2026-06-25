@@ -62,7 +62,6 @@ export default function Appointments() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-serif font-semibold text-[#1e293b]">Appointments</h1>
           <p className="text-sm text-[#64748b] mt-0.5">Manage and track all patient appointments</p>
         </div>
         <div className="flex items-center gap-2">

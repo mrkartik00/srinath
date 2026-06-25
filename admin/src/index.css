@@ -1,8 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
 
   font: 16px/1.5 var(--font-sans);
   color-scheme: light;
@@ -14,6 +13,7 @@
 
 body {
   margin: 0;
+  font-family: var(--font-sans);
 }
 
 #root {
@@ -21,7 +21,7 @@ body {
 }
 
 h1, h2, h3 {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-weight: 600;
   color: #1e293b;
 }

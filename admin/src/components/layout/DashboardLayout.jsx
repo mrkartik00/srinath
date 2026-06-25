@@ -1,95 +1,139 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+
+const Icons = {
+  Dashboard: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
+  Patient: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>,
+  Appt: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
+  Doc: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+  Chat: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>,
+  Bell: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>,
+  Search: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>,
+  Settings: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
+  Grid: <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>,
+  Vault: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>,
+  Clock: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+  Card: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+};
 
 const navConfig = [
   {
-    label: 'Core',
+    label: '',
     items: [
-      { to: '/', label: 'Dashboard', icon: '📊', implemented: true },
-      { to: '/patients', label: 'My Patients', icon: '🏥', implemented: true },
-      { to: '/appointments', label: 'Appointments', icon: '📅', implemented: true },
-      { to: '/prescriptions', label: 'Prescriptions', icon: '📝', implemented: true },
+      { to: '/', label: 'Dashboard', icon: Icons.Dashboard, implemented: true },
+      { to: '/patients', label: 'All Patient', icon: Icons.Patient, implemented: true },
+      { to: '/prescriptions', label: 'Prescriptions', icon: Icons.Doc, implemented: true },
+      { to: '/appointments', label: 'All Appointment', icon: Icons.Appt, implemented: true },
+      { to: '/chat', label: 'Messages', icon: Icons.Chat, implemented: true },
+      { to: '/reminders', label: 'Reminders', icon: Icons.Bell, implemented: false },
+      { to: '/medical-vault', label: 'Medical Vault', icon: Icons.Vault, implemented: false },
+      { to: '/availability', label: 'Availability', icon: Icons.Clock, implemented: false },
+      { to: '/subscription', label: 'Subscription', icon: Icons.Card, implemented: false },
+      { to: '/profile', label: 'My Profile', icon: Icons.Settings, implemented: false },
     ],
-  },
-  {
-    label: 'Clinical',
-    items: [
-      { to: '/reminders', label: 'Reminders', icon: '🔔', implemented: false },
-      { to: '/chat', label: 'Patient Chat', icon: '💬', implemented: true },
-      { to: '/medical-vault', label: 'Medical Vault', icon: '🗄️', implemented: false },
-    ],
-  },
-  {
-    label: 'Account',
-    items: [
-      { to: '/profile', label: 'My Profile', icon: '👤', implemented: false },
-      { to: '/availability', label: 'Availability', icon: '🕐', implemented: false },
-      { to: '/subscription', label: 'Subscription', icon: '💎', implemented: false },
-    ],
-  },
+  }
 ];
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => { logout(); navigate('/login'); };
   const cleanName = (user?.name || 'Doctor').replace(/^Dr\.?\s*/i, '');
   const initials = cleanName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  let currentTitle = 'Dashboard';
+  let currentIcon = Icons.Grid;
+  
+  const allItems = navConfig.flatMap(g => g.items);
+  const activeItem = allItems.find(item => 
+    item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
+  );
+
+  if (activeItem) {
+    currentTitle = activeItem.label;
+    currentIcon = activeItem.icon;
+  }
+
   return (
-    <div className="h-screen flex overflow-hidden bg-[#F8F6F0]">
-      <aside className={`bg-gradient-to-b from-[#255946] via-[#1e4d3d] to-[#163a2e] text-white flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-56' : 'w-[72px]'}`}>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-white/10">
-          {sidebarOpen && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center text-sm font-bold">S+</div>
-              <span className="text-base font-serif font-bold tracking-tight">Doctor Panel</span>
+    <div className="h-screen flex overflow-hidden bg-[#f4f5f9] font-sans" style={{ fontFamily: '"Figtree", sans-serif' }}>
+      <aside className={`bg-[#273d71] text-white flex flex-col transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-[72px]'}`}>
+        
+        {/* Header Logo */}
+        <div className="h-16 flex items-center px-4 mt-2">
+          {sidebarOpen ? (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-[#eb8c68] flex items-center justify-center text-white font-bold text-sm leading-none">S+</div>
+              <span className="text-xl font-bold tracking-tight">Surgirize</span>
             </div>
+          ) : (
+            <div className="w-8 h-8 mx-auto rounded-md bg-[#eb8c68] flex items-center justify-center text-white font-bold text-sm leading-none">S+</div>
           )}
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors text-sm">
-            {sidebarOpen ? '‹' : '›'}
-          </button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
-          {navConfig.map((group) => (
-            <div key={group.label}>
-              {sidebarOpen && <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-white/30 font-medium">{group.label}</p>}
-              <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${!sidebarOpen ? 'justify-center' : ''} ${isActive ? 'bg-white/15 text-white font-medium' : 'text-white/50 hover:text-white hover:bg-white/8'}`}>
-                    <span className="text-base flex-shrink-0">{item.icon}</span>
-                    {sidebarOpen && <span className="flex-1 truncate">{item.label}</span>}
-                    {sidebarOpen && !item.implemented && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400/60" />}
-                  </NavLink>
-                ))}
+
+        {/* Profile Card */}
+        {sidebarOpen && (
+          <div className="px-4 mt-4 mb-6">
+            <div className="bg-white rounded-xl p-4 flex flex-col items-center text-center shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#273d71] to-[#1e2f58] border-2 border-[#273d71]/20 flex items-center justify-center text-white font-bold text-sm mb-2">
+                {initials}
               </div>
+              <h3 className="text-[#273d71] font-bold text-sm">Dr. {cleanName}</h3>
+              <p className="text-[#64748b] text-xs mt-0.5">Dermatologist</p>
+            </div>
+          </div>
+        )}
+
+        <nav className="flex-1 overflow-y-auto py-2 px-4 space-y-1">
+          {navConfig.map((group, idx) => (
+            <div key={idx} className="space-y-1">
+              {group.items.map((item) => (
+                <NavLink 
+                  key={item.to} 
+                  to={item.to} 
+                  end={item.to === '/'} 
+                  className={({ isActive }) => `flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-all duration-200 ${isActive ? 'bg-white/10 text-white font-medium' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
+                >
+                  <div className={`flex items-center gap-3 ${!sidebarOpen ? 'justify-center w-full' : ''}`}>
+                    <span className="flex-shrink-0 opacity-90">{item.icon}</span>
+                    {sidebarOpen && <span className="truncate">{item.label}</span>}
+                  </div>
+                  {sidebarOpen && (
+                    <div className="flex items-center">
+                      {!item.implemented && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 mr-2" />}
+                      <span className="text-white/40 text-xs">▶</span>
+                    </div>
+                  )}
+                </NavLink>
+              ))}
             </div>
           ))}
         </nav>
-        <div className="px-3 pb-4 mt-auto border-t border-white/10 pt-3">
-          <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/8 ${!sidebarOpen ? 'justify-center' : ''}`}>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-white/20 to-white/5 border border-white/20 flex items-center justify-center text-[10px] font-semibold flex-shrink-0">{initials}</div>
-            {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">Dr. {cleanName.split(' ')[0]}</p>
-                <p className="text-[10px] text-white/40 truncate">{user?.email}</p>
-              </div>
-            )}
-          </div>
-        </div>
       </aside>
+      
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-[#E8E5DE]/60 flex items-center justify-between px-8 shadow-[0_1px_3px_rgba(37,89,70,0.03)]">
-          <p className="text-xs text-[#64748b] uppercase tracking-wider font-medium">Doctor Portal</p>
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium text-[#1e293b]">Dr. {cleanName.split(' ')[0]}</span>
-            <button onClick={handleLogout} className="text-xs text-[#C62828] hover:text-[#B71C1C] font-medium px-3 py-1.5 rounded-lg hover:bg-[#FEF2F2] transition-colors">Logout</button>
+        {/* Top Header */}
+        <header className="h-16 bg-[#f4f5f9] flex items-center justify-between px-8">
+          <div className="flex items-center gap-3 text-[#1e293b]">
+            <span className="text-[#273d71]">{currentIcon}</span>
+            <h1 className="text-xl font-bold" style={{ fontFamily: '"Figtree", sans-serif' }}>{currentTitle}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleLogout} 
+              className="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center gap-2 text-[#b91c1c] font-medium text-sm hover:bg-[#b91c1c] hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+              Logout
+            </button>
           </div>
         </header>
-        <main className="flex-1 p-8 overflow-y-auto"><Outlet /></main>
+        <main className="flex-1 p-8 pt-4 overflow-y-scroll"><Outlet /></main>
       </div>
     </div>
   );

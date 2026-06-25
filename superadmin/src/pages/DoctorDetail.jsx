@@ -16,48 +16,48 @@ export default function DoctorDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div className="text-white/50 text-center py-20">Loading...</div>;
+  if (loading) return <div className="text-[#64748b] text-center py-20">Loading...</div>;
   if (!data) return null;
 
   const { user, profile, stats } = data;
 
   return (
     <div className="space-y-6">
-      <button onClick={() => navigate('/doctors')} className="text-sm text-white/40 hover:text-white">← Back</button>
+      <button onClick={() => navigate('/doctors')} className="text-sm text-[#64748b] hover:text-[#1e293b] font-medium transition">← Back to Doctors</button>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">{user?.name}</h1>
-          <p className="text-sm text-white/40">{user?.email} • {profile?.specialization || 'No specialization'}</p>
+          <h1 className="text-xl font-bold text-[#1e293b]">{user?.name}</h1>
+          <p className="text-sm text-[#64748b]">{user?.email} • {profile?.specialization || 'No specialization'}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs ${user?.isActive ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{user?.isActive ? 'Active' : 'Inactive'}</span>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${user?.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{user?.isActive ? 'Active' : 'Inactive'}</span>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         {[{ label: 'Patients', value: stats?.patientCount }, { label: 'Appointments', value: stats?.appointmentCount }, { label: 'Prescriptions', value: stats?.prescriptionCount }].map((s) => (
-          <div key={s.label} className="bg-[#1e293b] rounded-xl p-4 border border-white/10">
-            <p className="text-2xl font-bold text-white">{s.value ?? 0}</p>
-            <p className="text-xs text-white/40">{s.label}</p>
+          <div key={s.label} className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+            <p className="text-2xl font-bold text-[#1e293b]">{s.value ?? 0}</p>
+            <p className="text-xs text-[#64748b] mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-[#1e293b] rounded-xl border border-white/10 p-5">
-        <h3 className="text-sm font-semibold text-white mb-3">Profile</h3>
-        <div className="grid grid-cols-2 gap-3 text-sm">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-[#1e293b] mb-4">Profile Details</h3>
+        <div className="grid grid-cols-2 gap-4 text-sm border-t border-gray-100 pt-4">
           {[['Qualification', profile?.qualification], ['License', profile?.licenseNumber], ['Experience', profile?.experience ? `${profile.experience} yrs` : '—'], ['Fee', profile?.consultationFee ? `₹${profile.consultationFee}` : '—'], ['Phone', user?.phone], ['Joined', user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—']].map(([k, v]) => (
-            <div key={k} className="flex justify-between"><span className="text-white/40">{k}</span><span className="text-white">{v || '—'}</span></div>
+            <div key={k} className="flex justify-between py-1"><span className="text-[#64748b]">{k}</span><span className="text-[#1e293b] font-medium">{v || '—'}</span></div>
           ))}
         </div>
       </div>
 
-      <div className="bg-[#1e293b] rounded-xl border border-white/10 p-5">
-        <h3 className="text-sm font-semibold text-white mb-3">Recent Activity</h3>
-        {activity.length === 0 ? <p className="text-sm text-white/40">No activity recorded</p> : (
-          <div className="space-y-2 max-h-60 overflow-y-auto">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-[#1e293b] mb-4">Recent Activity</h3>
+        {activity.length === 0 ? <p className="text-sm text-[#64748b] py-4 border-t border-gray-100">No activity recorded</p> : (
+          <div className="space-y-3 max-h-60 overflow-y-auto border-t border-gray-100 pt-4">
             {activity.map((a) => (
               <div key={a._id} className="flex justify-between text-xs">
-                <span className="text-white/60">{a.action}</span>
-                <span className="text-white/30">{new Date(a.timestamp).toLocaleString()}</span>
+                <span className="text-[#1e293b] font-medium">{a.action}</span>
+                <span className="text-[#94a3b8]">{new Date(a.timestamp).toLocaleString()}</span>
               </div>
             ))}
           </div>

@@ -28,26 +28,22 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-[#255946] via-[#1e4d3d] to-[#0f2a20] relative overflow-hidden">
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">S+</div>
-            <span className="text-xl font-serif font-bold">SurgiRise</span>
-          </div>
-          <div>
-            <h2 className="text-4xl font-serif font-semibold leading-tight mb-4">Join Our Platform</h2>
-            <p className="text-white/60 text-base max-w-sm">Register as a doctor to manage patients, prescriptions, and grow your practice digitally.</p>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-white/40">
-            <span>🔒 Secure</span><span>•</span><span>⚡ Fast Approval</span><span>•</span><span>🏥 Clinical</span>
+      <div className="hidden lg:flex lg:w-1/2 bg-[#273d71] relative justify-center items-center">
+        <div className="relative z-10 flex flex-col items-center justify-center p-12 text-white max-w-lg w-full">
+          <img src="/doctors.png" alt="Doctors" className="w-full max-w-md object-contain mb-8" />
+          <div className="w-full max-w-md mx-auto">
+            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: '"Figtree", sans-serif' }}>Welcome Doctor</h2>
+            <p className="text-white/80 text-base leading-relaxed">
+              Register as a doctor to manage patients, prescriptions, and grow your practice digitally in one place.
+            </p>
           </div>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center bg-[#F8F6F0] px-6 py-10 overflow-y-auto">
+      <div className="flex-1 flex items-center justify-center bg-white px-6 py-10 overflow-y-auto">
         <div className="w-full max-w-lg">
           <div className="mb-6">
-            <h1 className="text-2xl font-serif font-semibold text-[#1e293b]">Doctor Registration</h1>
-            <p className="text-sm text-[#64748b] mt-1">Fill your details to register. Admin will review and approve.</p>
+            <h1 className="text-4xl font-bold text-[#1e293b] mb-2">Register</h1>
+            <p className="text-sm text-[#64748b] mt-2">Fill your details to register. Admin will review and approve.</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -65,10 +61,14 @@ export default function Register() {
             <Input label="Clinic Address" value={form.clinicAddress} onChange={set('clinicAddress')} placeholder="123 Main St, City" />
             <div>
               <label className="block text-sm font-medium text-[#1e293b] mb-1.5">About Me</label>
-              <textarea value={form.aboutMe} onChange={set('aboutMe')} placeholder="Brief description about your practice..." rows={3} className="w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946] hover:border-[#255946]/30 transition-all" />
+              <textarea value={form.aboutMe} onChange={set('aboutMe')} placeholder="Brief description about your practice..." rows={3} className="w-full px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm placeholder:text-[#94a3b8] focus:outline-none focus:ring-2 focus:ring-[#273d71]/20 focus:border-[#273d71] hover:border-[#273d71]/30 transition-all" />
             </div>
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? 'Submitting...' : 'Register'}</Button>
-            <p className="text-center text-sm text-[#64748b]">Already have an account? <Link to="/login" className="text-[#255946] font-medium hover:underline">Sign In</Link></p>
+            <Button type="submit" className="w-full !bg-[#273d71] hover:!bg-[#1e2f58] !text-white !py-3 mt-4" size="lg" disabled={loading}>
+              {loading ? 'Submitting...' : 'Register'}
+            </Button>
+            <p className="text-center text-sm text-[#64748b] mt-6">
+              Already have an account? <Link to="/login" className="text-[#273d71] font-medium hover:underline">Sign In</Link>
+            </p>
           </form>
         </div>
       </div>

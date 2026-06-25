@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -8,6 +9,7 @@ const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function Chat() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -59,6 +61,14 @@ export default function Chat() {
   }, []);
 
   useEffect(() => { fetchConversations(); }, []);
+
+  useEffect(() => {
+    const urlId = searchParams.get('id');
+    if (urlId && conversations.length > 0 && activeId !== urlId) {
+      const conv = conversations.find(c => c._id === urlId);
+      if (conv) selectConversation(conv);
+    }
+  }, [conversations, searchParams, activeId]);
 
   const selectConversation = async (conv) => {
     if (activeIdRef.current) socketRef.current?.emit('conversation:leave', activeIdRef.current);

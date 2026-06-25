@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const DoctorPatient = require('../models/DoctorPatient');
+const Conversation = require('../models/Conversation');
 const { APPOINTMENT_STATUS, ROLES, DOCTOR_PATIENT_STATUS } = require('../config/constants');
 
 const getStats = async (scope = {}) => {
@@ -50,7 +51,14 @@ const getStats = async (scope = {}) => {
     .sort({ createdAt: -1 }).limit(5)
     .populate('userId', 'name email').lean();
 
-  return { totalPatients, totalDoctors, todayAppointments, completedToday, pendingToday, upcomingAppointments, recentPatients };
+  // Unread chat notifications
+  const unreadChatFilter = { organizationId: scope.organizationId, unreadByDoctor: { $gt: 0 } };
+  if (scope.doctorId) unreadChatFilter.doctorId = scope.doctorId;
+  const unreadConversations = await Conversation.find(unreadChatFilter)
+    .sort({ lastMessageAt: -1 }).limit(5)
+    .populate('patientId', 'name email').lean();
+
+  return { totalPatients, totalDoctors, todayAppointments, completedToday, pendingToday, upcomingAppointments, recentPatients, unreadConversations };
 };
 
 module.exports = { getStats };

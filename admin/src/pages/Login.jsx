@@ -34,33 +34,34 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex">
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#255946] via-[#1e4d3d] to-[#0f2a20] relative overflow-hidden">
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">S+</div>
-            <span className="text-xl font-serif font-bold">SurgiRise</span>
-          </div>
-          <div>
-            <h2 className="text-4xl font-serif font-semibold leading-tight mb-4">Doctor Portal</h2>
-            <p className="text-white/60 text-base max-w-sm">Manage your patients, appointments, and prescriptions in one place.</p>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-white/40">
-            <span>🔒 Secure</span><span>•</span><span>⚡ Fast</span><span>•</span><span>🏥 Clinical</span>
+      <div className="hidden lg:flex lg:w-1/2 bg-[#273d71] relative justify-center items-center">
+        <div className="relative z-10 flex flex-col items-center justify-center p-12 text-white max-w-lg w-full">
+          <img src="/doctors.png" alt="Doctors" className="w-full max-w-md object-contain mb-8" />
+          <div className="w-full max-w-md mx-auto">
+            <h2 className="text-4xl font-bold mb-4" style={{ fontFamily: '"Figtree", sans-serif' }}>Welcome Doctor</h2>
+            <p className="text-white/80 text-base leading-relaxed">
+              Access your patient records, view book appointments, and manage your patients prescription history in one place.
+            </p>
           </div>
         </div>
       </div>
-      <div className="flex-1 flex items-center justify-center bg-[#F8F6F0] px-6">
-        <div className="w-full max-w-sm">
+      <div className="flex-1 flex items-center justify-center bg-white px-6">
+        <div className="w-full max-w-md">
           <div className="mb-8">
-            <h1 className="text-2xl font-serif font-semibold text-[#1e293b]">Welcome back, Doctor</h1>
-            <p className="text-sm text-[#64748b] mt-1">Sign in to your practice dashboard</p>
+            <h1 className="text-4xl font-bold text-[#1e293b] mb-2">Login</h1>
+            <p className="text-sm text-[#64748b] mt-2">Enter your credentials to access your account and explore<br />more</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="doctor@clinic.com" required />
-            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required />
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</Button>
+            <Input label="User ID" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="" required />
+            <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="" required />
+
+            <Button type="submit" className="w-full !bg-[#273d71] hover:!bg-[#1e2f58] !text-white !py-3 mt-6" size="lg" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign in'}
+            </Button>
           </form>
-          <p className="text-center text-sm text-[#64748b] mt-6">Don't have an account? <Link to="/register" className="text-[#255946] font-medium hover:underline">Register</Link></p>
+          <p className="text-center text-sm text-[#64748b] mt-8">
+            Don't have an account? <Link to="/register" className="text-[#273d71] font-medium hover:underline">Register</Link>
+          </p>
         </div>
       </div>
     </div>

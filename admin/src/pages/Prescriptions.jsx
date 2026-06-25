@@ -67,7 +67,6 @@ export default function Prescriptions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-serif font-semibold text-[#1e293b]">Prescriptions</h1>
           <p className="text-sm text-[#64748b]">Digital prescriptions with automated reminders</p>
         </div>
         {isDoctor && <Button onClick={() => setShowForm(!showForm)}>{showForm ? 'Cancel' : '+ New Prescription'}</Button>}

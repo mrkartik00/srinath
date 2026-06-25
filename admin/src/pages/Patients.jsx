@@ -34,7 +34,6 @@ export default function Patients() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-serif font-semibold text-[#1e293b]">Patients</h1>
           <p className="text-sm text-[#64748b] mt-0.5">View and manage all registered patients</p>
         </div>
         <Badge variant="success" dot>{meta.total} registered</Badge>

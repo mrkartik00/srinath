@@ -10,18 +10,29 @@ const STATUS_STYLES = {
   cancelled: { bg: 'rgba(198,40,40,0.12)', color: '#C62828', label: 'Cancelled' },
 };
 
-const freqLabel = { 
-  once_daily: 'Once daily', 
-  twice_daily: 'Twice daily', 
-  thrice_daily: 'Thrice daily', 
-  custom: 'Custom' 
+const freqLabel = {
+  once_daily: 'Once daily',
+  twice_daily: 'Twice daily',
+  thrice_daily: 'Thrice daily',
+  custom: 'Custom'
 };
+
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < breakpoint : false);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
 
 export default function MyPrescriptions() {
   const navigate = useNavigate();
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const isMobile = useIsMobile();
 
   const fetchPrescriptions = async () => {
     try {
@@ -42,8 +53,8 @@ export default function MyPrescriptions() {
     const rxToast = toast.loading('Preparing download...');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/my/prescriptions/${rxId}/pdf`, { 
-        headers: { Authorization: `Bearer ${token}` } 
+      const res = await fetch(`/api/v1/my/prescriptions/${rxId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {
         toast.error('PDF not available yet', { id: rxToast });
@@ -71,9 +82,9 @@ export default function MyPrescriptions() {
   }
 
   return (
-    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", minHeight: '80vh', padding: '40px 0', background: '#ffffff' }}>
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 24px', boxSizing: 'border-box' }}>
-        
+    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", minHeight: '100vh', paddingTop: isMobile ? '84px' : '96px', paddingBottom: '40px', background: '#f0f4f8' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '0 16px' : '0 32px', boxSizing: 'border-box' }}>
+
         {/* ═══════════════════════════════════════════════ */}
         {/* SECTION HEADER — Figtree Semibold in signature blue */}
         {/* ═══════════════════════════════════════════════ */}
@@ -99,12 +110,12 @@ export default function MyPrescriptions() {
         {/* ═══════════════════════════════════════════════ */}
         {prescriptions.length === 0 ? (
           /* Empty State */
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '80px 0', 
-            background: '#f8fafb', 
-            borderRadius: '24px', 
-            border: '1px solid #eef5f7' 
+          <div style={{
+            textAlign: 'center',
+            padding: '80px 0',
+            background: '#f8fafb',
+            borderRadius: '24px',
+            border: '1px solid #eef5f7'
           }}>
             <div style={{ fontSize: '64px', marginBottom: '20px', opacity: 0.4 }}>📝</div>
             <h3 style={{ fontFamily: "'Figtree', sans-serif", fontSize: '28px', fontWeight: 600, color: '#253a5a', margin: '0 0 12px 0' }}>
@@ -116,7 +127,15 @@ export default function MyPrescriptions() {
           </div>
         ) : (
           /* List of Prescriptions */
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column',
+            background: '#ffffff',
+            borderRadius: '24px',
+            border: '1px solid #eaedf1',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+            padding: isMobile ? '24px' : '32px',
+          }}>
             {prescriptions.map((rx) => {
               const statusInfo = STATUS_STYLES[rx.status] || STATUS_STYLES.active;
               const dateObj = new Date(rx.issuedAt);
@@ -144,8 +163,8 @@ export default function MyPrescriptions() {
                     {/* Left Details */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap', flex: 1 }}>
                       <h3 style={{
-                        margin: 0, 
-                        fontSize: '28px', 
+                        margin: 0,
+                        fontSize: '28px',
                         fontWeight: 600,
                         color: isExpanded ? '#8db5c4' : '#253a5a',
                         transition: 'color 0.3s',
@@ -169,11 +188,11 @@ export default function MyPrescriptions() {
 
                     {/* Right Arrow indicator */}
                     <span style={{
-                      color: '#8db5c4', 
-                      fontSize: '14px', 
+                      color: '#8db5c4',
+                      fontSize: '14px',
                       fontWeight: 600,
-                      display: 'flex', 
-                      alignItems: 'center', 
+                      display: 'flex',
+                      alignItems: 'center',
                       gap: '6px',
                       transition: 'transform 0.3s',
                       transform: isExpanded ? 'rotate(180deg)' : 'none',
@@ -267,12 +286,12 @@ export default function MyPrescriptions() {
 
                     {/* Notes block */}
                     {rx.notes && (
-                      <div style={{ 
-                        margin: '24px 0', 
-                        padding: '18px 24px', 
-                        background: '#f8fafb', 
-                        borderLeft: '4px solid #8db5c4', 
-                        borderRadius: '4px 16px 16px 4px' 
+                      <div style={{
+                        margin: '24px 0',
+                        padding: '18px 24px',
+                        background: '#f8fafb',
+                        borderLeft: '4px solid #8db5c4',
+                        borderRadius: '4px 16px 16px 4px'
                       }}>
                         <p style={{ margin: 0, fontSize: '11px', fontWeight: 600, color: '#8db5c4', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>Doctor's Advice / Notes</p>
                         <p style={{ margin: 0, fontSize: '14.5px', color: '#36565f', lineHeight: 1.5, fontWeight: 500 }}>{rx.notes}</p>
@@ -284,14 +303,14 @@ export default function MyPrescriptions() {
                       <button
                         onClick={(e) => { e.stopPropagation(); navigate(`/prescriptions/${rx._id}`); }}
                         style={{
-                          background: '#253a5a', 
-                          color: '#ffffff', 
+                          background: '#253a5a',
+                          color: '#ffffff',
                           border: 'none',
-                          padding: '12px 28px', 
-                          borderRadius: '50px', 
+                          padding: '12px 28px',
+                          borderRadius: '50px',
                           fontSize: '13px',
-                          fontWeight: 600, 
-                          cursor: 'pointer', 
+                          fontWeight: 600,
+                          cursor: 'pointer',
                           transition: 'background-color 0.3s',
                         }}
                         onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1c304d'}
@@ -299,18 +318,18 @@ export default function MyPrescriptions() {
                       >
                         View Full Details
                       </button>
-                      
+
                       <button
                         onClick={(e) => { e.stopPropagation(); downloadPdf(rx._id); }}
                         style={{
-                          background: 'transparent', 
+                          background: 'transparent',
                           color: '#8db5c4',
                           border: '1.5px solid #8db5c4',
-                          padding: '12px 28px', 
-                          borderRadius: '50px', 
+                          padding: '12px 28px',
+                          borderRadius: '50px',
                           fontSize: '13px',
-                          fontWeight: 600, 
-                          cursor: 'pointer', 
+                          fontWeight: 600,
+                          cursor: 'pointer',
                           transition: 'all 0.3s',
                         }}
                         onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#8db5c4'; e.currentTarget.style.color = '#ffffff'; }}

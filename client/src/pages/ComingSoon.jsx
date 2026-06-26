@@ -1,17 +1,68 @@
-export default function ComingSoon({ title, description, phase, icon = '🚀' }) {
+import '../styles/shared.css';
+
+/**
+ * ComingSoon — Premium placeholder page for features under construction.
+ * Uses the shared design system (ds-* classes) so it feels cohesive.
+ *
+ * Props (unchanged from original):
+ *   title       {string}  - Page / feature name
+ *   description {string}  - Supporting copy
+ *   icon        {string}  - Emoji icon (default: 🚀)
+ *   phase       {string}  - Optional phase number (e.g., "2")
+ */
+export default function ComingSoon({
+  title = 'Coming Soon',
+  description = 'This feature is currently under development.',
+  icon = '🚀',
+  phase,
+}) {
   return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#36565F]/10 to-[#36565F]/5 border border-[#36565F]/10 flex items-center justify-center text-3xl mb-6">
-        {icon}
+    <div className="ds-coming-soon">
+      <div className="ds-coming-soon__inner">
+        {/* Icon orb */}
+        <div className="ds-coming-soon__orb" role="img" aria-label={title}>
+          {icon}
+        </div>
+
+        {/* Overline */}
+        <div className="ds-coming-soon__overline">
+          <span
+            style={{
+              display: 'inline-block',
+              width: '20px',
+              height: '1px',
+              background: '#8db5c4',
+              verticalAlign: 'middle',
+              marginRight: '4px',
+            }}
+          />
+          In Development
+          <span
+            style={{
+              display: 'inline-block',
+              width: '20px',
+              height: '1px',
+              background: '#8db5c4',
+              verticalAlign: 'middle',
+              marginLeft: '4px',
+            }}
+          />
+        </div>
+
+        {/* Title */}
+        <h1 className="ds-coming-soon__title">{title}</h1>
+
+        {/* Description */}
+        <p className="ds-coming-soon__desc">{description}</p>
+
+        {/* Phase badge */}
+        {phase && (
+          <div className="ds-coming-soon__phase-badge">
+            <span className="ds-coming-soon__phase-dot" />
+            Phase {phase}
+          </div>
+        )}
       </div>
-      <h1 className="text-2xl font-serif font-semibold text-[#1e293b] mb-2">{title}</h1>
-      <p className="text-sm text-[#64748b] max-w-md text-center mb-4">{description}</p>
-      {phase && (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#FFF7ED] text-[#E65100] border border-[#FED7AA]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#E65100]" />
-          Phase {phase}
-        </span>
-      )}
     </div>
   );
 }

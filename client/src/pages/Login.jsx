@@ -59,8 +59,8 @@ export default function Login() {
         <DnaVisual />
         <div className="relative z-10 flex flex-col justify-between p-12 text-white">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm">S+</div>
-            <span className="text-lg font-serif font-bold">SurgiRise</span>
+            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center font-bold text-sm" style={{ fontFamily: 'Figtree, sans-serif' }}>Dr.</div>
+            <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 700, fontSize: '18px' }}>Srinath Healthcare</span>
           </div>
           <div>
             <h2 className="text-3xl font-serif font-semibold leading-tight mb-4">
@@ -81,8 +81,8 @@ export default function Login() {
         <div className="w-full max-w-sm">
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-[#36565F] text-white flex items-center justify-center text-sm font-bold">S+</div>
-              <span className="text-lg font-serif font-bold text-[#36565F]">SurgiRise</span>
+              <div className="w-8 h-8 rounded-lg bg-[#36565F] text-white flex items-center justify-center text-sm" style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 700 }}>Dr.</div>
+              <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 700, fontSize: '18px', color: '#253a5a' }}>Srinath Healthcare</span>
             </div>
           </div>
 

@@ -15,6 +15,7 @@ import HomePage from '../pages/Home';
 import AboutPage from '../pages/About';
 import ServicesPage from '../pages/Services';
 import ContactPage from '../pages/Contact';
+import DoctorDetailPage from '../pages/DoctorDetail';
 
 // Flattened Dashboard pages
 import AppointmentsPage from '../pages/Appointments';
@@ -41,6 +42,7 @@ export default function AppRouter() {
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/services" element={<ServicesPage />} />
+            <Route path="/doctors/:id" element={<DoctorDetailPage />} />
             <Route path="/contact" element={<ContactPage />} />
 
             {/* ─── Auth Routes ─── */}

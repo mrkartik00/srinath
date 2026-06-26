@@ -7,6 +7,9 @@ import { getMyProfile, updateMyProfile } from '../api/endpoints/patient';
 import { getMyAppointments } from '../api/endpoints/appointment';
 import api from '../api/axios';
 import { Button, Input, Spinner } from '../components/ui';
+import VIPPage from './VIP';
+import PaymentsPage from './Payments';
+import MyReminders from './MyReminders';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -62,15 +65,15 @@ function SidebarReminders({ navigate }) {
     <div className="flex flex-col gap-3 mb-6 pt-2 border-t border-[#E8E5DE]/50">
       <div className="flex justify-between items-center mb-1">
         <h5 className="text-xs font-bold text-[#253a5a] uppercase tracking-wider">Reminders</h5>
-        <span className="w-5 h-5 rounded-full bg-[#FFF7ED] text-[#E56B55] text-[10px] font-bold flex items-center justify-center">{reminders.length}</span>
+        <span className="w-5 h-5 rounded-full bg-[#E2F0F0] text-[#36565F] text-[10px] font-bold flex items-center justify-center">{reminders.length}</span>
       </div>
       
       {reminders.map((r, i) => {
         const isUrgent = i === 0;
         return (
-          <div key={r._id} onClick={() => navigate('/reminders')} className={`${isUrgent ? 'bg-[#FFF7ED] border-[#FED7AA]' : 'bg-[#F8F6F0] border-[#E8E5DE]'} border rounded-xl p-3 flex gap-3 relative overflow-hidden group hover:shadow-sm transition-shadow cursor-pointer`}>
-            <div className={`absolute left-0 top-0 bottom-0 w-1 ${isUrgent ? 'bg-[#E56B55]' : 'bg-[#36565F]'}`} />
-            <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center ${isUrgent ? 'text-[#E56B55]' : 'text-[#36565F]'} flex-shrink-0 shadow-sm`}>
+          <div key={r._id} onClick={() => navigate('/reminders')} className={`${isUrgent ? 'bg-[#E2F0F0] border-[#8db5c4]' : 'bg-[#F8F6F0] border-[#E8E5DE]'} border rounded-xl p-3 flex gap-3 relative overflow-hidden group hover:shadow-sm transition-shadow cursor-pointer`}>
+            <div className={`absolute left-0 top-0 bottom-0 w-1 ${isUrgent ? 'bg-[#36565F]' : 'bg-[#36565F]/40'}`} />
+            <div className={`w-8 h-8 rounded-full bg-white flex items-center justify-center text-[#36565F] flex-shrink-0 shadow-sm`}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {isUrgent ? (
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -81,7 +84,7 @@ function SidebarReminders({ navigate }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-bold text-[#253a5a] truncate">{r.medicineName}</p>
-              <p className={`text-[10px] font-semibold ${isUrgent ? 'text-[#E56B55]' : 'text-[#5F8190]'} mt-0.5 truncate`}>
+              <p className={`text-[10px] font-semibold ${isUrgent ? 'text-[#36565F]' : 'text-[#5F8190]'} mt-0.5 truncate`}>
                 {r.dosage} • {new Date(r.scheduledAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
               </p>
             </div>
@@ -486,8 +489,26 @@ export default function Profile() {
       )
     },
     {
+      id: 'reminders',
+      label: 'Reminders',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
+    },
+    {
+      id: 'vip',
+      label: 'VIP Membership',
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-1.28.347v.14a.563.563 0 001.28.347l4.204 3.602c.38.325.178.948-.321.988l-5.518.442a.563.563 0 00-.475.345l-2.125 5.111a.562.562 0 01-1.04 0l-2.125-5.111a.563.563 0 00-.475-.345l-5.518-.442c-.499-.04-.701-.663-.321-.988l4.204-3.602a.563.563 0 00.182-.557l-1.285-5.385a.562.562 0 01.84-.61l4.925 2.89a.563.563 0 00.52 0l4.925-2.89a.562.562 0 01.84.61l-1.285 5.385z" />
+        </svg>
+      )
+    },
+    {
       id: 'billing',
-      label: 'Payments & Billing',
+      label: 'Payments',
       icon: (
         <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
@@ -499,36 +520,9 @@ export default function Profile() {
   const activeConv = conversations.find((c) => c._id === activeId);
 
   return (
-    <div style={{ boxSizing: 'border-box' }} className="w-full px-6 lg:px-12 py-8 lg:py-12">
+    <div className="bg-[#f0f4f8] min-h-screen pt-[84px] md:pt-[96px] pb-10" style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif" }}>
+      <div className="max-w-[1280px] mx-auto px-4 lg:px-8 w-full" style={{ boxSizing: 'border-box' }}>
       
-      {/* ═══════════════════════════════════════════════ */}
-      {/* BREADCRUMBS & TOP BAR                           */}
-      {/* ═══════════════════════════════════════════════ */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs font-semibold text-[#5F8190] uppercase tracking-wider">
-            <span>Patient</span>
-            <span className="text-xs text-[#E8E5DE]">&gt;</span>
-            <span>Patient Details</span>
-            <span className="text-xs text-[#E8E5DE]">&gt;</span>
-            <span className="text-[#36565F] font-bold">{profileData?.userId?.name || 'Patient'}</span>
-          </div>
-        </div>
-        
-        {/* Right action placeholders */}
-        <div className="flex items-center gap-3 mt-4 md:mt-0">
-          <button className="w-10 h-10 flex items-center justify-center bg-white border border-[#E8E5DE]/85 rounded-xl hover:bg-[#F8F6F0] transition-colors shadow-[0_2px_6px_rgba(0,0,0,0.02)]">
-            <svg className="w-5 h-5 text-[#5F8190]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-          </button>
-          <button className="w-10 h-10 flex items-center justify-center bg-white border border-[#E8E5DE]/85 rounded-xl hover:bg-[#F8F6F0] transition-colors shadow-[0_2px_6px_rgba(0,0,0,0.02)]">
-            <svg className="w-5 h-5 text-[#5F8190]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
-        </div>
-      </div>
 
       {/* ═══════════════════════════════════════════════ */}
       {/* MAIN TWO-COLUMN LAYOUT                          */}
@@ -570,15 +564,15 @@ export default function Profile() {
                     }}
                     className={`relative flex items-center gap-3.5 px-6 py-3.5 rounded-xl text-sm font-semibold transition-all focus:outline-none ${
                       isActive 
-                        ? 'text-[#E56B55] bg-[#F8F6F0]/60' 
+                        ? 'text-[#36565F] bg-[#E2F0F0]/60' 
                         : 'text-[#6B7C84] hover:text-[#36565F] hover:bg-[#F8F6F0]/20'
                     }`}
                   >
                     {/* Active vertical line overlay on the left */}
                     {isActive && (
-                      <div className="absolute left-0 top-3.5 bottom-3.5 w-1 bg-[#E56B55] rounded-r-md" />
+                      <div className="absolute left-0 top-3.5 bottom-3.5 w-1 bg-[#36565F] rounded-r-md" />
                     )}
-                    <span className={isActive ? 'text-[#E56B55]' : 'text-[#6B7C84]'}>
+                    <span className={isActive ? 'text-[#36565F]' : 'text-[#6B7C84]'}>
                       {tab.icon}
                     </span>
                     <span>{tab.label}</span>
@@ -841,53 +835,7 @@ export default function Profile() {
 
               </div>
 
-              {/* Patient Current Vitals */}
-              <div>
-                <h3 style={{ fontFamily: "'Figtree', sans-serif" }} className="text-lg font-bold text-[#253a5a] mb-4">
-                  Patient Current Vitals
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {/* BP */}
-                  <div className="bg-white rounded-2xl border border-[#E8E5DE]/60 p-5 shadow-[0_2px_12px_rgba(54,86,95,0.02)]">
-                    <p className="text-[11px] font-bold text-[#6B7C84] uppercase tracking-wider mb-1">Blood Pressure</p>
-                    <div className="flex items-baseline gap-0.5 mb-1.5">
-                      <span style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl font-bold text-[#253a5a]">{vitals.bloodPressure}</span>
-                      <span className="text-xs text-[#6B7C84]">mm/hg</span>
-                    </div>
-                    <p className={`text-[11px] font-semibold ${bpStatus.class}`}>{bpStatus.text}</p>
-                  </div>
 
-                  {/* HR */}
-                  <div className="bg-white rounded-2xl border border-[#E8E5DE]/60 p-5 shadow-[0_2px_12px_rgba(54,86,95,0.02)]">
-                    <p className="text-[11px] font-bold text-[#6B7C84] uppercase tracking-wider mb-1">Heart rate</p>
-                    <div className="flex items-baseline gap-0.5 mb-1.5">
-                      <span style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl font-bold text-[#253a5a]">{vitals.heartRate}</span>
-                      <span className="text-xs text-[#6B7C84]">BPM</span>
-                    </div>
-                    <p className={`text-[11px] font-semibold ${hrStatus.class}`}>{hrStatus.text}</p>
-                  </div>
-
-                  {/* Glucose */}
-                  <div className="bg-white rounded-2xl border border-[#E8E5DE]/60 p-5 shadow-[0_2px_12px_rgba(54,86,95,0.02)]">
-                    <p className="text-[11px] font-bold text-[#6B7C84] uppercase tracking-wider mb-1">Glucose</p>
-                    <div className="flex items-baseline gap-0.5 mb-1.5">
-                      <span style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl font-bold text-[#253a5a]">{vitals.glucose}</span>
-                      <span className="text-xs text-[#6B7C84]">mg/dl</span>
-                    </div>
-                    <p className={`text-[11px] font-semibold ${glucStatus.class}`}>{glucStatus.text}</p>
-                  </div>
-
-                  {/* Cholesterol */}
-                  <div className="bg-white rounded-2xl border border-[#E8E5DE]/60 p-5 shadow-[0_2px_12px_rgba(54,86,95,0.02)]">
-                    <p className="text-[11px] font-bold text-[#6B7C84] uppercase tracking-wider mb-1">Cholesterol</p>
-                    <div className="flex items-baseline gap-0.5 mb-1.5">
-                      <span style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl font-bold text-[#253a5a]">{vitals.cholesterol}</span>
-                      <span className="text-xs text-[#6B7C84]">mg/dl</span>
-                    </div>
-                    <p className={`text-[11px] font-semibold ${cholStatus.class}`}>{cholStatus.text}</p>
-                  </div>
-                </div>
-              </div>
 
               {/* Prescriptions Section (replacing History) */}
               <div>
@@ -1283,21 +1231,24 @@ export default function Profile() {
             </div>
           )}
 
-          {/* TAB 6: PAYMENTS & BILLING */}
+          {/* TAB 5.5: REMINDERS */}
+          {activeTab === 'reminders' && (
+            <div className="w-full animate-in fade-in duration-300">
+              <MyReminders />
+            </div>
+          )}
+
+          {/* TAB 6: VIP MEMBERSHIP */}
+          {activeTab === 'vip' && (
+            <div className="w-full animate-in fade-in duration-300">
+              <VIPPage />
+            </div>
+          )}
+
+          {/* TAB 7: PAYMENTS & BILLING */}
           {activeTab === 'billing' && (
-            <div className="bg-white rounded-[24px] border border-[#E8E5DE]/60 p-12 shadow-[0_4px_20px_rgba(54,86,95,0.03)] text-center flex flex-col items-center justify-center min-h-[400px]">
-              <div className="w-20 h-20 bg-[#E2F0F0] text-[#36565F] rounded-full flex items-center justify-center text-4xl mb-6 shadow-xs animate-bounce">
-                💳
-              </div>
-              <h3 style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl font-bold text-[#253a5a] mb-2 tracking-tight">
-                Payments & Billing
-              </h3>
-              <span className="bg-[#FFF7ED] text-[#E65100] border border-[#FED7AA] text-xs font-bold rounded-full px-4 py-1.5 uppercase tracking-wider mb-6">
-                Coming Soon
-              </span>
-              <p className="text-sm text-[#6B7C84] max-w-md leading-relaxed">
-                We are currently implementing secure billing invoice integrations. Soon, patients will be able to process co-pays, view itemized statements, and extend memberships online directly.
-              </p>
+            <div className="w-full animate-in fade-in duration-300">
+              <PaymentsPage />
             </div>
           )}
 
@@ -1391,6 +1342,7 @@ export default function Profile() {
         </div>
       )}
 
+    </div>
     </div>
   );
 }

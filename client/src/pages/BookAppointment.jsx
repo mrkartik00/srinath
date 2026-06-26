@@ -1,112 +1,79 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { bookAppointment } from '../api/endpoints/appointment';
-import { getDoctors } from '../api/endpoints/auth';
-import { getMyProfile, createProfile } from '../api/endpoints/patient';
+import { getMyProfile, createProfile, updateMyProfile } from '../api/endpoints/patient';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { Spinner } from '../components/ui';
-import Navbar from '../components/home/Navbar';
-import Footer from '../components/home/Footer';
-import HealthcareDepartments from '../components/home/HealthcareDepartments';
-import QuickFindSection from '../components/home/QuickFindSection';
 
-function DNAPattern() {
-  const points = [];
-  const amplitude = 28;
-  const frequency = 0.03;
-  for (let y = 0; y <= 400; y += 20) {
-    const x1 = 150 + Math.sin(y * frequency) * amplitude;
-    const x2 = 150 - Math.sin(y * frequency) * amplitude;
-    points.push({ y, x1, x2 });
-  }
+const doctorImages = {
+  'Dr. Arun Sharma': 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&fit=crop',
+  'Dr. Priya Mehta': 'https://images.unsplash.com/photo-1594824432258-f4633b4d4554?w=600&fit=crop',
+};
 
-  return (
-    <svg 
-      className="absolute right-0 top-0 h-full w-[40%] opacity-[0.25] pointer-events-none text-white hidden lg:block"
-      viewBox="0 0 300 400"
-      preserveAspectRatio="none"
-    >
-      <defs>
-        <linearGradient id="dna-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.1" />
-        </linearGradient>
-      </defs>
-      {points.map((pt, i) => (
-        <line 
-          key={`l-${i}`}
-          x1={pt.x1} 
-          y1={pt.y} 
-          x2={pt.x2} 
-          y2={pt.y} 
-          stroke="url(#dna-grad)" 
-          strokeWidth="1.5" 
-          opacity={0.5}
-        />
-      ))}
-      <path 
-        d={`M ${points[0].x1} ${points[0].y} ${points.slice(1).map(pt => `L ${pt.x1} ${pt.y}`).join(' ')}`} 
-        fill="none" 
-        stroke="url(#dna-grad)" 
-        strokeWidth="3" 
-      />
-      <path 
-        d={`M ${points[0].x2} ${points[0].y} ${points.slice(1).map(pt => `L ${pt.x2} ${pt.y}`).join(' ')}`} 
-        fill="none" 
-        stroke="url(#dna-grad)" 
-        strokeWidth="3" 
-      />
-      {points.map((pt, i) => (
-        <g key={`n-${i}`}>
-          <circle cx={pt.x1} cy={pt.y} r="4" fill="#ffffff" />
-          <circle cx={pt.x2} cy={pt.y} r="4" fill="#ffffff" />
-        </g>
-      ))}
-    </svg>
-  );
-}
+const getFormattedTimings = (slots) => {
+  if (!slots || slots.length === 0) return ['By Appointment Only'];
+  const dayNamesMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  // Sort slots by day number
+  const sorted = [...slots].sort((a, b) => a.day - b.day);
+
+  // Group slots with the same timings
+  const groups = {};
+  sorted.forEach(s => {
+    const key = `${s.startTime}-${s.endTime}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(s.day);
+  });
+
+  const formattedLines = [];
+  Object.entries(groups).forEach(([timeRange, days]) => {
+    const [start, end] = timeRange.split('-');
+
+    // Check if days form a continuous weekday range (Mon-Fri)
+    const isMonFri = days.length === 5 && days.every(d => d >= 1 && d <= 5);
+    if (isMonFri) {
+      formattedLines.push(`Mon - Fri: ${start} - ${end}`);
+    } else {
+      const dayNames = days.map(d => dayNamesMap[d]).join(', ');
+      formattedLines.push(`${dayNames}: ${start} - ${end}`);
+    }
+  });
+
+  return formattedLines;
+};
 
 export default function BookAppointment() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [doctors, setDoctors] = useState([]);
   const [appointmentTypes, setAppointmentTypes] = useState([]);
   const [surgeonsLoading, setSurgeonsLoading] = useState(true);
   const [hasProfile, setHasProfile] = useState(true);
-  
-  const marqueeRef = useRef(null);
-
-  useEffect(() => {
-    const el = marqueeRef.current;
-    if (!el) return;
-    let animId;
-    let pos = 0;
-    const speed = 0.5;
-    const animate = () => {
-      pos -= speed;
-      if (Math.abs(pos) >= el.scrollWidth / 3) {
-        pos = 0;
-      }
-      el.style.transform = `translateX(${pos}px)`;
-      animId = requestAnimationFrame(animate);
-    };
-    animId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animId);
-  }, []);
+  const [step, setStep] = useState(1);
 
   const [form, setForm] = useState({
     name: user?.name || '',
     email: user?.email || '',
     phone: user?.phone || '',
-    doctorId: '',
-    dateTime: '',
+    dob: '',
+    gender: '',
+    address: '',
+    doctorId: location.state?.doctorId || '',
+    dateTime: location.state?.dateTime || '',
     duration: 30,
     type: '',
     notes: ''
   });
+
+  const handleNextStep = () => {
+    if (!form.doctorId) return toast.error('Please select a doctor');
+    if (!form.dateTime) return toast.error('Please select a date and time');
+    setStep(2);
+  };
 
   // Sync user info if user object loads late
   useEffect(() => {
@@ -122,14 +89,27 @@ export default function BookAppointment() {
 
   useEffect(() => {
     Promise.all([
-      getDoctors().then((res) => setDoctors(res.data || [])),
+      api.get('/api/v1/config/doctors').then((res) => {
+        setDoctors(res.data || []);
+      }),
       api.get('/api/v1/config/constants').then((res) => {
         const types = res.data?.appointmentTypes || [];
         setAppointmentTypes(types);
         if (types.length) setForm((f) => ({ ...f, type: types[0].value }));
       }),
       getMyProfile()
-        .then(() => setHasProfile(true))
+        .then((res) => {
+          setHasProfile(true);
+          if (res.data) {
+            const profile = res.data;
+            setForm((f) => ({
+              ...f,
+              dob: profile.dateOfBirth ? profile.dateOfBirth.split('T')[0] : f.dob,
+              gender: profile.gender || f.gender,
+              address: profile.address?.street || f.address,
+            }));
+          }
+        })
         .catch((err) => {
           if (err.response?.status === 404 || err.status === 404) {
             setHasProfile(false);
@@ -144,13 +124,22 @@ export default function BookAppointment() {
     e.preventDefault();
     if (!form.doctorId) return toast.error('Please select a doctor');
     if (!form.dateTime) return toast.error('Please select a date and time');
-    
+
     setLoading(true);
     try {
       if (!hasProfile) {
         // Auto-create profile if patient does not have one yet
         await createProfile({});
         setHasProfile(true);
+      }
+
+      // Sync patient profile details if provided
+      if (form.dob || form.gender || form.address) {
+        await updateMyProfile({
+          dateOfBirth: form.dob || undefined,
+          gender: form.gender || undefined,
+          address: { street: form.address, city: '', state: '', zipCode: '' }
+        }).catch(err => console.error("Profile sync failed", err));
       }
 
       // Format custom name/email/phone changes to append to doctor notes
@@ -194,366 +183,376 @@ export default function BookAppointment() {
     paddingRight: '24px'
   };
 
+  const activeDoctor = doctors.find(d => d.id === form.doctorId);
+  const doctorPhoto = activeDoctor ? (doctorImages[activeDoctor.name] || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=600&fit=crop') : null;
+
   return (
-    <div className="w-full relative overflow-visible">
-      
-      {/* Upper Banner Section */}
-      <div className="w-full bg-[#e1eff2] pt-32 pb-16 lg:pb-24 relative overflow-visible">
-        <DNAPattern />
-        <div className="max-w-[960px] mx-auto px-4 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative">
-          
-          {/* Left Column - Slogan */}
-          <div className="lg:col-span-7 pt-8 lg:pt-20 space-y-4">
-            <h1 
-              style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
-              className="text-[40px] md:text-[54px] text-[#253a5a] leading-[1.1] tracking-tight"
-            >
-              Advanced Medicine, <br />
-              Personalized Care
-            </h1>
-            <p 
-              style={{ fontFamily: "'Figtree', sans-serif" }}
-              className="text-[#556b73] text-[15px] md:text-[16px] leading-relaxed max-w-sm font-medium"
-            >
-              Experience the future of healthcare with us—because you deserve the best.
-            </p>
+    <div className="w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col justify-between bg-[#f0f4f8]">
+      <div className="flex-grow flex items-center justify-center p-4 md:p-6 lg:px-8 lg:pb-8 pt-28 lg:pt-[120px] pb-4">
+        {surgeonsLoading ? (
+          <div className="py-12 flex justify-center w-full">
+            <Spinner size="md" />
           </div>
+        ) : (
+          <div className="max-w-[1280px] w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8 items-stretch h-full lg:max-h-[640px]">
+            {/* Left Column: Doctor Profile & Contact Info */}
+            <div className="hidden lg:flex lg:col-span-5 flex-col gap-4 lg:max-h-full lg:overflow-y-auto pr-1">
+              {activeDoctor ? (
+                <div className="bg-white rounded-3xl border border-[#eaedf1] shadow-sm p-6 flex flex-col justify-between gap-6 flex-grow">
+                  <div className="space-y-5">
+                    {/* Header info with photo */}
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={doctorPhoto}
+                        alt={activeDoctor.name}
+                        className="w-16 h-16 rounded-2xl object-cover border-2 border-[#e1eff2] shadow-sm shrink-0"
+                      />
+                      <div>
+                        <h3 className="text-[17px] font-bold text-[#1a2b30] leading-snug">{activeDoctor.name}</h3>
+                        <span className="inline-block px-2 py-0.5 rounded-full bg-[#e1eff2] text-[#253a5a] text-[10px] font-bold mt-1">
+                          {activeDoctor.specialty || 'General Physician'}
+                        </span>
+                        <p className="text-[11px] text-[#809196] mt-1 font-semibold">{activeDoctor.qualification}</p>
+                      </div>
+                    </div>
 
-          {/* Right Column - Booking Form Card */}
-          <div className="lg:col-span-5 relative z-20 lg:h-[320px]">
-            <div className="bg-white rounded-[24px] shadow-[0_35px_70px_rgba(54,86,95,0.12)] border border-[#e8e5de]/30 p-8 lg:absolute lg:top-8 lg:left-0 lg:w-full z-20">
-              <h2 
-                style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
-                className="text-2xl md:text-3xl text-[#1a2b30] mb-2"
-              >
-                Make an Appointment
-              </h2>
-              <p 
-                style={{ fontFamily: "'Figtree', sans-serif" }}
-                className="text-xs text-[#809196] mb-8 font-medium leading-relaxed"
-              >
-                Your email address will not be published. Required fields are marked *
-              </p>
+                    {/* Meta info grid */}
+                    <div className="border-t border-[#eaedf1] pt-4 grid grid-cols-2 gap-y-3.5 gap-x-2 text-[13px] text-[#4a5568]">
+                      <div>
+                        <span className="block text-[10px] font-semibold text-[#809196] uppercase tracking-wide">Experience</span>
+                        <span className="font-bold text-[#1e293b]">{activeDoctor.experience} years</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] font-semibold text-[#809196] uppercase tracking-wide">Consultation Fee</span>
+                        <span className="font-bold text-[#253a5a] text-[14px]">₹{activeDoctor.fee}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="block text-[10px] font-semibold text-[#809196] uppercase tracking-wide">Clinic Location</span>
+                        <span className="font-medium text-[#1e293b] block leading-tight">{activeDoctor.clinicName || 'SR+ Center'}</span>
+                        <span className="text-[11px] text-[#809196] block mt-0.5">{activeDoctor.clinicAddress}</span>
+                      </div>
+                    </div>
 
-              {surgeonsLoading ? (
-                <div className="py-12 flex justify-center">
-                  <Spinner size="md" />
+                    {/* Available Timings */}
+                    <div className="border-t border-[#eaedf1] pt-4">
+                      <span className="block text-[10px] font-semibold text-[#809196] uppercase tracking-wide mb-2">Available Slots ({activeDoctor.timezone || 'Asia/Kolkata'})</span>
+                      <div className="space-y-1.5">
+                        {getFormattedTimings(activeDoctor.availableSlots).map((line, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-[12px] text-[#4a5568] bg-[#f8fafc] border border-[#eaedf1] px-3 py-1.5 rounded-xl">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#809196" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span className="font-medium">{line}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* About paragraph at bottom */}
+                  {activeDoctor.aboutMe && (
+                    <div className="border-t border-[#eaedf1] pt-4">
+                      <span className="block text-[10px] font-semibold text-[#809196] uppercase tracking-wide mb-1">About Doctor</span>
+                      <p className="text-[12px] text-[#64748b] leading-relaxed italic">
+                        "{activeDoctor.aboutMe}"
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  
-                  {/* Your Name */}
+                <div className="bg-white rounded-3xl border border-[#eaedf1] shadow-sm p-6 flex flex-col items-center justify-center text-center gap-4 py-12 flex-grow min-h-[300px]">
+                  <div className="w-16 h-16 rounded-full bg-[#f0f4f8] flex items-center justify-center text-[#8db5c4]">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
                   <div>
-                    <label className={labelClass}>
-                      Your Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={form.name}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Enter your name"
-                      required
-                    />
+                    <h3 className="text-base font-bold text-[#1a2b30] mb-1">Select a Doctor</h3>
+                    <p className="text-xs text-[#809196] max-w-[240px] mx-auto leading-relaxed">
+                      Choose a specialist from the booking form to view their details, qualifications, experience, and consultation fee.
+                    </p>
                   </div>
-
-                  {/* Your Email */}
-                  <div>
-                    <label className={labelClass}>
-                      Your Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-
-                  {/* Your Phone */}
-                  <div>
-                    <label className={labelClass}>
-                      Your Phone
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={form.phone}
-                      onChange={handleChange}
-                      className={inputClass}
-                      placeholder="Enter your phone"
-                    />
-                  </div>
-
-                  {/* Doctor Selection */}
-                  <div>
-                    <label className={labelClass}>
-                      Select Doctor *
-                    </label>
-                    <select 
-                      name="doctorId" 
-                      className={selectClass} 
-                      style={selectStyle}
-                      value={form.doctorId} 
-                      onChange={handleChange} 
-                      required
-                    >
-                      <option value="">Choose a doctor</option>
-                      {doctors.map((s) => (
-                        <option key={s._id} value={s._id}>
-                          {s.name} — {s.email}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Date & Time */}
-                  <div>
-                    <label className={labelClass}>
-                      Date & Time *
-                    </label>
-                    <input
-                      type="datetime-local"
-                      name="dateTime"
-                      value={form.dateTime}
-                      onChange={handleChange}
-                      className={inputClass}
-                      required
-                    />
-                  </div>
-
-                  {/* Type and Duration Row */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelClass}>
-                        Type *
-                      </label>
-                      <select 
-                        name="type" 
-                        className={selectClass} 
-                        style={selectStyle}
-                        value={form.type} 
-                        onChange={handleChange}
-                      >
-                        {appointmentTypes.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelClass}>
-                        Duration *
-                      </label>
-                      <select 
-                        name="duration" 
-                        className={selectClass} 
-                        style={selectStyle}
-                        value={form.duration} 
-                        onChange={handleChange}
-                      >
-                        <option value={15}>15 min</option>
-                        <option value={30}>30 min</option>
-                        <option value={45}>45 min</option>
-                        <option value={60}>60 min</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Your Comment (Notes) */}
-                  <div>
-                    <label className={labelClass}>
-                      Your Comment
-                    </label>
-                    <textarea
-                      name="notes"
-                      value={form.notes}
-                      onChange={handleChange}
-                      className={`${inputClass} resize-none`}
-                      rows={3}
-                      placeholder="Add comments or medical notes..."
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
-                    className="w-full bg-[#1f3a60] hover:bg-[#162a47] text-white py-3.5 px-6 rounded-full transition-all duration-200 transform hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex items-center justify-center gap-2 mt-4 text-[15px] tracking-wide"
-                  >
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                        </svg>
-                        Sending Request...
-                      </>
-                    ) : (
-                      'Send a Request'
-                    )}
-                  </button>
-
-                </form>
-              )}
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* Bottom Lobby Image */}
-      <div className="w-full h-[480px] lg:h-[620px] overflow-hidden relative z-10 lg:-mt-24 -mt-8">
-        <img 
-          src="/appointment-hero.png?v=2" 
-          alt="Medical Center Lobby" 
-          className="w-full h-full object-cover" 
-        />
-      </div>
-
-      {/* --- Marquee & Working Hours Section --- */}
-      <div className="w-full bg-white relative z-20 pt-16 pb-24">
-        
-        {/* Marquee Row */}
-        <div className="about-section__marquee" style={{ paddingTop: '0px', paddingBottom: '60px' }}>
-          <div className="about-section__marquee-track" ref={marqueeRef}>
-            {[0, 1, 2].map((block) =>
-              ["Cardiology", "+", "Neurology", "+", "Pediatrics", "+", "Dermatology", "+"].map((item, i) => (
-                <span
-                  key={`${block}-${i}`}
-                  className={
-                    item === '+'
-                      ? 'about-section__marquee-sep'
-                      : 'about-section__marquee-item'
-                  }
-                >
-                  {item}
-                </span>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* 2-Column Content */}
-        <div className="max-w-[960px] mx-auto px-4 w-full grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-16 items-start">
-          
-          {/* Left: Working Hours Card */}
-          <div className="bg-[#8db5c4] rounded-[24px] p-8 lg:p-10 relative overflow-hidden text-white shadow-lg">
-            {/* Background Plus Icon */}
-            <svg 
-              className="absolute -top-6 -right-6 w-48 h-48 text-white opacity-20 pointer-events-none" 
-              viewBox="0 0 24 24" fill="currentColor"
-            >
-              <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6z" />
-            </svg>
-            
-            <h3 style={{ fontFamily: "'Figtree', sans-serif" }} className="text-2xl md:text-3xl font-semibold mb-8 relative z-10">
-              Working Hours
-            </h3>
-            
-            <div className="space-y-4 relative z-10 text-[15px] font-medium">
-              <div className="flex justify-between items-center">
-                <span>Monday</span>
-                <span>7.00am - 19.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Tuesday</span>
-                <span>7.00am - 19.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Wednesday</span>
-                <span>7.00am - 19.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Thursday</span>
-                <span>7.00am - 19.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Friday</span>
-                <span>7.00am - 19.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Saturday</span>
-                <span>9.00am - 17.00pm</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Sunday</span>
-                <span>Close</span>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="w-full mt-10 bg-white text-[#1a2b30] py-3.5 px-6 rounded-full font-bold transition-transform hover:scale-[1.02] text-[14px]"
-            >
-              Book Online
-            </button>
-          </div>
-
-          {/* Right: Why Choose Us Content */}
-          <div className="pt-4 lg:pt-8">
-            {/* Tagline */}
-            <div className="flex items-center gap-2 text-[#8db5c4] font-semibold text-[15px] mb-4">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z"/>
-                <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z"/>
-                <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z"/>
-                <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z"/>
-                <path d="M12 9v6M9 12h6"/>
-              </svg>
-              why choose our medical center
-            </div>
-
-            {/* Headline */}
-            <h2 
-              style={{ fontFamily: "'Figtree', sans-serif" }} 
-              className="text-[32px] md:text-[40px] font-semibold text-[#1a2b30] leading-[1.15] mb-10 tracking-tight"
-            >
-              Innovation in Medicine,<br/>Care for Life
-            </h2>
-
-            {/* Feature List (2 columns) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6 mb-10">
-              {[
-                'Comprehensive Medical Care',
-                'Modern & Comfortable Facilities',
-                'Expert Healthcare Team',
-                'Preventive & Wellness Programs',
-                'Personalized Treatment Plans',
-                '24/7 Emergency Services'
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-3 text-[#556b73] text-[13px] font-semibold">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8db5c4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  {feature}
                 </div>
-              ))}
+              )}
+
+              {/* Assistance helpline */}
+              <div className="bg-[#253a5a] rounded-3xl p-6 text-white flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-white mb-0.5">Need Booking Assistance?</h4>
+                  <p className="text-[12px] text-[#94a3b8]">
+                    Call support at <span className="text-white font-semibold">+91 98765 43210</span> or email <span className="text-white font-semibold">care@srplus.com</span>
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <hr className="border-t border-[#e8e5de] mb-8" />
+            {/* Right Column: Form Wizard */}
+            <div className="lg:col-span-7 bg-white rounded-3xl border border-[#eaedf1] shadow-sm p-6 md:p-8 flex flex-col justify-between h-full lg:max-h-full lg:overflow-y-auto">
+              <form onSubmit={handleSubmit} className="h-full flex flex-col justify-between gap-6">
+                <div>
+                  {/* Form Header & Step Tracker */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }} className="text-xl md:text-2xl text-[#1a2b30]">
+                        Book Appointment
+                      </h2>
+                      <p style={{ fontFamily: "'Figtree', sans-serif" }} className="text-[11px] text-[#809196] font-medium leading-none mt-1">
+                        Required fields are marked with *
+                      </p>
+                    </div>
 
-            <p className="text-[#556b73] text-[15px] font-medium leading-relaxed">
-              We offer comprehensive medical care, ensuring a full spectrum of diagnostic, preventive, and treatment services tailored to individual needs.
-            </p>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step === 1 ? 'bg-[#253a5a] text-white' : 'bg-[#e1eff2] text-[#253a5a]'}`}>1</div>
+                      <div className="w-6 h-[2px] bg-[#eaedf1]" />
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${step === 2 ? 'bg-[#253a5a] text-white' : 'bg-[#e1eff2] text-[#253a5a]'}`}>2</div>
+                    </div>
+                  </div>
+
+                  {/* Step 1: Booking Details */}
+                  {step === 1 && (
+                    <div className="space-y-5 animate-fadeIn">
+                      <div>
+                        <label className={labelClass}>Select Doctor *</label>
+                        <select
+                          name="doctorId"
+                          className={selectClass}
+                          style={selectStyle}
+                          value={form.doctorId}
+                          onChange={handleChange}
+                          required
+                        >
+                          <option value="">Choose a doctor</option>
+                          {doctors.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name} — {s.specialty || s.email}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Date & Time *</label>
+                        <input
+                          type="datetime-local"
+                          name="dateTime"
+                          value={form.dateTime}
+                          onChange={handleChange}
+                          className={inputClass}
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className={labelClass}>Type *</label>
+                          <select
+                            name="type"
+                            className={selectClass}
+                            style={selectStyle}
+                            value={form.type}
+                            onChange={handleChange}
+                          >
+                            {appointmentTypes.map((t) => (
+                              <option key={t.value} value={t.value}>
+                                {t.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelClass}>Duration *</label>
+                          <select
+                            name="duration"
+                            className={selectClass}
+                            style={selectStyle}
+                            value={form.duration}
+                            onChange={handleChange}
+                          >
+                            <option value={15}>15 min</option>
+                            <option value={30}>30 min</option>
+                            <option value={45}>45 min</option>
+                            <option value={60}>60 min</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Step 2: Patient Information */}
+                  {step === 2 && (
+                    <div className="space-y-4 animate-fadeIn">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
+                        <div>
+                          <label className={labelClass}>Full Name *</label>
+                          <input
+                            type="text"
+                            name="name"
+                            value={form.name}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b]"
+                            placeholder="Enter your full name"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className={labelClass}>Phone Number *</label>
+                          <input
+                            type="tel"
+                            name="phone"
+                            value={form.phone}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b]"
+                            placeholder="Enter your phone number"
+                            required
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className={labelClass}>Email Address *</label>
+                          <input
+                            type="email"
+                            name="email"
+                            value={form.email}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b]"
+                            placeholder="Enter your email address"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className={labelClass}>Date of Birth</label>
+                          <input
+                            type="date"
+                            name="dob"
+                            value={form.dob}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className={labelClass}>Gender</label>
+                          <select
+                            name="gender"
+                            value={form.gender}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] text-[#1e293b] appearance-none"
+                            style={{ ...selectStyle, backgroundPosition: 'right 12px center' }}
+                          >
+                            <option value="">Select gender</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className={labelClass}>Address</label>
+                          <input
+                            type="text"
+                            name="address"
+                            value={form.address}
+                            onChange={handleChange}
+                            className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b]"
+                            placeholder="Enter your address"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={labelClass}>Additional Notes (Optional)</label>
+                        <textarea
+                          name="notes"
+                          value={form.notes}
+                          onChange={handleChange}
+                          className="w-full bg-[#f8fafc] border border-[#eaedf1] rounded-xl px-4 py-2 text-[14px] font-medium transition-all focus:outline-none focus:border-[#36565F] placeholder:text-[#9ca3af] text-[#1e293b] resize-none"
+                          rows={2}
+                          placeholder="Write any notes for the doctor..."
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Wizard navigation buttons */}
+                <div>
+                  {step === 1 ? (
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleNextStep}
+                        style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
+                        className="w-full bg-[#253a5a] hover:bg-[#1e2e48] text-white py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm tracking-wide"
+                      >
+                        Continue to Patient Info
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                          <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-4 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setStep(1)}
+                        style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
+                        className="flex-1 bg-white hover:bg-gray-50 text-[#4a5568] border border-[#eaedf1] py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm tracking-wide"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="19" y1="12" x2="5" y2="12"></line>
+                          <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        Back to Details
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 600 }}
+                        className="flex-1 bg-[#253a5a] hover:bg-[#1e2e48] text-white py-3.5 px-4 rounded-xl transition-all duration-200 transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm tracking-wide"
+                      >
+                        {loading ? (
+                          <>
+                            <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            </svg>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                              <line x1="16" y1="2" x2="16" y2="6"></line>
+                              <line x1="8" y1="2" x2="8" y2="6"></line>
+                              <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Confirm Booking
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </form>
+            </div>
           </div>
-
-        </div>
+        )}
       </div>
 
-      {/* --- Healthcare Departments Section --- */}
-      <HealthcareDepartments />
-
-      {/* Quick Find & Testimonials Section */}
-      <QuickFindSection />
-
-      <Footer />
+      {/* Mini copyright footer to replace heavy footer and avoid scrolling */}
+      <div className="py-4 text-center text-xs text-[#809196] border-t border-[#eaedf1] bg-white">
+        © 2026 Dr. Srinath Healthcare. All rights reserved.
+      </div>
     </div>
   );
 }

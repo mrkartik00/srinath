@@ -1,24 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700&display=swap');
 
-/* Font declarations */
+/* Font declarations — Britti Sans alias points to Figtree */
 @font-face {
   font-family: 'Britti Sans';
-  src: local('Britti Sans'), local('Inter');
+  src: local('Britti Sans'), local('Figtree');
+}
+
+/* ===========================
+   GLOBAL DESIGN TOKENS
+   =========================== */
+:root {
+  /* Brand Palette */
+  --ds-primary:        #36565F;
+  --ds-primary-dark:   #253a5a;
+  --ds-secondary:      #5F8190;
+  --ds-accent:         #8db5c4;
+  --ds-bg:             #f0f4f8;
+  --ds-bg-teal:        #E2F0F0;
+  --ds-muted:          #6B7C84;
+  --ds-text:           #141414;
+  --ds-dark:           #253a5a;
+  --ds-blue:           #3253A6;
+  --ds-border:         rgba(54, 86, 95, 0.15);
+  --ds-white:          #ffffff;
+
+  /* Spacing */
+  --ds-container-max:  1400px;
+  --ds-pad-desktop:    120px;
+  --ds-pad-tablet:     64px;
+  --ds-pad-mobile:     24px;
+  --ds-section-gap:    96px;
+  --ds-card-gap:       32px;
+
+  /* Border Radius */
+  --ds-radius-page:    36px;
+  --ds-radius-card:    24px;
+  --ds-radius-btn:     16px;
+  --ds-radius-input:   16px;
+  --ds-radius-sm:      8px;
+
+  /* Shadows */
+  --ds-shadow-sm:  0 1px 3px rgba(54, 86, 95, 0.06);
+  --ds-shadow-md:  0 4px 16px rgba(54, 86, 95, 0.08);
+  --ds-shadow-lg:  0 12px 40px rgba(54, 86, 95, 0.12);
+  --ds-shadow-xl:  0 20px 60px rgba(54, 86, 95, 0.16);
+
+  /* Font */
+  --ds-font: 'Figtree', system-ui, -apple-system, sans-serif;
 }
 
 /* ===========================
    HOME PAGE CSS VARIABLES
+   (kept for backward compat)
    =========================== */
 .home-page {
-  --hp-primary: #36565F;
-  --hp-secondary: #5F8190;
-  --hp-background: #E2F0F0;
-  --hp-dark: #36565F;
-  --hp-text: #36565F;
-  --hp-muted: #6B7C84;
-  --hp-border: rgba(54, 86, 95, 0.15);
-  --hp-nav-glass: #E2F0F0;
+  --hp-primary:    var(--ds-primary);
+  --hp-secondary:  var(--ds-secondary);
+  --hp-background: var(--ds-bg-teal);
+  --hp-dark:       var(--ds-primary);
+  --hp-text:       var(--ds-primary);
+  --hp-muted:      var(--ds-muted);
+  --hp-border:     var(--ds-border);
+  --hp-nav-glass:  var(--ds-bg-teal);
 }
 
 /* ===========================
@@ -1328,8 +1371,8 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
-  margin: 0 auto 60px auto;
-  max-width: 960px;
+  margin: 0 0 60px 0;
+  width: 100%;
 }
 
 .doctors-section__subtitle {
@@ -1366,8 +1409,8 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 32px;
-  margin: 0 auto 40px auto;
-  max-width: 960px;
+  margin: 0 0 40px 0;
+  width: 100%;
 }
 
 .doctor-card {
@@ -1418,9 +1461,9 @@
 }
 
 .doctor-card__name {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Figtree', sans-serif;
   font-size: 20px;
-  font-weight: 700;
+  font-weight: 600;
   color: #1a1a1a;
   margin: 0 0 8px 0;
 }

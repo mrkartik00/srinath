@@ -1,0 +1,546 @@
+/* =========================================================
+   DOCTOR DETAIL PAGE
+   ========================================================= */
+
+.dd-page {
+  font-family: var(--ds-font);
+  background: #f8f9fa;
+  min-height: 100vh;
+  padding: 120px 24px 60px; /* Offset for navbar */
+}
+
+.dd-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+/* ─── LEFT COLUMN: Main Info ─── */
+.dd-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dd-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #eaedf1;
+  padding: 32px;
+}
+
+/* Doctor Profile Header */
+.dd-profile {
+  display: flex;
+  gap: 32px;
+}
+
+.dd-profile-image {
+  width: 180px;
+  height: 180px;
+  border-radius: 16px;
+  object-fit: cover;
+  background: #e9ecef;
+}
+
+.dd-profile-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dd-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dd-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1f36;
+  margin: 0;
+}
+
+.dd-verified {
+  color: #3b82f6;
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.dd-favorite {
+  margin-left: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #d1d5db;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  cursor: pointer;
+  background: transparent;
+}
+
+.dd-specialty {
+  font-size: 16px;
+  font-weight: 600;
+  color: #3b82f6;
+  margin: 0 0 16px 0;
+}
+
+.dd-stats {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 16px;
+}
+
+.dd-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dd-stat-icon {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+}
+
+.dd-fee {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1f36;
+  margin-bottom: 16px;
+}
+.dd-fee span {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.dd-bio {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+/* Action Buttons */
+.dd-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.dd-btn-primary {
+  background: #253a5a;
+  color: #fff;
+  border: none;
+}
+.dd-btn-primary:hover {
+  background: #1e2e48;
+}
+
+.dd-btn-outline {
+  background: #fff;
+  color: #253a5a;
+  border: 1px solid #253a5a;
+}
+.dd-btn-outline:hover {
+  background: #f8fafc;
+}
+
+.dd-btn-light {
+  background: #fff;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+}
+.dd-btn-light:hover {
+  background: #f3f4f6;
+}
+
+/* TABS */
+.dd-tabs {
+  display: flex;
+  gap: 32px;
+  border-bottom: 1px solid #eaedf1;
+  margin-top: 32px;
+}
+
+.dd-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  position: relative;
+}
+
+.dd-tab.active {
+  color: #3b82f6;
+}
+
+.dd-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #3b82f6;
+}
+
+/* Content Area */
+.dd-content {
+  display: flex;
+  gap: 32px;
+}
+
+.dd-content-left {
+  flex: 1;
+}
+
+.dd-content-right {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.dd-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1f36;
+  margin: 0 0 16px 0;
+}
+
+.dd-text {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+.dd-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px 0;
+}
+
+.dd-list li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+.dd-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 4px;
+  height: 4px;
+  background: #9ca3af;
+  border-radius: 50%;
+}
+
+.dd-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dd-tag {
+  font-size: 13px;
+  color: #4b5563;
+  border: 1px solid #eaedf1;
+  padding: 6px 16px;
+  border-radius: 20px;
+}
+
+/* Timeline */
+.dd-timeline {
+  position: relative;
+  padding-left: 20px;
+  margin-bottom: 24px;
+}
+
+.dd-timeline::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.dd-timeline-item {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.dd-timeline-dot {
+  position: absolute;
+  left: -20px;
+  top: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #3b82f6;
+  border: 2px solid #fff;
+}
+.dd-timeline-dot.inactive {
+  background: #9ca3af;
+}
+
+.dd-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dd-timeline-date {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.dd-timeline-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1f36;
+}
+
+.dd-timeline-subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0 0 4px 0;
+}
+
+.dd-timeline-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.5;
+  margin: 0;
+}
+
+
+/* ─── RIGHT COLUMN: Booking Widget ─── */
+.dd-sidebar {
+  width: 360px;
+  flex-shrink: 0;
+}
+
+.dd-booking-widget {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #eaedf1;
+  padding: 24px;
+  position: sticky;
+  top: 100px;
+}
+
+.dd-booking-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1f36;
+  margin: 0 0 20px 0;
+}
+
+.dd-booking-subtitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1f36;
+  margin: 0 0 16px 0;
+}
+
+/* Calendar Month Header */
+.dd-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.dd-cal-month {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1f36;
+}
+.dd-cal-nav {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #eaedf1;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* Calendar Grid */
+.dd-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.dd-cal-day-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  margin-bottom: 8px;
+}
+
+.dd-cal-day {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1f36;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.dd-cal-day.disabled {
+  color: #d1d5db;
+  cursor: default;
+}
+.dd-cal-day.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Time Slots */
+.dd-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.dd-slot {
+  border: 1px solid #3b82f6;
+  color: #3b82f6;
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.dd-slot.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Summary Box */
+.dd-summary-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.dd-summary-icon {
+  color: #3b82f6;
+  margin-top: 2px;
+}
+
+.dd-summary-text {
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+.dd-summary-text strong {
+  color: #1a1f36;
+}
+
+.dd-btn-block {
+  width: 100%;
+  background: #253a5a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.dd-btn-block:hover {
+  background: #1e2e48;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .dd-container {
+    flex-direction: column;
+  }
+  .dd-sidebar {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .dd-profile {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .dd-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .dd-stats {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .dd-content {
+    flex-direction: column;
+  }
+  .dd-content-right {
+    width: 100%;
+  }
+}

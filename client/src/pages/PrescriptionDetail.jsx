@@ -4,17 +4,17 @@ import toast from 'react-hot-toast';
 import { Spinner } from '../components/ui';
 import api from '../api/axios';
 
-const statusVariant = { 
+const statusVariant = {
   active: { bg: '#253a5a', color: '#ffffff', label: 'Active' },
   completed: { bg: '#8db5c4', color: '#ffffff', label: 'Completed' },
   cancelled: { bg: 'rgba(198,40,40,0.12)', color: '#C62828', label: 'Cancelled' }
 };
 
-const freqLabel = { 
-  once_daily: 'Once daily', 
-  twice_daily: 'Twice daily', 
-  thrice_daily: 'Thrice daily', 
-  custom: 'Custom' 
+const freqLabel = {
+  once_daily: 'Once daily',
+  twice_daily: 'Twice daily',
+  thrice_daily: 'Thrice daily',
+  custom: 'Custom'
 };
 
 export default function PrescriptionDetail() {
@@ -40,12 +40,12 @@ export default function PrescriptionDetail() {
     const rxToast = toast.loading('Preparing download...');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/my/prescriptions/${id}/pdf`, { 
-        headers: { Authorization: `Bearer ${token}` } 
+      const res = await fetch(`/api/v1/my/prescriptions/${id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
-      if (!res.ok) { 
-        toast.error('PDF not available yet', { id: rxToast }); 
-        return; 
+      if (!res.ok) {
+        toast.error('PDF not available yet', { id: rxToast });
+        return;
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -55,10 +55,10 @@ export default function PrescriptionDetail() {
       a.click();
       URL.revokeObjectURL(url);
       toast.success('Downloaded!', { id: rxToast });
-    } catch { 
-      toast.error('Download failed', { id: rxToast }); 
-    } finally { 
-      setDownloading(false); 
+    } catch {
+      toast.error('Download failed', { id: rxToast });
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -77,12 +77,12 @@ export default function PrescriptionDetail() {
   const statusInfo = statusVariant[rx.status] || { bg: '#8db5c4', color: '#ffffff', label: rx.status };
 
   return (
-    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", background: '#f8fafb', minHeight: '100vh', padding: '40px 0' }}>
+    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", background: '#f0f4f8', minHeight: '100vh', padding: '140px 0 40px' }}>
       <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 24px', boxSizing: 'border-box' }}>
 
         {/* Back navigation */}
-        <button 
-          onClick={() => navigate('/prescriptions')}
+        <button
+          onClick={() => navigate(-1)}
           style={{
             background: 'transparent',
             color: '#253a5a',
@@ -106,7 +106,7 @@ export default function PrescriptionDetail() {
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
-          Back to Prescriptions
+          Go Back
         </button>
 
         {/* ═══════════════════════════════════════════════ */}
@@ -152,7 +152,7 @@ export default function PrescriptionDetail() {
             }}>
               {rx.diagnosis || 'Prescription Details'}
             </h1>
-            
+
             <p style={{ fontSize: '15px', color: '#6B7C84', margin: 0, fontWeight: 500 }}>
               Issued by Dr. {doctorName} on {formattedDate}
             </p>
@@ -204,7 +204,7 @@ export default function PrescriptionDetail() {
           gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)',
           gap: '32px',
         }} className="detail-grid-layout">
-          
+
           {/* Left Side: Medicines List */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <div style={{
@@ -301,7 +301,7 @@ export default function PrescriptionDetail() {
 
           {/* Right Side: Doctor info & Advice notes */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            
+
             {/* Doctor Info card */}
             <div style={{
               background: '#ffffff',

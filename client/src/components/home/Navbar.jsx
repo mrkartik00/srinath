@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -7,18 +7,36 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Hover states for the two distinct dropdown categories
+  // Hover states for the distinct dropdown categories
+  const [consultHovered, setConsultHovered] = useState(false);
   const [healthHovered, setHealthHovered] = useState(false);
   const [accountHovered, setAccountHovered] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
 
-  const isTransparent = location.pathname === '/' || location.pathname === '/services';
-  const isBookAppointment = location.pathname === '/book-appointment';
+  const isTransparent = location.pathname === '/';
+  const isBookAppointment = 
+    location.pathname === '/book-appointment' || 
+    location.pathname === '/services' || 
+    location.pathname.startsWith('/appointments') || 
+    location.pathname.startsWith('/prescriptions') ||
+    location.pathname.startsWith('/profile') ||
+    location.pathname.startsWith('/chat');
   const elementColor = isBookAppointment ? '#36565F' : '#ffffff';
 
   const navbarStyle = {
@@ -27,15 +45,15 @@ export default function Navbar() {
     left: 0,
     width: '100%',
     height: '90px',
-    background: isBookAppointment ? '#ffffff' : (isTransparent ? 'transparent' : '#8db5c4'),
+    background: isBookAppointment ? '#f0f4f8' : ((isTransparent && !mobileMenuOpen) ? 'transparent' : '#8db5c4'),
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '0 40px',
     zIndex: 100,
     boxSizing: 'border-box',
-    boxShadow: isBookAppointment ? '0 4px 20px rgba(0, 0, 0, 0.02)' : 'none',
-    borderBottom: isBookAppointment ? '1px solid #f0f0f0' : 'none',
+    boxShadow: 'none',
+    borderBottom: isBookAppointment ? '1px solid rgba(54, 86, 95, 0.08)' : 'none',
   };
 
   const linkStyle = {
@@ -130,20 +148,53 @@ export default function Navbar() {
             onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            Services
+            Find Doctors
           </Link>
 
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Link 
-              to="/shop" 
-              style={linkStyle}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              onClick={e => e.preventDefault()}
-            >
-              Shop
-            </Link>
-            <span style={{ position: 'absolute', top: '-8px', right: '-35px', background: '#E56B55', color: '#fff', fontSize: '8px', padding: '2px 4px', borderRadius: '4px', fontWeight: 'bold', letterSpacing: '0.5px' }}>SOON</span>
+          <div 
+            className="relative"
+            onMouseEnter={() => setConsultHovered(true)}
+            onMouseLeave={() => setConsultHovered(false)}
+            style={{ display: 'inline-block' }}
+          >
+            <button style={dropdownButtonStyle}>
+              Consult <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
+            </button>
+            
+            {consultHovered && (
+              <div style={dropdownMenuStyle}>
+                <Link 
+                  to="/book-appointment"
+                  style={{
+                    display: 'block',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    color: '#36565f',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Book Appointment
+                </Link>
+                <Link 
+                  to="/chat"
+                  style={{
+                    display: 'block',
+                    padding: '10px 16px',
+                    fontSize: '14px',
+                    color: '#36565f',
+                    textDecoration: 'none',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  Chat
+                </Link>
+              </div>
+            )}
           </div>
           
           {user ? (
@@ -188,14 +239,7 @@ export default function Navbar() {
                 )}
               </div>
 
-              <Link 
-                to="/chat" 
-                style={linkStyle}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
-                Chat
-              </Link>
+              {/* Chat link removed */}
             </>
           ) : (
             <Link 
@@ -261,10 +305,6 @@ export default function Navbar() {
                   </div>
                   {[
                     { label: 'Profile', path: '/profile' },
-                    { label: 'Chat', path: '/chat' },
-                    { label: 'Reminders', path: '/reminders' },
-                    { label: 'VIP Membership', path: '/vip' },
-                    { label: 'Payments', path: '/payments' },
                   ].map((item) => (
                     <Link 
                       key={item.label}
@@ -353,7 +393,12 @@ export default function Navbar() {
           gap: '20px'
         }}>
           <Link to="/" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Home</Link>
-          <Link to="/services" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Services</Link>
+          <Link to="/services" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Find Doctors</Link>
+          <div style={{ padding: '10px 0', borderBottom: '1px solid #eef5f7' }}>
+            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700, color: '#6B7C84', textTransform: 'uppercase' }}>Consult</p>
+            <Link to="/book-appointment" onClick={() => setMobileMenuOpen(false)} style={{ display: 'block', fontSize: '16px', fontWeight: 500, color: '#36565F', textDecoration: 'none', marginBottom: '12px' }}>Book Appointment</Link>
+            <Link to="/chat" onClick={() => setMobileMenuOpen(false)} style={{ display: 'block', fontSize: '16px', fontWeight: 500, color: '#36565F', textDecoration: 'none' }}>Chat</Link>
+          </div>
           
           {user ? (
             <>
@@ -373,10 +418,6 @@ export default function Navbar() {
               {/* My Account Group */}
               <div style={{ fontSize: '12px', fontWeight: 700, color: '#8db5c4', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '12px' }}>My Account</div>
               <Link to="/profile" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Profile</Link>
-              <Link to="/chat" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Chat</Link>
-              <Link to="/reminders" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Reminders</Link>
-              <Link to="/vip" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>VIP Membership</Link>
-              <Link to="/payments" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Payments</Link>
               
               <button 
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
@@ -397,10 +438,7 @@ export default function Navbar() {
             </>
           ) : (
             <>
-              <div style={{ position: 'relative', display: 'inline-block' }}>
-                <Link to="/shop" onClick={e => e.preventDefault()} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Shop</Link>
-                <span style={{ position: 'absolute', top: '-2px', right: '-35px', background: '#E56B55', color: '#fff', fontSize: '8px', padding: '2px 4px', borderRadius: '4px', fontWeight: 'bold' }}>SOON</span>
-              </div>
+              {/* Shop link removed */}
               <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{
                 textAlign: 'center',
                 background: '#36565F',

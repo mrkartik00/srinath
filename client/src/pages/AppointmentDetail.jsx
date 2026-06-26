@@ -66,12 +66,12 @@ export default function AppointmentDetail() {
   const doctorEmail = apt.doctorId?.email || '';
 
   return (
-    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", background: '#f8fafb', minHeight: '100vh' }}>
+    <div style={{ boxSizing: 'border-box', fontFamily: "'Inter', sans-serif", background: '#f0f4f8', minHeight: '100vh' }}>
       
       {/* ═══════════════════════════════════════════════ */}
       {/* HERO BANNER — Deep premium gradient background  */}
       {/* ═══════════════════════════════════════════════ */}
-      <div style={{ background: '#8fbec8', paddingTop: '120px', paddingBottom: '16px' }}>
+      <div style={{ background: '#f0f4f8', paddingTop: '120px', paddingBottom: '16px' }}>
         <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px', boxSizing: 'border-box' }}>
           
           <div style={{
@@ -104,7 +104,7 @@ export default function AppointmentDetail() {
               
               {/* Back navigation */}
               <button 
-                onClick={() => navigate('/appointments')}
+                onClick={() => navigate(-1)}
                 style={{
                   background: 'rgba(255, 255, 255, 0.1)',
                   color: '#ffffff',
@@ -128,7 +128,7 @@ export default function AppointmentDetail() {
                   <line x1="19" y1="12" x2="5" y2="12"></line>
                   <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
-                Back to Appointments
+                Go Back
               </button>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px' }}>

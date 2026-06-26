@@ -2,34 +2,68 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from '../home/Navbar';
 import Footer from '../home/Footer';
 import '../../styles/home.css';
+import '../../styles/shared.css';
+
+const AUTH_PATHS = ['/login', '/register'];
+const NO_FOOTER_PATHS = ['/book-appointment'];
+
+// Pages where the navbar sits on top of a full-bleed hero (no top-padding needed)
+const FULL_BLEED_PATHS = [
+  '/',
+  '/services',
+  '/book-appointment',
+];
+
+const FULL_BLEED_PREFIXES = [
+  '/appointments',
+  '/prescriptions',
+  '/profile',
+  '/chat',
+];
 
 export default function MainLayout() {
-  const location = useLocation();
-  const isHome = location.pathname === '/';
-  const isServices = location.pathname === '/services';
-  
-  // If we are on the login or register page, we might just show the raw layout or hide navbar.
-  // Actually, login and register have their own full-bleed layouts.
-  // Let's hide the Navbar and Footer on auth pages to match original design.
-  const isAuth = location.pathname === '/login' || location.pathname === '/register';
+  const { pathname } = useLocation();
 
-  if (isAuth) {
+  // Auth pages render without Navbar / Footer
+  if (AUTH_PATHS.includes(pathname)) {
     return <Outlet />;
   }
 
-  const isFullBleed = isHome || isServices || location.pathname === '/book-appointment' || location.pathname.startsWith('/appointments');
+  // Determine if page manages its own top spacing (full-bleed hero pages)
+  const isFullBleed =
+    FULL_BLEED_PATHS.includes(pathname) ||
+    FULL_BLEED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
   return (
-    <div 
-      className="min-h-screen flex flex-col hp-global-bg" 
+    <div
+      className="hp-global-bg"
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'var(--ds-font)',
+      }}
     >
       <Navbar />
-      
-      {/* Content wrapper with no artificial restriction so pages can span 1680px */}
-      <main className={`flex-1 w-full flex flex-col ${!isFullBleed ? 'pt-[120px]' : ''}`}>
+
+      {/*
+       * Main content area.
+       * - Full-bleed pages: no top padding (hero starts behind the navbar)
+       * - Standard pages: 90px top padding to clear the absolute-positioned navbar
+       */}
+      <main
+        style={{
+          flex: 1,
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          paddingTop: isFullBleed ? 0 : '90px',
+        }}
+      >
         <Outlet />
       </main>
-      <Footer />
+
+      {!NO_FOOTER_PATHS.includes(pathname) && <Footer />}
     </div>
   );
 }

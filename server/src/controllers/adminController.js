@@ -28,9 +28,14 @@ const deactivateDoctor = asyncHandler(async (req, res) => {
   apiResponse.success(res, null, 'Doctor deactivated');
 });
 
+const reactivateDoctor = asyncHandler(async (req, res) => {
+  await doctorService.reactivate(req.scope.organizationId, req.params.id, req.user.id);
+  apiResponse.success(res, null, 'Doctor reactivated');
+});
+
 const getStats = asyncHandler(async (req, res) => {
   const stats = await dashboardService.getStats(req.scope);
   apiResponse.success(res, stats, 'Platform stats fetched');
 });
 
-module.exports = { addDoctor, getDoctors, getDoctor, updateDoctor, deactivateDoctor, getStats };
+module.exports = { addDoctor, getDoctors, getDoctor, updateDoctor, deactivateDoctor, reactivateDoctor, getStats };

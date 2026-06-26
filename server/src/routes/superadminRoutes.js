@@ -17,6 +17,7 @@ router.get('/doctors/:id', ...guard, c.getDoctor);
 router.post('/doctors', ...guard, c.addDoctor);
 router.patch('/doctors/:id', ...guard, c.updateDoctor);
 router.delete('/doctors/:id', ...guard, c.deactivateDoctor);
+router.patch('/doctors/:id/reactivate', ...guard, c.reactivateDoctor);
 router.get('/doctors/:id/activity', ...guard, c.getDoctorActivity);
 
 // Doctor Registrations

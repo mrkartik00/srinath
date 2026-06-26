@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { getDoctorById, deactivateDoctor } from '../api/endpoints/doctors';
+import { getDoctorById, deactivateDoctor, reactivateDoctor } from '../api/endpoints/doctors';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
@@ -23,6 +23,12 @@ export default function DoctorDetail() {
   const handleDeactivate = async () => {
     if (!window.confirm('Deactivate this doctor? They will lose access.')) return;
     try { await deactivateDoctor(id); toast.success('Doctor deactivated'); navigate('/doctors'); }
+    catch (err) { toast.error(err.message); }
+  };
+
+  const handleReactivate = async () => {
+    if (!window.confirm('Reactivate this doctor? They will regain access.')) return;
+    try { await reactivateDoctor(id); toast.success('Doctor reactivated'); navigate('/doctors'); }
     catch (err) { toast.error(err.message); }
   };
 
@@ -98,6 +104,9 @@ export default function DoctorDetail() {
 
       {user?.isActive && (
         <Button variant="danger" onClick={handleDeactivate}>Deactivate Doctor</Button>
+      )}
+      {!user?.isActive && (
+        <Button variant="success" onClick={handleReactivate}>Reactivate Doctor</Button>
       )}
     </div>
   );

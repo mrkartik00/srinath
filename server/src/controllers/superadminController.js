@@ -64,6 +64,12 @@ const deactivateDoctor = asyncHandler(async (req, res) => {
   apiResponse.success(res, null, 'Doctor deactivated');
 });
 
+const reactivateDoctor = asyncHandler(async (req, res) => {
+  await doctorService.reactivate(req.scope.organizationId, req.params.id, req.user.id);
+  await SystemLog.create({ actorId: req.user.id, actorName: req.user.email, action: 'doctor.reactivated', target: req.params.id });
+  apiResponse.success(res, null, 'Doctor reactivated');
+});
+
 const getDoctorActivity = asyncHandler(async (req, res) => {
   const activity = await DoctorActivity.find({ doctorId: req.params.id }).sort({ timestamp: -1 }).limit(50).lean();
   apiResponse.success(res, activity, 'Activity fetched');
@@ -221,7 +227,7 @@ const getLogs = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, getDoctorActivity,
+  getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, reactivateDoctor, getDoctorActivity,
   getRegistrations, approveDoctor, rejectDoctor,
   getPatients, getAppointments, getPrescriptions, getAnalytics,
   getPlans, getPlanFeatures, createPlan, updatePlan, togglePlan, deletePlan,

@@ -93,4 +93,15 @@ const deactivate = async (orgId, doctorId, actorId) => {
   return user;
 };
 
-module.exports = { addDoctor, selfRegister, getAll, getById, update, deactivate };
+const reactivate = async (orgId, doctorId, actorId) => {
+  const user = await User.findOneAndUpdate(
+    { _id: doctorId, organizationId: orgId, role: ROLES.DOCTOR, isActive: false },
+    { isActive: true, deletedAt: null },
+    { new: true }
+  );
+  if (!user) throw new NotFoundError('Doctor not found or already active');
+  auditService.log({ actorId, actorRole: ROLES.SUPER_ADMIN, action: 'doctor.reactivated', targetType: 'User', targetId: doctorId });
+  return user;
+};
+
+module.exports = { addDoctor, selfRegister, getAll, getById, update, deactivate, reactivate };

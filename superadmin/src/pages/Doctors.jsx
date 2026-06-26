@@ -49,6 +49,11 @@ export default function Doctors() {
     try { await api.delete(`/api/v1/superadmin/doctors/${id}`); toast.success('Deactivated'); fetchDoctors(); } catch (err) { toast.error(err.message); }
   };
 
+  const handleReactivate = async (id) => {
+    if (!confirm('Reactivate this doctor?')) return;
+    try { await api.patch(`/api/v1/superadmin/doctors/${id}/reactivate`); toast.success('Reactivated'); fetchDoctors(); } catch (err) { toast.error(err.message); }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -86,6 +91,7 @@ export default function Doctors() {
               <div className="flex items-center gap-3">
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${doc.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{doc.isActive ? 'Active' : 'Inactive'}</span>
                 {doc.isActive && <button onClick={(e) => { e.stopPropagation(); handleDeactivate(doc._id); }} className="text-xs text-red-500 hover:text-red-600 font-medium">Deactivate</button>}
+                {!doc.isActive && <button onClick={(e) => { e.stopPropagation(); handleReactivate(doc._id); }} className="text-xs text-green-600 hover:text-green-700 font-medium">Reactivate</button>}
               </div>
             </div>
           ))}

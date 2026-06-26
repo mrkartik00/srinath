@@ -13,6 +13,7 @@ router.get('/doctors', ...guard, adminController.getDoctors);
 router.get('/doctors/:id', ...guard, adminController.getDoctor);
 router.patch('/doctors/:id', ...guard, adminController.updateDoctor);
 router.delete('/doctors/:id', ...guard, adminController.deactivateDoctor);
+router.patch('/doctors/:id/reactivate', ...guard, adminController.reactivateDoctor);
 router.get('/stats', ...guard, adminController.getStats);
 
 module.exports = router;

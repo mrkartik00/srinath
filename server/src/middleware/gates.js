@@ -39,4 +39,13 @@ const requireActiveSubscription = (req, res, next) => {
   return next(err);
 };
 
-module.exports = { doctorApprovedGate, requireActiveSubscription };
+// Block users who haven't verified their email.
+const requireEmailVerified = (req, res, next) => {
+  if (!req.user) return next();
+  if (req.user.isEmailVerified) return next();
+  const err = new ForbiddenError('Email verification required');
+  err.code = 'EMAIL_NOT_VERIFIED';
+  return next(err);
+};
+
+module.exports = { doctorApprovedGate, requireActiveSubscription, requireEmailVerified };

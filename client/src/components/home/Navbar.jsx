@@ -25,6 +25,7 @@ export default function Navbar() {
   }, [mobileMenuOpen]);
 
   const handleLogout = () => {
+    if (!window.confirm('Sign out?')) return;
     logout();
     navigate('/');
   };

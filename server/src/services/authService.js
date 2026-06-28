@@ -27,17 +27,39 @@ const register = async (data) => {
   }
 
   const user = await User.create({ ...data, organizationId: orgId });
+
+  // Send OTP for email verification
+  const { sendOtp } = require('./otpService');
+  try { await sendOtp(user.email, 'registration'); } catch (_) { /* non-blocking */ }
+
   const accessToken = generateToken(user);
   const refreshToken = generateRefreshToken(user);
 
   return {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, approvalStatus: user.approvalStatus },
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, approvalStatus: user.approvalStatus, isEmailVerified: false },
     accessToken,
     refreshToken,
   };
 };
 
 const login = async (email, password) => {
+  // Check SuperAdmin collection first
+  const SuperAdmin = require('../models/SuperAdmin');
+  let superAdmin = await SuperAdmin.findOne({ email }).select('+password');
+  if (superAdmin) {
+    if (!superAdmin.isActive) throw new UnauthorizedError('Account is deactivated');
+    const isMatch = await superAdmin.comparePassword(password);
+    if (!isMatch) throw new UnauthorizedError('Invalid email or password');
+    superAdmin.lastLogin = new Date();
+    await superAdmin.save({ validateBeforeSave: false });
+    const accessToken = generateToken(superAdmin);
+    const refreshToken = generateRefreshToken(superAdmin);
+    return {
+      user: { id: superAdmin._id, name: superAdmin.name, email: superAdmin.email, role: 'super_admin', organizationId: superAdmin.organizationId, isEmailVerified: true },
+      accessToken, refreshToken,
+    };
+  }
+
   const user = await User.findOne({ email }).select('+password');
   if (!user) throw new UnauthorizedError('Invalid email or password');
   if (!user.isActive && user.approvalStatus !== 'pending_approval' && user.approvalStatus !== 'rejected') {
@@ -47,6 +69,13 @@ const login = async (email, password) => {
   const isMatch = await user.comparePassword(password);
   if (!isMatch) throw new UnauthorizedError('Invalid email or password');
 
+  if (!user.isEmailVerified) {
+    const err = new UnauthorizedError('Please verify your email before signing in');
+    err.code = 'EMAIL_NOT_VERIFIED';
+    err.email = user.email;
+    throw err;
+  }
+
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false });
 
@@ -54,7 +83,7 @@ const login = async (email, password) => {
   const refreshToken = generateRefreshToken(user);
 
   return {
-    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, doctorId: user.doctorId, approvalStatus: user.approvalStatus },
+    user: { id: user._id, name: user.name, email: user.email, role: user.role, organizationId: user.organizationId, doctorId: user.doctorId, approvalStatus: user.approvalStatus, isEmailVerified: user.isEmailVerified },
     accessToken,
     refreshToken,
   };
@@ -63,6 +92,13 @@ const login = async (email, password) => {
 const refreshTokenFn = async (token) => {
   try {
     const decoded = jwt.verify(token, config.JWT_REFRESH_SECRET);
+    const SuperAdmin = require('../models/SuperAdmin');
+    const admin = await SuperAdmin.findById(decoded.id);
+    if (admin) {
+      if (!admin.isActive) throw new UnauthorizedError('Invalid refresh token');
+      const accessToken = generateToken(admin);
+      return { accessToken };
+    }
     const user = await User.findById(decoded.id);
     if (!user || !user.isActive) throw new UnauthorizedError('Invalid refresh token');
     const accessToken = generateToken(user);
@@ -73,6 +109,9 @@ const refreshTokenFn = async (token) => {
 };
 
 const getMe = async (userId) => {
+  const SuperAdmin = require('../models/SuperAdmin');
+  const admin = await SuperAdmin.findById(userId);
+  if (admin) return admin;
   const user = await User.findById(userId);
   if (!user) throw new NotFoundError('User not found');
   return user;

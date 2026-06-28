@@ -28,15 +28,15 @@ export default function Dashboard() {
   return (
     <div className="space-y-6" style={{ fontFamily: '"Figtree", sans-serif' }}>
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
         {STAT_CARDS.map((s) => (
-          <div key={s.key} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-[#273d71]/10 flex items-center justify-center text-[#273d71] flex-shrink-0">
+          <div key={s.key} className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 flex items-start gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-[#273d71]/10 flex items-center justify-center text-[#273d71] flex-shrink-0">
               {s.icon}
             </div>
             <div>
-              <p className="text-2xl font-bold text-[#1e293b]">{d[s.key] ?? 0}</p>
-              <p className="text-xs text-[#64748b] mt-0.5">{s.label}</p>
+              <p className="text-xl sm:text-2xl font-bold text-[#1e293b]">{d[s.key] ?? 0}</p>
+              <p className="text-[11px] sm:text-xs text-[#64748b] mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}

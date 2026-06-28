@@ -26,6 +26,12 @@ const api = {
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     }).then(handleResponse),
+
+  delete: (url) =>
+    fetch(`${API_BASE_URL}${url}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    }).then(handleResponse),
 };
 
 function getAuthHeaders() {
@@ -33,34 +39,48 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function refreshToken() {
+  const rt = localStorage.getItem('refreshToken');
+  if (!rt) throw new Error('No refresh token');
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: rt }),
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  const data = await res.json();
+  localStorage.setItem('token', data.data.accessToken);
+  return data.data.accessToken;
+}
+
 async function handleResponse(res) {
   let data;
   try { data = await res.json(); } catch { throw new Error('Server not reachable. Please try again.'); }
   if (res.status === 401) {
     const hadToken = !!localStorage.getItem('token');
-    if (hadToken) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      throw new Error('Session expired');
-    }
-    throw new Error(data.message || 'Invalid credentials');
-  }
-  if (!res.ok) {
-    let errorMsg = data.message;
-    if (data.errors) {
-      if (Array.isArray(data.errors)) {
-        errorMsg = data.errors.join(', ');
-      } else if (typeof data.errors === 'object') {
-        errorMsg = Object.values(data.errors)
-          .map(e => (typeof e === 'string' ? e : e.message))
-          .filter(Boolean)
-          .join(', ') || errorMsg;
-      } else if (typeof data.errors === 'string') {
-        errorMsg = data.errors;
+    if (hadToken && data.code !== 'EMAIL_NOT_VERIFIED') {
+      // Try refresh
+      try {
+        await refreshToken();
+        // Token refreshed — caller should retry. For simplicity, redirect to trigger re-fetch.
+        window.location.reload();
+        return;
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.setItem('sessionExpired', 'true');
+        window.location.href = '/login';
       }
     }
-    throw new Error(errorMsg || 'Something went wrong');
+    const e = new Error(data.message || 'Invalid credentials');
+    e.response = { data, status: 401 };
+    throw e;
+  }
+  if (!res.ok) {
+    const e = new Error(data.message || 'Something went wrong');
+    e.response = { data, status: res.status };
+    throw e;
   }
   return data;
 }

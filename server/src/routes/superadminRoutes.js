@@ -3,10 +3,11 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 const tenantScope = require('../middleware/tenantScope');
+const { requireEmailVerified } = require('../middleware/gates');
 const c = require('../controllers/superadminController');
 const { ROLES } = require('../config/constants');
 
-const guard = [protect, authorize(ROLES.SUPER_ADMIN), tenantScope];
+const guard = [protect, requireEmailVerified, authorize(ROLES.SUPER_ADMIN), tenantScope];
 
 // Dashboard
 router.get('/dashboard', ...guard, c.getDashboard);

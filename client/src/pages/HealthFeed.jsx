@@ -23,6 +23,9 @@ export default function HealthFeed() {
       )}
 
       <div className="max-w-2xl mx-auto">
+        <div className="bg-gradient-to-r from-[#255946] to-[#367a5f] text-white rounded-xl p-4 mb-6 text-center text-sm font-medium">
+          🤖 AI-powered personalized health tips — coming soon
+        </div>
         <h1 className="text-2xl font-bold text-[#255946]">Health Feed</h1>
         <p className="text-gray-500 mt-1 mb-6">Personalized health tips based on your medical profile</p>
 

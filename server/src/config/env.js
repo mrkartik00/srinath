@@ -67,10 +67,17 @@ module.exports = {
     maxTokensPerResponse: parseInt(process.env.AI_MAX_TOKENS, 10) || 1024,
   },
 
+  // Brevo (transactional email for OTP verification)
+  BREVO: {
+    apiKey: process.env.BREVO_API_KEY || null,
+    senderEmail: process.env.BREVO_SENDER_EMAIL || 'noreply@janki.care',
+    senderName: process.env.BREVO_SENDER_NAME || 'Janki Care',
+  },
+
   // Feature flags — let phases ship dark and be enabled per-environment without
   // code changes. Defaults keep CURRENT behaviour (nothing newly gated).
   FEATURES: {
-    doctorApprovalRequired: bool(process.env.FEATURE_DOCTOR_APPROVAL, false),
+    doctorApprovalRequired: bool(process.env.FEATURE_DOCTOR_APPROVAL, true),
     patientSubscriptionRequired: bool(process.env.FEATURE_PATIENT_SUBSCRIPTION, false),
     aiEnabled: bool(process.env.FEATURE_AI, false),
     vaultEnabled: bool(process.env.FEATURE_VAULT, false),

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -64,10 +65,11 @@ export const navConfig = [
 ];
 
 export default function Layout() {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => { if (!window.confirm('Sign out?')) return; logout(); navigate('/login'); };
 
   const initials = (user?.name || 'SA').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
@@ -81,7 +83,12 @@ export default function Layout() {
 
   return (
     <div className="h-screen flex overflow-hidden bg-[#f4f5f9]" style={{ fontFamily: '"Figtree", sans-serif' }}>
-      <aside className="w-64 bg-[#273d71] text-white flex flex-col">
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
+      )}
+
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#273d71] text-white flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
         {/* Header Logo */}
         <div className="h-16 flex items-center px-4 mt-2">
@@ -112,6 +119,7 @@ export default function Layout() {
                     key={item.to}
                     to={item.to}
                     end={item.to === '/'}
+                    onClick={() => setMobileOpen(false)}
                     className={({ isActive }) => `flex items-center justify-between px-4 py-2.5 rounded-lg text-sm transition-all duration-200 ${isActive ? 'bg-white/10 text-white font-medium' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                   >
                     <div className="flex items-center gap-3">
@@ -132,8 +140,11 @@ export default function Layout() {
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
-        <header className="h-16 bg-[#f4f5f9] flex items-center justify-between px-8">
+        <header className="h-16 bg-[#f4f5f9] flex items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 text-[#1e293b]">
+            <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 -ml-2 mr-1 rounded-md text-[#273d71] hover:bg-white">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
             <span className="text-[#273d71]">{currentIcon}</span>
             <h1 className="text-xl font-bold" style={{ fontFamily: '"Figtree", sans-serif' }}>{currentTitle}</h1>
           </div>
@@ -149,7 +160,7 @@ export default function Layout() {
             </button>
           </div>
         </header>
-        <main className="flex-1 p-8 pt-4 overflow-y-scroll"><Outlet /></main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 pt-4 overflow-y-scroll"><Outlet /></main>
       </div>
     </div>
   );

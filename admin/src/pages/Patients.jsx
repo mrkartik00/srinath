@@ -32,17 +32,17 @@ export default function Patients() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-sm text-[#64748b] mt-0.5">View and manage all registered patients</p>
+          <p className="text-xs sm:text-sm text-[#64748b] mt-0.5">View and manage all registered patients</p>
         </div>
         <Badge variant="success" dot>{meta.total} registered</Badge>
       </div>
 
       {/* Search Bar */}
       <div className="bg-white rounded-xl border border-[#E8E5DE]/60 p-4 shadow-[0_1px_3px_rgba(37,89,70,0.04)]">
-        <form onSubmit={handleSearch} className="flex items-center gap-3">
-          <div className="flex-1 max-w-sm">
+        <form onSubmit={handleSearch} className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[200px]">
             <Input
               placeholder="Search by name or email..."
               value={search}
@@ -58,57 +58,89 @@ export default function Patients() {
         </form>
       </div>
 
-      {/* Table */}
+      {/* Table (desktop) + Cards (mobile) */}
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
           {loading ? <Spinner /> : (
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F8F6F0]/60">
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Patient</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Blood Group</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Gender</th>
-                  <th className="px-6 py-3.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E8E5DE]/50">
+            <>
+              {/* Mobile Card View */}
+              <div className="sm:hidden divide-y divide-gray-100">
                 {patients.map((p) => {
                   const name = p.userId?.name || 'Unknown';
                   const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                   return (
-                    <tr key={p._id} className="hover:bg-[#F8F6F0]/40 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 border border-[#255946]/10 flex items-center justify-center text-[11px] font-semibold text-[#255946]">
-                            {initials}
-                          </div>
-                          <span className="text-sm font-medium text-[#1e293b]">{name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#64748b]">{p.userId?.email || '—'}</td>
-                      <td className="px-6 py-4">
-                        {p.bloodGroup ? <Badge>{p.bloodGroup}</Badge> : <span className="text-xs text-[#94a3b8]">—</span>}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#64748b] capitalize">{p.gender || '—'}</td>
-                      <td className="px-6 py-4 text-right">
-                        <Button size="sm" variant="ghost" onClick={() => navigate(`/patients/${p._id}`)}>
-                          View Details →
-                        </Button>
-                      </td>
-                    </tr>
+                    <div key={p._id} className="p-4 flex items-center gap-3 active:bg-gray-50" onClick={() => navigate(`/patients/${p._id}`)}>
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#273d71]/10 to-[#273d71]/5 border border-[#273d71]/10 flex items-center justify-center text-xs font-semibold text-[#273d71] flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1e293b] truncate">{name}</p>
+                        <p className="text-xs text-[#64748b] truncate">{p.userId?.email || '—'}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {p.bloodGroup && <Badge>{p.bloodGroup}</Badge>}
+                        <span className="text-[#64748b] text-sm">›</span>
+                      </div>
+                    </div>
                   );
                 })}
                 {patients.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center text-[#64748b]">
-                      <p className="text-base">No patients found</p>
-                      <p className="text-xs mt-1">Try a different search term</p>
-                    </td>
-                  </tr>
+                  <div className="px-4 py-12 text-center text-[#64748b]">
+                    <p className="text-sm">No patients found</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#F8F6F0]/60">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Patient</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Blood Group</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Gender</th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8E5DE]/50">
+                    {patients.map((p) => {
+                      const name = p.userId?.name || 'Unknown';
+                      const initials = name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                      return (
+                        <tr key={p._id} className="hover:bg-[#F8F6F0]/40 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#273d71]/10 to-[#273d71]/5 border border-[#273d71]/10 flex items-center justify-center text-[11px] font-semibold text-[#273d71]">
+                                {initials}
+                              </div>
+                              <span className="text-sm font-medium text-[#1e293b]">{name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#64748b]">{p.userId?.email || '—'}</td>
+                          <td className="px-6 py-4">
+                            {p.bloodGroup ? <Badge>{p.bloodGroup}</Badge> : <span className="text-xs text-[#94a3b8]">—</span>}
+                          </td>
+                          <td className="px-6 py-4 text-sm text-[#64748b] capitalize">{p.gender || '—'}</td>
+                          <td className="px-6 py-4 text-right">
+                            <Button size="sm" variant="ghost" onClick={() => navigate(`/patients/${p._id}`)}>
+                              View Details →
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {patients.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-12 text-center text-[#64748b]">
+                          <p className="text-base">No patients found</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

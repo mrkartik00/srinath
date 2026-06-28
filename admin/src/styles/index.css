@@ -1,52 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* Primary - Deep Forest Green */
-  --color-primary: #255946;
-  --color-primary-dark: #1a3f32;
-  --color-primary-light: #2d6b54;
-
-  /* Backgrounds */
-  --color-background: #F8F6F0;
-  --color-surface: #FFFFFF;
-  --color-surface-alt: #F8F6F0;
-
-  /* Text */
+  --color-primary: #273d71;
+  --color-primary-dark: #1e2f58;
+  --color-primary-light: #36565F;
+  --color-accent: #eb8c68;
+  --color-accent-light: #f4a882;
+  --color-background: #f4f5f9;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fc;
   --color-text: #1e293b;
   --color-text-muted: #64748b;
-  --color-text-on-primary: #FFFFFF;
-
-  /* Borders */
-  --color-border: #E8E5DE;
-
-  /* Accents */
-  --color-accent: #E8F5E9;
-  --color-accent-coral: #F4845F;
-  --color-accent-mint: #D0F0E0;
-
-  /* Status */
+  --color-text-on-primary: #ffffff;
+  --color-border: #e2e8f0;
   --color-success: #2E7D32;
-  --color-warning: #F4845F;
+  --color-warning: #E65100;
   --color-danger: #C62828;
-  --color-info: #1565C0;
-
-  /* Radii */
+  --color-info: #3253A6;
   --radius-sm: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(37, 89, 70, 0.04), 0 1px 2px rgba(37, 89, 70, 0.02);
-  --shadow-md: 0 4px 6px rgba(37, 89, 70, 0.04), 0 2px 4px rgba(37, 89, 70, 0.02);
-  --shadow-lg: 0 10px 15px rgba(37, 89, 70, 0.05), 0 4px 6px rgba(37, 89, 70, 0.03);
-
-  /* Typography */
-  --font-serif: 'Playfair Display', Georgia, serif;
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-sm: 0 1px 3px rgba(39, 61, 113, 0.06);
+  --shadow-md: 0 4px 12px rgba(39, 61, 113, 0.08);
+  --shadow-lg: 0 12px 32px rgba(39, 61, 113, 0.12);
+  --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
 }
 
 body {
   font-family: var(--font-sans);
-  @apply bg-background text-text antialiased;
+  background: var(--color-background);
+  color: var(--color-text);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
 }

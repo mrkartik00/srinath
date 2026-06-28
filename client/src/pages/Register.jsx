@@ -42,12 +42,11 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await register({ ...form, role: 'patient' });
-      login(res.data.accessToken, res.data.user);
-      toast.success('Welcome to Dr. Srinath Healthcare!');
-      navigate('/appointments');
+      await register({ ...form, role: 'patient' });
+      toast.success('Account created! Please verify your email.');
+      navigate('/verify-otp', { state: { email: form.email, password: form.password } });
     } catch (err) {
-      toast.error(err.message || 'Registration failed');
+      toast.error(err?.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }

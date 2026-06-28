@@ -1,9 +1,7 @@
-const { Worker, Queue } = require('bullmq');
-const { connection } = require('./index');
+const { Worker } = require('bullmq');
+const { connection, chatArchiveQueue } = require('./index');
 const Conversation = require('../models/Conversation');
 const logger = require('../config/logger');
-
-const chatArchiveQueue = new Queue('chat-archive', { connection });
 
 const processArchive = async () => {
   const thirtyDaysAgo = new Date();

@@ -9,6 +9,8 @@ import MainLayout from '../components/layout/MainLayout';
 // Auth pages
 import Login from '../pages/Login';
 import Register from '../pages/Register';
+import VerifyOtp from '../pages/VerifyOtp';
+import ForgotPassword from '../pages/ForgotPassword';
 
 // Public pages
 import HomePage from '../pages/Home';
@@ -48,6 +50,8 @@ export default function AppRouter() {
             {/* ─── Auth Routes ─── */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
             {/* ─── Protected Routes (Flattened) ─── */}
             <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />

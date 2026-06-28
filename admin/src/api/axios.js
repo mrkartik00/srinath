@@ -39,6 +39,20 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function refreshToken() {
+  const rt = localStorage.getItem('refreshToken');
+  if (!rt) throw new Error('No refresh token');
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: rt }),
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  const data = await res.json();
+  localStorage.setItem('token', data.data.accessToken);
+  return data.data.accessToken;
+}
+
 async function handleResponse(res) {
   let data;
   try {
@@ -48,21 +62,29 @@ async function handleResponse(res) {
   }
 
   if (res.status === 401) {
-    // Only clear session + redirect if the user was previously logged in.
-    // Login/register attempts naturally get 401 for wrong credentials — those
-    // should just throw an error, not redirect.
     const hadToken = !!localStorage.getItem('token');
-    if (hadToken) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-      throw new Error('Session expired');
+    if (hadToken && data.code !== 'EMAIL_NOT_VERIFIED') {
+      try {
+        await refreshToken();
+        window.location.reload();
+        return;
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.setItem('sessionExpired', 'true');
+        window.location.href = '/login';
+      }
     }
-    throw new Error(data.message || 'Invalid credentials');
+    const e = new Error(data.message || 'Invalid credentials');
+    e.response = { data, status: 401 };
+    throw e;
   }
 
   if (!res.ok) {
-    throw new Error(data.message || 'Something went wrong');
+    const e = new Error(data.message || 'Something went wrong');
+    e.response = { data, status: res.status };
+    throw e;
   }
 
   return data;

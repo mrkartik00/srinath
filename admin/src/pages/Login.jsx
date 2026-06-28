@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { login as loginApi } from '../api/endpoints/auth';
@@ -13,6 +13,13 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (localStorage.getItem('sessionExpired')) {
+      localStorage.removeItem('sessionExpired');
+      toast.error('Session expired. Please sign in again.');
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -20,7 +27,7 @@ export default function Login() {
       const res = await loginApi(email, password);
       if (res.data.user.role === 'super_admin') { toast.error('Super Admins must use the Super Admin portal.'); return; }
       if (res.data.user.role !== 'doctor') { toast.error('This portal is for doctors only.'); return; }
-      login(res.data.accessToken, res.data.user);
+      login(res.data.accessToken, res.data.user, res.data.refreshToken);
       const status = res.data.user.approvalStatus;
       if (status && status !== 'approved' && status !== 'not_applicable') {
         navigate('/pending-approval');
@@ -28,7 +35,15 @@ export default function Login() {
         toast.success('Welcome, Doctor!');
         navigate('/');
       }
-    } catch (err) { toast.error(err?.message || 'Login failed. Check your credentials.'); }
+    } catch (err) {
+      const data = err?.response?.data;
+      if (data?.code === 'EMAIL_NOT_VERIFIED') {
+        toast.error('Please verify your email first');
+        navigate('/verify-otp', { state: { email: data.email || email, password } });
+      } else {
+        toast.error(data?.message || 'Login failed. Check your credentials.');
+      }
+    }
     finally { setLoading(false); }
   };
 
@@ -54,6 +69,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input label="User ID" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="" required />
             <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="" required />
+            <div className="text-right"><Link to="/forgot-password" className="text-sm text-[#273d71] font-medium hover:underline">Forgot Password?</Link></div>
 
             <Button type="submit" className="w-full !bg-[#273d71] hover:!bg-[#1e2f58] !text-white !py-3 mt-6" size="lg" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}

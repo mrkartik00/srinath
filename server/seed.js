@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { connectDB, disconnectDB } = require('./src/config/db');
 const Organization = require('./src/models/Organization');
 const User = require('./src/models/User');
+const SuperAdmin = require('./src/models/SuperAdmin');
 const DoctorProfile = require('./src/models/DoctorProfile');
 const DoctorPatient = require('./src/models/DoctorPatient');
 const Patient = require('./src/models/Patient');
@@ -11,7 +12,7 @@ const { ROLES, APPOINTMENT_TYPES } = require('./src/config/constants');
 const seed = async () => {
   await connectDB();
   console.log('🗑️  Clearing existing data...');
-  await Promise.all([Organization.deleteMany(), User.deleteMany({}), DoctorProfile.deleteMany(), DoctorPatient.deleteMany(), Patient.deleteMany({}), Appointment.deleteMany({})]);
+  await Promise.all([Organization.deleteMany(), User.deleteMany({}), SuperAdmin.deleteMany({}), DoctorProfile.deleteMany(), DoctorPatient.deleteMany(), Patient.deleteMany({}), Appointment.deleteMany({})]);
 
   // 1. Organization with pricing
   const org = await Organization.create({
@@ -27,11 +28,10 @@ const seed = async () => {
   });
   console.log('✅ Organization created:', org.name);
 
-  // 2. Super Admin
-  const admin = await User.create({
-    name: 'Dr. Srinath (Super Admin)', email: 'admin@jankicare.com', password: 'admin123',
-    role: ROLES.SUPER_ADMIN, organizationId: org._id, phone: '+919876543210',
-    approvalStatus: 'not_applicable', registrationSource: 'admin_created',
+  // 2. Super Admin (separate collection)
+  const admin = await SuperAdmin.create({
+    name: 'Dr. Srinath', email: 'admin@jankicare.com', password: 'admin123',
+    phone: '+919876543210', organizationId: org._id,
   });
   org.ownerId = admin._id;
   await org.save();

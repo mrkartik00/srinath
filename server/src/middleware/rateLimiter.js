@@ -5,7 +5,7 @@ const noop = (req, res, next) => next();
 
 // Disable rate limiting in development
 if (config.NODE_ENV !== 'production') {
-  module.exports = { defaultLimiter: noop, authLimiter: noop };
+  module.exports = { defaultLimiter: noop, authLimiter: noop, otpLimiter: noop };
   return;
 }
 
@@ -31,4 +31,12 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { defaultLimiter, authLimiter };
+const otpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Too many OTP attempts. Try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+module.exports = { defaultLimiter, authLimiter, otpLimiter };

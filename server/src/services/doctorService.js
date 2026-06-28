@@ -57,6 +57,11 @@ const selfRegister = async (data) => {
   });
 
   auditService.log({ actorId: user._id, actorRole: ROLES.DOCTOR, action: AUDIT_ACTIONS.DOCTOR_SELF_REGISTERED, targetType: 'User', targetId: user._id, changes: { name: data.name, email: data.email } });
+
+  // Send OTP for email verification
+  const { sendOtp } = require('./otpService');
+  try { await sendOtp(user.email, 'registration'); } catch (_) { /* non-blocking */ }
+
   return user;
 };
 

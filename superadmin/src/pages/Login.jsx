@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -11,13 +11,20 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (localStorage.getItem('sessionExpired')) {
+      localStorage.removeItem('sessionExpired');
+      toast.error('Session expired. Please sign in again.');
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const res = await api.post('/api/v1/auth/login', { email, password });
       if (res.data.user.role !== 'super_admin') { toast.error('Access denied. Super Admin only.'); return; }
-      login(res.data.accessToken, res.data.user);
+      login(res.data.accessToken, res.data.user, res.data.refreshToken);
       navigate('/');
     } catch (err) { toast.error(err.message); }
     finally { setLoading(false); }

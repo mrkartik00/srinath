@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { login as loginApi } from '../api/endpoints/auth';
@@ -37,16 +37,29 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (localStorage.getItem('sessionExpired')) {
+      localStorage.removeItem('sessionExpired');
+      toast.error('Session expired. Please sign in again.');
+    }
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
       const res = await loginApi(email, password);
-      login(res.data.accessToken, res.data.user);
+      login(res.data.accessToken, res.data.user, res.data.refreshToken);
       toast.success('Welcome back!');
       navigate('/appointments');
     } catch (err) {
-      toast.error(err.message || 'Login failed');
+      const data = err?.response?.data;
+      if (data?.code === 'EMAIL_NOT_VERIFIED') {
+        toast.error('Please verify your email first');
+        navigate('/verify-otp', { state: { email: data.email || email, password } });
+      } else {
+        toast.error(data?.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
     }
@@ -94,6 +107,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <Input label="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" required />
             <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required />
+            <div className="text-right"><Link to="/forgot-password" className="text-sm text-[#36565F] font-medium hover:underline">Forgot Password?</Link></div>
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>

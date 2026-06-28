@@ -1,36 +1,38 @@
 /*
- * Janki Care Shared CSS Theme Tokens
- * Import this in admin/client Tailwind CSS via @theme or copy values.
- * This file documents the canonical token values.
+ * SR+ Platform Shared CSS Theme Tokens
+ * Single source of truth for all apps.
+ *
+ * CLIENT (Patient-facing): Teal palette
+ *   Primary:       #36565F
+ *   Primary Dark:  #253a5a
+ *   Secondary:     #5F8190
+ *   Accent:        #8db5c4
+ *   Background:    #f0f4f8
+ *
+ * ADMIN & SUPERADMIN (Internal dashboards): Navy palette
+ *   Primary:       #273d71
+ *   Primary Dark:  #1e2f58
+ *   Accent:        #eb8c68
+ *   Background:    #f4f5f9
+ *
+ * SHARED across all apps:
+ *   Font:          Figtree
+ *   Success:       #2E7D32
+ *   Warning:       #E65100
+ *   Danger:        #C62828
+ *   Info:          #3253A6
+ *   Text:          #1e293b
+ *   Text Muted:    #64748b
+ *   Surface:       #ffffff
  */
 
-/* --- Colors --- */
-/* Primary:       #255946 */
-/* Primary Dark:  #1a3f32 */
-/* Primary Light: #2d6b54 */
-/* Background:    #F8F6F0 */
-/* Surface:       #FFFFFF */
-/* Surface Alt:   #F8F6F0 */
-/* Border:        #E8E5DE */
-/* Accent:        #E8F5E9 */
-/* Accent Coral:  #F4845F */
-/* Accent Mint:   #D0F0E0 */
-/* Text:          #1e293b */
-/* Text Muted:    #64748b */
-/* Success:       #2E7D32 */
-/* Warning:       #F4845F */
-/* Danger:        #C62828 */
-/* Info:          #1565C0 */
-
 /* --- Typography --- */
-/* Serif:  'Playfair Display', Georgia, serif */
-/* Sans:   'Inter', system-ui, -apple-system, sans-serif */
-/* Mono:   ui-monospace, 'Cascadia Code', Consolas, monospace */
+/* Sans: 'Figtree', system-ui, -apple-system, sans-serif */
 
 /* --- Radii --- */
-/* sm: 8px  | md: 10px | lg: 12px | xl: 16px | full: 9999px */
+/* sm: 8px | md: 12px | lg: 16px | xl: 24px | full: 9999px */
 
-/* --- Shadows --- */
-/* sm: 0 1px 3px rgba(37,89,70,.04), 0 1px 2px rgba(37,89,70,.02) */
-/* md: 0 4px 6px rgba(37,89,70,.04), 0 2px 4px rgba(37,89,70,.02) */
-/* lg: 0 10px 15px rgba(37,89,70,.05), 0 4px 6px rgba(37,89,70,.03) */
+/* --- Shadows (navy-tinted) --- */
+/* sm: 0 1px 3px rgba(39, 61, 113, 0.06) */
+/* md: 0 4px 12px rgba(39, 61, 113, 0.08) */
+/* lg: 0 12px 32px rgba(39, 61, 113, 0.12) */

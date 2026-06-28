@@ -18,11 +18,10 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await registerApi({ ...form, experience: +form.experience, consultationFee: +form.consultationFee || 0 });
-      login(res.data.accessToken, res.data.user);
-      toast.success('Registration submitted! Awaiting approval.');
-      navigate('/pending-approval');
-    } catch (err) { toast.error(err.message || 'Registration failed'); }
+      await registerApi({ ...form, experience: +form.experience, consultationFee: +form.consultationFee || 0 });
+      toast.success('Registration submitted! Please verify your email.');
+      navigate('/verify-otp', { state: { email: form.email, password: form.password } });
+    } catch (err) { toast.error(err?.response?.data?.message || 'Registration failed'); }
     finally { setLoading(false); }
   };
 

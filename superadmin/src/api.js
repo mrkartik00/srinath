@@ -16,10 +16,46 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+async function refreshToken() {
+  const rt = localStorage.getItem('refreshToken');
+  if (!rt) throw new Error('No refresh token');
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken: rt }),
+  });
+  if (!res.ok) throw new Error('Refresh failed');
+  const data = await res.json();
+  localStorage.setItem('token', data.data.accessToken);
+  return data.data.accessToken;
+}
+
 async function handleResponse(res) {
   const data = await res.json();
-  if (res.status === 401) { localStorage.clear(); window.location.href = '/login'; throw new Error('Session expired'); }
-  if (!res.ok) throw new Error(data.message || 'Something went wrong');
+  if (res.status === 401) {
+    const hadToken = !!localStorage.getItem('token');
+    if (hadToken) {
+      try {
+        await refreshToken();
+        window.location.reload();
+        return;
+      } catch {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.setItem('sessionExpired', 'true');
+        window.location.href = '/login';
+      }
+    }
+    const e = new Error(data.message || 'Session expired');
+    e.response = { data, status: 401 };
+    throw e;
+  }
+  if (!res.ok) {
+    const e = new Error(data.message || 'Something went wrong');
+    e.response = { data, status: res.status };
+    throw e;
+  }
   return data;
 }
 

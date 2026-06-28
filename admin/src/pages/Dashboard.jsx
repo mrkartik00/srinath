@@ -70,15 +70,15 @@ export default function Dashboard() {
     <div className="space-y-6" style={{ fontFamily: '"Figtree", sans-serif' }}>
 
       {/* Stat Cards - White with purple circle icon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {STAT_CARDS.map((card) => (
-          <div key={card.key} className="bg-white rounded-[10px] p-5 flex items-center gap-4 shadow-sm border border-gray-100">
-            <div className="w-12 h-12 rounded-full bg-[#273d71] text-white flex items-center justify-center flex-shrink-0">
+          <div key={card.key} className="bg-white rounded-[10px] p-3 sm:p-5 flex items-center gap-3 sm:gap-4 shadow-sm border border-gray-100">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#273d71] text-white flex items-center justify-center flex-shrink-0">
               {card.icon}
             </div>
             <div>
-              <p className="text-xl font-bold text-[#1e293b]">{s[card.key] ?? 0}</p>
-              <p className="text-sm text-[#64748b]">{card.label}</p>
+              <p className="text-lg sm:text-xl font-bold text-[#1e293b]">{s[card.key] ?? 0}</p>
+              <p className="text-xs sm:text-sm text-[#64748b]">{card.label}</p>
             </div>
           </div>
         ))}
@@ -178,80 +178,65 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Appointments Table */}
+      {/* Appointments */}
       <div className="bg-white rounded-[10px] shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-5 flex items-center justify-between border-b border-gray-100">
-          <h3 className="text-base font-bold text-[#1e293b]">Appointment</h3>
-          <span className="text-sm font-bold text-[#1e293b]">Total Appointment : {s.upcomingAppointments?.length || 0}</span>
+        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-gray-100">
+          <h3 className="text-base font-bold text-[#1e293b]">Appointments</h3>
+          <span className="text-xs sm:text-sm font-bold text-[#64748b]">{s.upcomingAppointments?.length || 0} upcoming</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <tbody>
-              {s.upcomingAppointments?.length > 0 ? (
-                s.upcomingAppointments.map((apt) => {
-                  const patientName = apt.patientId?.userId?.name || 'Unknown Patient';
-                  const docName = apt.doctorId?.name || 'Unknown Doctor';
-                  const initials = patientName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                  return (
-                    <tr 
-                      key={apt._id} 
-                      onClick={() => navigate(`/appointments/${apt._id}`)}
-                      className="border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer"
+        {s.upcomingAppointments?.length > 0 ? (
+          <div className="divide-y divide-gray-50">
+            {s.upcomingAppointments.map((apt) => {
+              const patientName = apt.patientId?.userId?.name || 'Unknown Patient';
+              const initials = patientName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+              return (
+                <div
+                  key={apt._id}
+                  onClick={() => navigate(`/appointments/${apt._id}`)}
+                  className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-[#f3f4f6] flex items-center justify-center text-sm font-bold text-[#273d71] flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[#1e293b] truncate">{patientName}</p>
+                        <p className="text-xs text-[#64748b] mt-0.5">{formatDate(apt.dateTime)}, {formatTime(apt.dateTime)}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-lg">{apt.type === 'virtual' ? '💻' : '🏥'}</span>
+                      <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium bg-[#eff6ff] text-[#3b82f6] border border-[#bfdbfe] capitalize">
+                        {apt.status || 'scheduled'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 pl-[52px]">
+                    <button
+                      type="button"
+                      onClick={(e) => handleComplete(e, apt._id)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-[#475569] hover:bg-green-50 hover:text-green-700 transition-colors"
                     >
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[#f3f4f6] flex items-center justify-center text-sm font-bold text-[#273d71] flex-shrink-0">
-                            {initials}
-                          </div>
-                          <span className="text-sm font-semibold text-[#1e293b]">{patientName}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-[#64748b] whitespace-nowrap">{docName}</td>
-                      <td className="py-4 px-4 text-sm text-[#1e293b] font-medium whitespace-nowrap">{formatDate(apt.dateTime)}, {formatTime(apt.dateTime)}</td>
-                      <td className="py-4 px-4 text-sm text-[#64748b] capitalize whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-lg">{apt.type === 'virtual' ? '💻' : '🏥'}</span>
-                          {apt.type === 'virtual' ? 'Virtual' : 'In-Clinic'}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-[#eff6ff] text-[#3b82f6] border border-[#bfdbfe] flex items-center gap-1.5 w-fit capitalize">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></span>
-                          {apt.status || 'scheduled'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          <button 
-                            type="button"
-                            onClick={(e) => handleComplete(e, apt._id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-sm font-medium text-[#475569] hover:bg-green-50 hover:text-green-700 hover:border-green-200 transition-colors cursor-pointer relative z-10"
-                          >
-                            <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                            Complete
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={(e) => handleCancel(e, apt._id)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#b91c1c] text-white text-sm font-medium hover:bg-[#991b1b] transition-colors cursor-pointer relative z-10"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                            Cancel
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan="6" className="py-10 text-center text-sm text-[#64748b]">No appointments found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                      <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                      Complete
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => handleCancel(e, apt._id)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#b91c1c] text-white text-xs font-medium hover:bg-[#991b1b] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-10 text-center text-sm text-[#64748b]">No appointments found</div>
+        )}
       </div>
 
     </div>

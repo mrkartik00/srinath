@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 const tenantScope = require('../middleware/tenantScope');
-const { requireActiveSubscription } = require('../middleware/gates');
+const { requireActiveSubscription, requireEmailVerified } = require('../middleware/gates');
 const validate = require('../middleware/validate');
 const { snoozeSchema } = require('../validators/reminderValidator');
 const reminderController = require('../controllers/reminderController');
@@ -11,10 +11,10 @@ const prescriptionController = require('../controllers/prescriptionController');
 const { ROLES } = require('../config/constants');
 
 // Patient: my prescriptions
-router.get('/prescriptions', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, prescriptionController.getMyPrescriptions);
+router.get('/prescriptions', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, prescriptionController.getMyPrescriptions);
 
 // Patient: download prescription PDF
-router.get('/prescriptions/:id/pdf', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, (req, res, next) => {
+router.get('/prescriptions/:id/pdf', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, (req, res, next) => {
   const Prescription = require('../models/Prescription');
   const Patient = require('../models/Patient');
   const storageService = require('../services/storageService');
@@ -30,9 +30,9 @@ router.get('/prescriptions/:id/pdf', protect, authorize(ROLES.PATIENT), tenantSc
 });
 
 // Patient: reminders
-router.get('/reminders', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.getToday);
-router.patch('/reminders/:id/ack', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.acknowledge);
-router.patch('/reminders/:id/snooze', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, validate(snoozeSchema), reminderController.snooze);
-router.patch('/reminders/:id/miss', protect, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.miss);
+router.get('/reminders', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.getToday);
+router.patch('/reminders/:id/ack', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.acknowledge);
+router.patch('/reminders/:id/snooze', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, validate(snoozeSchema), reminderController.snooze);
+router.patch('/reminders/:id/miss', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, requireActiveSubscription, reminderController.miss);
 
 module.exports = router;

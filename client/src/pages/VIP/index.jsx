@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
 import { getPatientPlans } from '../../api/endpoints/patient';
 import { Spinner } from '../../components/ui';
@@ -73,6 +74,7 @@ export default function VIPPage() {
               </ul>
 
               <button
+                onClick={() => { if (status !== 'active') toast('Contact the clinic to subscribe. Payment integration coming soon.'); }}
                 disabled={status === 'active'}
                 className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all focus:outline-none ${status === 'active'
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed'

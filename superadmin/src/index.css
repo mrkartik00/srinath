@@ -1,1 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-primary: #273d71;
+  --color-primary-dark: #1e2f58;
+  --color-primary-light: #36565F;
+  --color-accent: #eb8c68;
+  --color-accent-light: #f4a882;
+  --color-background: #f4f5f9;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8f9fc;
+  --color-text: #1e293b;
+  --color-text-muted: #64748b;
+  --color-text-on-primary: #ffffff;
+  --color-border: #e2e8f0;
+  --color-success: #2E7D32;
+  --color-warning: #E65100;
+  --color-danger: #C62828;
+  --color-info: #3253A6;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow-sm: 0 1px 3px rgba(39, 61, 113, 0.06);
+  --shadow-md: 0 4px 12px rgba(39, 61, 113, 0.08);
+  --shadow-lg: 0 12px 32px rgba(39, 61, 113, 0.12);
+  --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-text);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+}

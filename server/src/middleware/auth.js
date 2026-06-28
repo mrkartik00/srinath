@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/env');
 const { UnauthorizedError } = require('../utils/apiError');
 const User = require('../models/User');
+const SuperAdmin = require('../models/SuperAdmin');
 
 const protect = async (req, res, next) => {
   try {
@@ -15,11 +16,17 @@ const protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, config.JWT_SECRET);
-    const user = await User.findById(decoded.id);
 
+    // Check SuperAdmin collection first
+    const admin = await SuperAdmin.findById(decoded.id);
+    if (admin) {
+      if (!admin.isActive) return next(new UnauthorizedError('Account is deactivated'));
+      req.user = { id: admin._id, role: 'super_admin', email: admin.email, organizationId: admin.organizationId, isEmailVerified: true };
+      return next();
+    }
+
+    const user = await User.findById(decoded.id);
     if (!user) return next(new UnauthorizedError('User no longer exists'));
-    // Allow pending_approval / rejected doctors to authenticate (they see
-    // the waiting/rejection screen). Only truly deactivated accounts are blocked.
     if (!user.isActive && user.approvalStatus !== 'pending_approval' && user.approvalStatus !== 'rejected') {
       return next(new UnauthorizedError('Account is deactivated'));
     }
@@ -30,10 +37,9 @@ const protect = async (req, res, next) => {
       email: user.email,
       organizationId: user.organizationId,
       doctorId: user.doctorId,
-      // Denormalized status used by gating middleware (gates.js) — avoids an
-      // extra DB read per request. Kept in sync on approval/subscription change.
       approvalStatus: user.approvalStatus,
       subscriptionStatus: user.subscriptionStatus,
+      isEmailVerified: user.isEmailVerified,
     };
     next();
   } catch (error) {

@@ -20,8 +20,8 @@ export function AuthProvider({ children }) {
     } else { setLoading(false); }
   }, []);
 
-  const login = (token, userData) => { localStorage.setItem('token', token); localStorage.setItem('user', JSON.stringify(userData)); setUser(userData); };
-  const logout = () => { localStorage.clear(); setUser(null); };
+  const login = (token, userData, refreshToken) => { localStorage.setItem('token', token); if (refreshToken) localStorage.setItem('refreshToken', refreshToken); localStorage.setItem('user', JSON.stringify(userData)); setUser(userData); };
+  const logout = () => { localStorage.removeItem('token'); localStorage.removeItem('refreshToken'); localStorage.removeItem('user'); setUser(null); };
 
   return <AuthContext.Provider value={{ user, login, logout, loading }}>{children}</AuthContext.Provider>;
 }

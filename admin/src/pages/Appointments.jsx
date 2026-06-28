@@ -76,7 +76,7 @@ export default function Appointments() {
             type="date"
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value)}
-            className="w-44"
+            className="w-full sm:w-44"
           />
           <select
             className="px-3.5 py-2.5 bg-white border border-[#E8E5DE] rounded-[10px] text-sm text-[#1e293b] transition-all duration-200 hover:border-[#255946]/30 focus:outline-none focus:ring-2 focus:ring-[#255946]/20 focus:border-[#255946]"
@@ -101,70 +101,109 @@ export default function Appointments() {
         </form>
       </div>
 
-      {/* Table */}
+      {/* Table (desktop) + Cards (mobile) */}
       <Card>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className="p-0">
           {loading ? <Spinner /> : (
-            <table className="w-full">
-              <thead>
-                <tr className="bg-[#F8F6F0]/60">
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Patient</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Doctor</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Date & Time</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#E8E5DE]/50">
+            <>
+              {/* Mobile Card View */}
+              <div className="sm:hidden divide-y divide-gray-100">
                 {appointments.map((apt) => (
-                  <tr key={apt._id} className="hover:bg-[#F8F6F0]/40 transition-colors cursor-pointer" onClick={() => navigate(`/appointments/${apt._id}`)}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#255946]/10 to-[#255946]/5 flex items-center justify-center text-[10px] font-semibold text-[#255946]">
+                  <div key={apt._id} className="p-4 active:bg-gray-50" onClick={() => navigate(`/appointments/${apt._id}`)}>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#273d71]/10 to-[#273d71]/5 flex items-center justify-center text-[10px] font-semibold text-[#273d71] flex-shrink-0">
                           {(apt.patientId?.userId?.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2)}
                         </div>
-                        <span className="text-sm font-medium text-[#1e293b]">{apt.patientId?.userId?.name || '—'}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-[#1e293b] truncate">{apt.patientId?.userId?.name || '—'}</p>
+                          <p className="text-xs text-[#64748b]">
+                            {apt.dateTime ? new Date(apt.dateTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </p>
+                        </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#64748b]">{apt.doctorId?.name || '—'}</td>
-                    <td className="px-6 py-4 text-sm text-[#1e293b]">
-                      {apt.dateTime ? new Date(apt.dateTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="text-xs capitalize text-[#64748b]">
-                        {apt.type === 'virtual' ? '🖥 Virtual' : '🏥 In-Clinic'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
                       <Badge variant={statusVariant[apt.status] || 'default'} dot>
                         {apt.status?.replace('_', ' ')}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      {apt.status === 'scheduled' && (
-                        <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          <Button size="sm" variant="secondary" disabled={actionLoading === apt._id} onClick={() => handleComplete(apt._id)}>
-                            ✓ Complete
-                          </Button>
-                          <Button size="sm" variant="danger" disabled={actionLoading === apt._id} onClick={() => handleCancel(apt._id)}>
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
+                    </div>
+                    {apt.status === 'scheduled' && (
+                      <div className="flex gap-2 mt-3 pl-12" onClick={(e) => e.stopPropagation()}>
+                        <Button size="sm" variant="secondary" disabled={actionLoading === apt._id} onClick={() => handleComplete(apt._id)}>✓ Complete</Button>
+                        <Button size="sm" variant="danger" disabled={actionLoading === apt._id} onClick={() => handleCancel(apt._id)}>Cancel</Button>
+                      </div>
+                    )}
+                  </div>
                 ))}
                 {appointments.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-12 text-center text-[#64748b]">
-                      <p className="text-base">No appointments found</p>
-                      <p className="text-xs mt-1">Try adjusting your filters</p>
-                    </td>
-                  </tr>
+                  <div className="px-4 py-12 text-center text-[#64748b]">
+                    <p className="text-sm">No appointments found</p>
+                  </div>
                 )}
-              </tbody>
-            </table>
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden sm:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#F8F6F0]/60">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Patient</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Doctor</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Date & Time</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-[#64748b] uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-[#64748b] uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E8E5DE]/50">
+                    {appointments.map((apt) => (
+                      <tr key={apt._id} className="hover:bg-[#F8F6F0]/40 transition-colors cursor-pointer" onClick={() => navigate(`/appointments/${apt._id}`)}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#273d71]/10 to-[#273d71]/5 flex items-center justify-center text-[10px] font-semibold text-[#273d71]">
+                              {(apt.patientId?.userId?.name || 'U').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <span className="text-sm font-medium text-[#1e293b]">{apt.patientId?.userId?.name || '—'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#64748b]">{apt.doctorId?.name || '—'}</td>
+                        <td className="px-6 py-4 text-sm text-[#1e293b]">
+                          {apt.dateTime ? new Date(apt.dateTime).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-xs capitalize text-[#64748b]">
+                            {apt.type === 'virtual' ? '🖥 Virtual' : '🏥 In-Clinic'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant={statusVariant[apt.status] || 'default'} dot>
+                            {apt.status?.replace('_', ' ')}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {apt.status === 'scheduled' && (
+                            <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                              <Button size="sm" variant="secondary" disabled={actionLoading === apt._id} onClick={() => handleComplete(apt._id)}>
+                                ✓ Complete
+                              </Button>
+                              <Button size="sm" variant="danger" disabled={actionLoading === apt._id} onClick={() => handleCancel(apt._id)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {appointments.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="px-6 py-12 text-center text-[#64748b]">
+                          <p className="text-base">No appointments found</p>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

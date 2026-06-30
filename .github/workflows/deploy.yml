@@ -12,8 +12,6 @@ concurrency:
 env:
   USERNAME: root
   PROJECT_DIR: /var/www/janki
-  HOST: ${{ secrets.DROPLET_HOST }}
-  DROPLET_SSH_PRIVATE_KEY: ${{ secrets.DROPLET_SSH_PRIVATE_KEY }}
 
   # Server env vars
   NODE_ENV: production
@@ -53,9 +51,9 @@ jobs:
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ env.HOST }}
+          host: ${{ secrets.DROPLET_HOST }}
           username: ${{ env.USERNAME }}
-          key: ${{ env.DROPLET_SSH_PRIVATE_KEY }}
+          key: ${{ secrets.DROPLET_SSH_PRIVATE_KEY }}
           command_timeout: 45m
           envs: HOST,USERNAME,PROJECT_DIR,NODE_ENV,PORT,MONGODB_URI,JWT_SECRET,JWT_REFRESH_SECRET,JWT_ACCESS_EXPIRES_IN,JWT_REFRESH_EXPIRES_IN,CLIENT_URL,ADMIN_URL,SUPER_ADMIN_URL,REDIS_URL,RATE_LIMIT_WINDOW_MS,RATE_LIMIT_MAX,RAZORPAY_ENABLED,RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET,RAZORPAY_WEBHOOK_SECRET,AI_PROVIDER,GEMINI_API_KEY,AI_MODEL,AI_MAX_TOKENS,BREVO_API_KEY,BREVO_SENDER_EMAIL,BREVO_SENDER_NAME,STORAGE_DRIVER
           script: |

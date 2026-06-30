@@ -114,7 +114,7 @@ jobs:
 
             # ── 4. Install dependencies ─────────────────────────────────────
             echo "📦 Installing dependencies"
-            cd $PROJECT_DIR && npm install --no-audit --no-fund
+            cd $PROJECT_DIR && NODE_ENV=development npm install --no-audit --no-fund
 
             # Fix workspace hoisting: symlink socket.io-client for Vite bundling
             mkdir -p client/node_modules admin/node_modules

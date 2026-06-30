@@ -49,7 +49,6 @@ export default function VerifyOtp() {
     setLoading(true);
     try {
       await verifyOtp(email, code);
-      // Auto sign-in after verification
       if (password) {
         const res = await loginApi(email, password);
         login(res.data.accessToken, res.data.user, res.data.refreshToken);
@@ -75,40 +74,63 @@ export default function VerifyOtp() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F6F0] px-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-semibold text-center text-[#1e293b] mb-2">Verify Your Email</h1>
-        <p className="text-sm text-center text-[#64748b] mb-8">
-          We sent a 6-digit code to <span className="font-medium text-[#1e293b]">{email}</span>
-        </p>
-        <form onSubmit={handleSubmit}>
-          <div className="flex justify-center gap-3 mb-8">
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={el => inputs.current[i] = el}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={e => handleChange(i, e.target.value)}
-                onKeyDown={e => handleKeyDown(i, e)}
-                onPaste={handlePaste}
-                className="w-12 h-14 text-center text-xl font-semibold border-2 border-gray-200 rounded-lg focus:border-[#36565F] focus:outline-none transition-colors"
-              />
-            ))}
+    <div className="min-h-screen flex items-center justify-center bg-[#f0f4f8] px-4" style={{ fontFamily: "'Figtree', system-ui, sans-serif" }}>
+      <div className="w-full max-w-[420px]">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-[12px] bg-[#253a5a] text-white flex items-center justify-center text-sm font-bold">Dr.</div>
+            <span className="font-bold text-[18px] text-[#253a5a] tracking-tight">Srinath Healthcare</span>
           </div>
-          <button type="submit" disabled={loading} className="w-full py-3 bg-[#36565F] text-white rounded-lg font-medium hover:bg-[#253F47] transition-colors disabled:opacity-50">
-            {loading ? 'Verifying...' : 'Verify & Continue'}
-          </button>
-        </form>
-        <p className="text-center text-sm text-[#64748b] mt-6">
-          {countdown > 0 ? (
-            <>Resend code in <span className="font-medium">{countdown}s</span></>
-          ) : (
-            <button onClick={handleResend} className="text-[#36565F] font-medium hover:underline">Resend Code</button>
-          )}
-        </p>
+        </div>
+
+        <div className="bg-white rounded-[24px] border border-[rgba(54,86,95,0.1)] shadow-[0_4px_24px_rgba(54,86,95,0.06)] p-8">
+          <div className="text-center mb-8">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-[16px] bg-[#E2F0F0] flex items-center justify-center">
+              <svg width="28" height="28" fill="none" stroke="#36565F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <h1 className="text-[24px] font-semibold text-[#253a5a] tracking-tight">Verify Your Email</h1>
+            <p className="text-[14px] text-[#6B7C84] mt-2">
+              We sent a 6-digit code to <span className="font-semibold text-[#253a5a]">{email}</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            <div className="flex justify-center gap-3 mb-8">
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={el => inputs.current[i] = el}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={e => handleChange(i, e.target.value)}
+                  onKeyDown={e => handleKeyDown(i, e)}
+                  onPaste={handlePaste}
+                  className="w-12 h-14 text-center text-xl font-semibold text-[#253a5a] border-2 border-[rgba(54,86,95,0.18)] rounded-[12px] focus:border-[#36565F] focus:ring-2 focus:ring-[#36565F]/15 outline-none transition-all"
+                />
+              ))}
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-[14px] bg-[#253a5a] text-white rounded-[16px] font-semibold text-[15px] shadow-[0_8px_20px_rgba(37,58,90,0.25)] hover:bg-[#36565F] hover:shadow-[0_12px_28px_rgba(37,58,90,0.32)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:pointer-events-none active:scale-[0.97]"
+            >
+              {loading ? 'Verifying...' : 'Verify & Continue'}
+            </button>
+          </form>
+
+          <p className="text-center text-[13px] text-[#6B7C84] mt-6">
+            {countdown > 0 ? (
+              <>Resend code in <span className="font-semibold text-[#253a5a]">{countdown}s</span></>
+            ) : (
+              <button onClick={handleResend} className="text-[#36565F] font-semibold hover:text-[#253a5a] transition-colors">Resend Code</button>
+            )}
+          </p>
+        </div>
       </div>
     </div>
   );

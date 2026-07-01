@@ -46,12 +46,12 @@ const getAll = async (query = {}, scope = {}) => {
     filter.userId = filter.userId ? { $in: filter.userId.$in.filter((id) => searchIds.some((s) => s.equals(id))) } : { $in: searchIds };
   }
 
-  return paginate(Patient, filter, { page, limit, populate: { path: 'userId', select: 'name email phone' } });
+  return paginate(Patient, filter, { page, limit, populate: { path: 'userId', select: 'name email phone avatar' } });
 };
 
 const getById = async (patientId, scope = {}) => {
   const filter = { _id: patientId, organizationId: scope.organizationId };
-  const patient = await Patient.findOne(filter).populate('userId', 'name email phone');
+  const patient = await Patient.findOne(filter).populate('userId', 'name email phone avatar');
   if (!patient) throw new NotFoundError('Patient not found');
 
   // If doctor, verify they have access
@@ -66,7 +66,7 @@ const getById = async (patientId, scope = {}) => {
 const getByUserId = async (userId, scope = {}) => {
   const filter = { userId };
   if (scope.organizationId) filter.organizationId = scope.organizationId;
-  const patient = await Patient.findOne(filter).populate('userId', 'name email phone');
+  const patient = await Patient.findOne(filter).populate('userId', 'name email phone avatar');
   if (!patient) throw new NotFoundError('Patient profile not found');
   return patient;
 };
@@ -83,13 +83,13 @@ const update = async (patientId, data, scope = {}) => {
 
   Object.assign(patient, data);
   await patient.save();
-  return Patient.findById(patientId).populate('userId', 'name email phone');
+  return Patient.findById(patientId).populate('userId', 'name email phone avatar');
 };
 
 const updateByUserId = async (userId, data, scope = {}) => {
   const filter = { userId };
   if (scope.organizationId) filter.organizationId = scope.organizationId;
-  const patient = await Patient.findOneAndUpdate(filter, data, { new: true, runValidators: true }).populate('userId', 'name email phone');
+  const patient = await Patient.findOneAndUpdate(filter, data, { new: true, runValidators: true }).populate('userId', 'name email phone avatar');
   if (!patient) throw new NotFoundError('Patient profile not found');
   return patient;
 };

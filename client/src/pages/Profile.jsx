@@ -185,17 +185,49 @@ export default function Profile() {
             padding: '24px 20px', boxShadow: '0 4px 20px rgba(54,86,95,0.04)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
           }}>
-            {/* Avatar */}
-            <div style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #d4e8ec 0%, #b8d8df 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '26px', fontWeight: 900, color: '#36565F',
-              fontFamily: "'Figtree', sans-serif",
-              border: '3px solid #ffffff',
-              boxShadow: '0 4px 16px rgba(54,86,95,0.15)',
-            }}>
-              {initials}
+            {/* Avatar with upload */}
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                width: '80px', height: '80px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, #d4e8ec 0%, #b8d8df 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '26px', fontWeight: 900, color: '#36565F',
+                fontFamily: "'Figtree', sans-serif",
+                border: '3px solid #ffffff',
+                boxShadow: '0 4px 16px rgba(54,86,95,0.15)',
+                overflow: 'hidden',
+              }}>
+                {profileData?.userId?.avatar ? (
+                  <img src={profileData.userId.avatar} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : initials}
+              </div>
+              <label style={{
+                position: 'absolute', bottom: '-2px', right: '-2px',
+                width: '28px', height: '28px', borderRadius: '50%',
+                background: '#253a5a', border: '2px solid #fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              }}>
+                <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M7 1v12M1 7h12"/></svg>
+                <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+                  const formData = new FormData();
+                  formData.append('avatar', file);
+                  try {
+                    const baseUrl = import.meta.env.VITE_API_URL || '';
+                    const token = localStorage.getItem('token');
+                    const res = await fetch(`${baseUrl}/api/v1/auth/avatar`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                    const data = await res.json();
+                    if (data.success) {
+                      setProfileData(prev => ({ ...prev, userId: { ...prev.userId, avatar: data.data.avatar } }));
+                      toast.success('Profile picture updated!');
+                    } else toast.error(data.message || 'Upload failed');
+                  } catch { toast.error('Failed to upload'); }
+                  e.target.value = '';
+                }} />
+              </label>
             </div>
 
             {/* Name & email */}

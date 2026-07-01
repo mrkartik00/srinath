@@ -16,6 +16,7 @@ const { connectDB, disconnectDB } = require('./src/config/db');
 const Organization = require('./src/models/Organization');
 const SuperAdmin = require('./src/models/SuperAdmin');
 const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
 
 const run = async () => {
   await connectDB();
@@ -30,7 +31,7 @@ const run = async () => {
   if (!org) {
     org = await Organization.create({
       name: 'Janki Care Platform',
-      ownerId: require('mongoose').Types.ObjectId(),
+      ownerId: new mongoose.Types.ObjectId(),
       settings: {
         maxDoctors: 50,
         maxPatients: 500,

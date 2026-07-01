@@ -109,7 +109,7 @@ router.post('/conversations/:id/upload', protect, requireEmailVerified, tenantSc
     return apiResponse.error(res, 'Access denied', 403);
   }
 
-  const isParticipant = conversation.patientId.toString() === req.user.id || conversation.doctorId.toString() === req.user.id;
+  const isParticipant = conversation.patientId.toString() === req.user.id.toString() || conversation.doctorId.toString() === req.user.id.toString();
   if (!isParticipant) return apiResponse.error(res, 'Not a participant', 403);
 
   const file = req.file;

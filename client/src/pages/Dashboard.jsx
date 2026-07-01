@@ -80,13 +80,8 @@ export default function Dashboard() {
     (appt) => appt.status === 'scheduled' || appt.status === 'rescheduled'
   );
   
-  // Use first scheduled appointment or fallback to mock data from the screenshot
-  const activeAppt = upcomingAppointments.length > 0 ? upcomingAppointments[0] : {
-    doctor: 'DR. Yeashfin Jhosef',
-    type: 'Cardiologist • Heart Health Review',
-    dateTime: new Date(2026, 11, 31, 10, 0), // Dec 31, 2026 10:00 AM
-    isMock: true
-  };
+  // Use first scheduled appointment or null (no fake data)
+  const activeAppt = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
 
   const formatDateLabel = (date) => {
     const d = new Date(date);
@@ -113,7 +108,7 @@ export default function Dashboard() {
     if (doctors.length === 0) {
       return mockupDepts.map(dept => ({
         ...dept,
-        count: 5
+        count: 0
       }));
     }
 
@@ -145,23 +140,8 @@ export default function Dashboard() {
 
     if (matched.length > 0) return matched;
 
-    // High quality fallback mock doctors
-    return [
-      {
-        _id: `mock-${deptName}-1`,
-        name: `Dr. Yeashfin Jhosef`,
-        specialty: deptName,
-        email: `y.jhosef@srinathhealth.com`,
-        isMock: true
-      },
-      {
-        _id: `mock-${deptName}-2`,
-        name: `Dr. Tawhid Khameni`,
-        specialty: deptName,
-        email: `t.khameni@srinathhealth.com`,
-        isMock: true
-      }
-    ];
+    // No doctors found for this department
+    return [];
   };
 
   // Filter completed/cancelled consultations dynamically
@@ -178,27 +158,19 @@ export default function Dashboard() {
   }
 
   // Determine if active appointment is video or clinic visit
-  const isVideoConsultation = 
-    activeAppt.isMock || 
+  const isVideoConsultation = activeAppt && (
     activeAppt.type?.toLowerCase().includes('video') || 
     activeAppt.type?.toLowerCase().includes('online') || 
     activeAppt.notes?.toLowerCase().includes('video') || 
-    activeAppt.notes?.toLowerCase().includes('online');
+    activeAppt.notes?.toLowerCase().includes('online')
+  );
 
   // Helper to map active appointment doctor data
   const getActiveApptDoc = () => {
-    if (activeAppt.isMock) {
-      return {
-        name: 'Dr. Yeashfin Jhosef',
-        specialty: 'Cardiologist',
-        email: 'y.jhosef@srinathhealth.com',
-        isMock: true
-      };
-    }
+    if (!activeAppt) return null;
     return activeAppt.doctorId || {
       name: activeAppt.doctor || 'Doctor',
       specialty: activeAppt.type || 'General Practitioner',
-      email: 'contact@healthsrinath.com'
     };
   };
 
@@ -287,7 +259,7 @@ export default function Dashboard() {
                 <div className="flex gap-2 items-center mt-1">
                   {/* Book Now Button */}
                   <button
-                    onClick={() => requireAuth(() => navigate('/book-appointment', { state: { doctorId: doc.isMock ? undefined : (doc._id || doc.id) } }))}
+                    onClick={() => requireAuth(() => navigate('/book-appointment', { state: { doctorId: doc._id || doc.id } }))}
                     className="bg-[#253a5a] hover:bg-[#1a2c44] text-white font-bold text-[11px] py-2.5 md:py-3 rounded-xl transition-all flex-1 text-center shadow-[0_2px_8px_rgba(37,58,90,0.15)] uppercase tracking-wider"
                   >
                     Book Now
@@ -333,7 +305,7 @@ export default function Dashboard() {
           <div>
             <p className="text-xs font-semibold text-[#6B7C84] uppercase tracking-widest mb-1">{todayStr}</p>
             <h1 className="text-2xl font-extrabold text-[#253a5a] tracking-tight leading-tight">
-              Patient Portal
+              Janki Care
             </h1>
             <p className="text-sm text-[#6B7C84] font-medium mt-0.5">Sign in to access your health dashboard.</p>
           </div>
@@ -433,6 +405,7 @@ export default function Dashboard() {
 
 
       {/* ─── Upcoming Consultation Hero Card ─── */}
+      {activeAppt ? (
       <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div 
           onClick={() => window.dispatchEvent(new CustomEvent('show-doctor-details', { detail: getActiveApptDoc() }))}
@@ -440,7 +413,7 @@ export default function Dashboard() {
         >
           <div className="relative shrink-0">
             <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center font-bold text-lg text-slate-700">
-              {activeAppt.isMock ? 'Y' : (activeAppt.doctorId?.name ? activeAppt.doctorId.name.charAt(0) : 'D')}
+              {activeAppt?.doctorId?.name ? activeAppt.doctorId.name.charAt(0) : 'D'}
             </div>
             <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-white rounded-full"></span>
           </div>
@@ -455,12 +428,12 @@ export default function Dashboard() {
             </div>
             <h2 className="text-xl font-bold text-[#253a5a] mt-1.5 font-['Figtree']">
               {(() => {
-                const docName = activeAppt.isMock ? activeAppt.doctor : (activeAppt.doctorId?.name || activeAppt.doctor || '');
+                const docName = activeAppt?.doctorId?.name || activeAppt?.doctor || '';
                 return docName.startsWith('Dr.') ? docName : `Dr. ${docName}`;
               })()}
             </h2>
             <p className="text-xs text-slate-500 font-medium capitalize mt-0.5">
-              {activeAppt.isMock ? activeAppt.type : (activeAppt.type || 'General Consultation')}
+              {activeAppt?.type || 'General Consultation'}
             </p>
             
             <div className="flex items-center gap-4 mt-3 text-xs text-slate-600 font-semibold">
@@ -500,6 +473,18 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+      ) : (
+      <div className="bg-white rounded-[24px] p-8 shadow-sm border border-slate-100/50 text-center">
+        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f0f4f8] flex items-center justify-center">
+          <Calendar size={24} className="text-[#36565F]" />
+        </div>
+        <h3 className="text-lg font-semibold text-[#253a5a] mb-2">No Upcoming Appointments</h3>
+        <p className="text-sm text-slate-500 mb-4">Book your first appointment with our doctors</p>
+        <button onClick={() => navigate('/book-appointment')} className="bg-[#253a5a] hover:bg-[#1a2c44] text-white font-semibold text-sm px-6 py-3 rounded-full transition-all">
+          Book Appointment
+        </button>
+      </div>
+      )}
 
       {/* ─── Explore Departments Section ─── */}
       <div>

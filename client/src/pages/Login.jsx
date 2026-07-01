@@ -54,6 +54,15 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await loginApi(email, password);
+      const role = res.data.user.role;
+      if (role === 'doctor') {
+        toast.error('Doctors must use the Doctor Portal at doctor.janki.care');
+        return;
+      }
+      if (role === 'super_admin') {
+        toast.error('Admins must use the Admin Portal at admin.janki.care');
+        return;
+      }
       login(res.data.accessToken, res.data.user, res.data.refreshToken);
       toast.success('Welcome back!');
       navigate('/appointments');

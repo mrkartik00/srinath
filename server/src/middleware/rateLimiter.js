@@ -18,6 +18,7 @@ const defaultLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 const authLimiter = rateLimit({
@@ -29,6 +30,7 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 const otpLimiter = rateLimit({
@@ -37,6 +39,7 @@ const otpLimiter = rateLimit({
   message: { success: false, message: 'Too many OTP attempts. Try again in 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
 
 module.exports = { defaultLimiter, authLimiter, otpLimiter };

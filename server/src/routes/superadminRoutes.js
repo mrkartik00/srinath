@@ -28,6 +28,7 @@ router.patch('/registrations/:id/reject', ...guard, c.rejectDoctor);
 
 // Patients (cross-doctor)
 router.get('/patients', ...guard, c.getPatients);
+router.post('/patients', ...guard, c.addPatient);
 
 // Appointments (platform-wide)
 router.get('/appointments', ...guard, c.getAppointments);

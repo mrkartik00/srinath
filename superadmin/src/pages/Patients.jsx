@@ -6,6 +6,7 @@ export default function Patients() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', gender: '', bloodGroup: '', dateOfBirth: '' });
   const [submitting, setSubmitting] = useState(false);
 
@@ -113,7 +114,16 @@ export default function Patients() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#1e293b] mb-1">Password *</label>
-                <input name="password" type="password" value={form.password} onChange={handleChange} required minLength={6} className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#273d71]" placeholder="Min 6 characters" />
+                <div className="relative">
+                  <input name="password" type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleChange} required minLength={6} className="w-full px-3 py-2.5 pr-10 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#273d71]" placeholder="Min 6 characters" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                    {showPassword ? (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9s3-6 7-6 7 6 7 6-3 6-7 6-7-6-7-6z"/><circle cx="9" cy="9" r="2.5"/><path d="M3 15L15 3"/></svg>
+                    ) : (
+                      <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 9s3-6 7-6 7 6 7 6-3 6-7 6-7-6-7-6z"/><circle cx="9" cy="9" r="2.5"/></svg>
+                    )}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[#1e293b] mb-1">Phone</label>

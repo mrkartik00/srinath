@@ -28,6 +28,7 @@ router.patch('/registrations/:id/reject', ...guard, c.rejectDoctor);
 
 // Patients (cross-doctor)
 router.get('/patients', ...guard, c.getPatients);
+router.post('/patients', ...guard, c.addPatient);
 
 // Appointments (platform-wide)
 router.get('/appointments', ...guard, c.getAppointments);
@@ -60,5 +61,9 @@ router.post('/settings', ...guard, c.upsertSetting);
 
 // Logs
 router.get('/logs', ...guard, c.getLogs);
+
+// AI Config (Phase 6)
+router.get('/ai-config', ...guard, c.getAIConfig);
+router.patch('/ai-config', ...guard, c.updateAIConfig);
 
 module.exports = router;

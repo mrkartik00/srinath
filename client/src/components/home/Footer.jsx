@@ -49,8 +49,8 @@ export default function Footer() {
                 </svg>
               </div>
               <div>
-                <h3 style={{ color: '#ffffff', margin: 0, fontSize: '24px', fontWeight: 700, letterSpacing: '-0.5px' }}>Dr. Srinath</h3>
-                <p style={{ color: '#ffffff', margin: 0, fontSize: '12px', opacity: 0.8 }}>Healthcare Center</p>
+                <h3 style={{ color: '#ffffff', margin: 0, fontSize: '24px', fontWeight: 700, letterSpacing: '-0.5px' }}>Janki Care</h3>
+                <p style={{ color: '#ffffff', margin: 0, fontSize: '12px', opacity: 0.8 }}>by Dr. Srinath Rathod</p>
               </div>
             </div>
             <p style={{ lineHeight: 1.6, marginBottom: '32px', maxWidth: '300px' }}>
@@ -154,7 +154,7 @@ export default function Footer() {
           borderTop: '1px solid rgba(255,255,255,0.1)',
           fontSize: '14px'
         }}>
-          <div>Copyright © {new Date().getFullYear()} Dr. Srinath Healthcare. All Rights Reserved</div>
+          <div>Copyright © {new Date().getFullYear()} Janki Care. All Rights Reserved</div>
           <div style={{ display: 'flex', gap: '32px', marginTop: '16px', md: { marginTop: 0 } }}>
             <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Terms of Use</a>
             <a href="#" style={{ color: '#94a3b8', textDecoration: 'none' }}>Privacy Policy</a>

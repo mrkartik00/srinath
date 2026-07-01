@@ -62,4 +62,8 @@ router.post('/settings', ...guard, c.upsertSetting);
 // Logs
 router.get('/logs', ...guard, c.getLogs);
 
+// AI Config (Phase 6)
+router.get('/ai-config', ...guard, c.getAIConfig);
+router.patch('/ai-config', ...guard, c.updateAIConfig);
+
 module.exports = router;

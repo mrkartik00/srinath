@@ -258,7 +258,7 @@ export default function Chat({ isEmbedded = false }) {
                         </svg>
                       </div>
                       <p className="text-[13px] text-[#6B7C84] mt-0.5">
-                        GPT-6 • 218 LLMs • 118 left this month
+                        AI-assisted • Escalates to doctor when needed
                       </p>
                     </div>
                   </div>

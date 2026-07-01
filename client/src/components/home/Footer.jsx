@@ -77,16 +77,16 @@ export default function Footer() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ color: '#ffffff', minWidth: '80px' }}>We are Here:</span>
-                <span>123 Wellness Ave, Mumbai, MH 400001, India</span>
+                <span style={{ color: '#ffffff', minWidth: '80px' }}>Location:</span>
+                <span>Janki Care Clinic, Bangalore, Karnataka, India</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ color: '#ffffff', minWidth: '80px' }}>Send Mail:</span>
-                <span style={{ color: '#ffffff' }}>contact@drsrinath.com</span>
+                <span style={{ color: '#ffffff', minWidth: '80px' }}>Email:</span>
+                <span style={{ color: '#ffffff' }}>care@janki.care</span>
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <span style={{ color: '#ffffff', minWidth: '80px' }}>Call Us:</span>
-                <span style={{ color: '#ef4444', fontWeight: 600 }}>+91 98765 43210</span>
+                <span style={{ color: '#8db5c4', fontWeight: 600 }}>+91 98765 43210</span>
               </div>
             </div>
 
@@ -120,9 +120,9 @@ export default function Footer() {
               borderRadius: '24px',
               padding: '32px'
             }}>
-              <h4 style={{ color: '#ffffff', fontSize: '20px', fontWeight: 600, margin: '0 0 24px 0' }}>Our Departments</h4>
+              <h4 style={{ color: '#ffffff', fontSize: '20px', fontWeight: 600, margin: '0 0 24px 0' }}>Our Services</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {['Cardiology', 'Neurology', 'Gastroenterology', 'Endocrinology', 'Gynecology', 'Otolaryngology'].map(dept => (
+                {['General Surgery', 'Laparoscopic Surgery', 'Hernia Repair', 'Gallbladder Surgery', 'Appendectomy', 'Consultations'].map(dept => (
                   <li key={dept}>
                     <a href="#" style={{
                       color: '#94a3b8',

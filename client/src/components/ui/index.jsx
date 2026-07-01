@@ -8,6 +8,8 @@
      Background:   #E2F0F0 / #f0f4f8
    ───────────────────────────────────────────────────────────── */
 
+import { useState } from 'react';
+
 export function Button({
   children,
   variant = 'primary',
@@ -91,23 +93,44 @@ export function Button({
   );
 }
 
-export function Input({ label, error, hint, className = '', ...props }) {
+export function Input({ label, error, hint, className = '', type, ...props }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === 'password';
+
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       {label && (
         <label className="text-sm font-semibold text-[#253a5a]">{label}</label>
       )}
-      <input
-        className={[
-          'w-full px-4 py-3 rounded-[16px] text-sm font-medium',
-          'bg-white text-[#253a5a] placeholder:text-[#6B7C84]/60',
-          'border transition-all duration-200 outline-none',
-          error
-            ? 'border-[#C62828] ring-2 ring-[#C62828]/20'
-            : 'border-[rgba(54,86,95,0.18)] hover:border-[#5F8190]/40 focus:border-[#36565F] focus:ring-2 focus:ring-[#36565F]/15',
-        ].join(' ')}
-        {...props}
-      />
+      <div className="relative">
+        <input
+          type={isPassword ? (showPassword ? 'text' : 'password') : type}
+          className={[
+            'w-full px-4 py-3 rounded-[16px] text-sm font-medium',
+            isPassword ? 'pr-11' : '',
+            'bg-white text-[#253a5a] placeholder:text-[#6B7C84]/60',
+            'border transition-all duration-200 outline-none',
+            error
+              ? 'border-[#C62828] ring-2 ring-[#C62828]/20'
+              : 'border-[rgba(54,86,95,0.18)] hover:border-[#5F8190]/40 focus:border-[#36565F] focus:ring-2 focus:ring-[#36565F]/15',
+          ].join(' ')}
+          {...props}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7C84] hover:text-[#253a5a] transition-colors"
+            tabIndex={-1}
+          >
+            {showPassword ? (
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 10s4-7 9-7 9 7 9 7-4 7-9 7-9-7-9-7z"/><circle cx="10" cy="10" r="3"/><path d="M3 17L17 3"/></svg>
+            ) : (
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 10s4-7 9-7 9 7 9 7-4 7-9 7-9-7-9-7z"/><circle cx="10" cy="10" r="3"/></svg>
+            )}
+          </button>
+        )}
+      </div>
       {hint && !error && <p className="text-xs text-[#6B7C84]">{hint}</p>}
       {error && <p className="text-xs text-[#C62828] font-medium">{error}</p>}
     </div>

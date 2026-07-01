@@ -101,7 +101,7 @@ const getDocument = asyncHandler(async (req, res) => {
   if (!doc) return apiResponse.error(res, 'Document not found', 404);
 
   // Verify access: owner or their doctor
-  const isOwner = doc.patientId.toString() === req.user.id;
+  const isOwner = doc.patientId.toString() === req.user.id.toString();
   if (!isOwner && req.user.role === ROLES.DOCTOR) {
     const rel = await DoctorPatient.findOne({
       doctorId: req.user.id,
@@ -127,7 +127,7 @@ const downloadDocument = asyncHandler(async (req, res) => {
   if (!doc) return apiResponse.error(res, 'Document not found', 404);
 
   // Verify access
-  const isOwner = doc.patientId.toString() === req.user.id;
+  const isOwner = doc.patientId.toString() === req.user.id.toString();
   if (!isOwner && req.user.role === ROLES.DOCTOR) {
     const rel = await DoctorPatient.findOne({
       doctorId: req.user.id,

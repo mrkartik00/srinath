@@ -170,10 +170,10 @@ export default function PortalLayout() {
             </svg>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, fontSize: '16px', color: brandColor, lineHeight: 1.1, letterSpacing: '-0.5px' }}>
-                Dr. Srinath
+                Janki Care
               </span>
               <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '8.5px', color: '#8db5c4', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                Patient Portal
+                by Dr. Srinath Rathod
               </span>
             </div>
           </Link>
@@ -275,10 +275,10 @@ export default function PortalLayout() {
               whiteSpace: 'nowrap',
             }}>
               <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, fontSize: '18px', color: brandColor, lineHeight: 1.1, letterSpacing: '-0.5px' }}>
-                Dr. Srinath
+                Janki Care
               </span>
               <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '9px', color: '#8db5c4', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                Patient Portal
+                by Dr. Srinath Rathod
               </span>
             </div>
           </Link>

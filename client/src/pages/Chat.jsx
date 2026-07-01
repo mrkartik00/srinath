@@ -21,6 +21,8 @@ export default function Chat({ isEmbedded = false }) {
   const activeIdRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const typingTimeout = useRef(null);
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
 
   // Sync ref
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
@@ -111,6 +113,39 @@ export default function Chat({ isEmbedded = false }) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
     }
   }, [messages, typing]);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeId) return;
+    if (file.size > 10 * 1024 * 1024) { toast.error('File must be under 10MB'); return; }
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', `📎 ${file.name}`);
+
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/api/v1/chat/conversations/${activeId}/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessages(prev => [...prev, data.data]);
+        toast.success('File attached');
+      } else {
+        toast.error('Upload failed');
+      }
+    } catch {
+      toast.error('Network error during upload');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const [showDoctorDropdown, setShowDoctorDropdown] = useState(false);
 
@@ -299,6 +334,40 @@ export default function Chat({ isEmbedded = false }) {
                           : 'bg-white text-[#253a5a] rounded-bl-[4px] border border-[#eaedf1]'
                           }`}>
                           <p>{m.body}</p>
+                          
+                          {/* Attachments */}
+                          {m.attachments?.length > 0 && (
+                            <div className="mt-2 space-y-2">
+                              {m.attachments.map((att, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={async () => {
+                                    try {
+                                      const baseUrl = import.meta.env.VITE_API_URL || '';
+                                      const token = localStorage.getItem('token');
+                                      const res = await fetch(`${baseUrl}/api/v1/chat/attachments/${m._id}/download`, {
+                                        headers: { Authorization: `Bearer ${token}` }
+                                      });
+                                      const data = await res.json();
+                                      if (data.success && data.data.url) {
+                                        window.open(data.data.url, '_blank');
+                                      } else {
+                                        toast.error('Could not open file');
+                                      }
+                                    } catch { toast.error('Download failed'); }
+                                  }}
+                                  className={`flex items-center gap-2 px-3 py-2 rounded-[12px] text-[13px] font-medium transition-colors ${isMine ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-[#f0f4f8] hover:bg-[#E2F0F0] text-[#36565F]'}`}
+                                >
+                                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+                                    <polyline points="14 2 14 8 10 8"/>
+                                  </svg>
+                                  <span className="truncate max-w-[150px]">{att.fileName}</span>
+                                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v8m-3-3l3 3 3-3"/><path d="M2 12h10"/></svg>
+                                </button>
+                              ))}
+                            </div>
+                          )}
 
                           {/* Time stamp inside bubble for sender */}
                           {isMine && (
@@ -346,6 +415,25 @@ export default function Chat({ isEmbedded = false }) {
               {/* Messages Input Footer */}
               <div className="px-4 md:px-8 py-4 md:py-6 bg-white border-t border-[#eaedf1]">
                 <form onSubmit={sendMessage} className="flex gap-2 md:gap-4 items-center">
+                  
+                  {/* File upload */}
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || !activeId}
+                    className="w-[42px] h-[42px] md:w-[46px] md:h-[46px] rounded-full bg-[#f0f4f8] hover:bg-[#E2F0F0] text-[#36565F] flex items-center justify-center transition-colors focus:outline-none flex-shrink-0 disabled:opacity-40"
+                    title="Attach file (PDF, Image)"
+                  >
+                    {uploading ? (
+                      <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="opacity-75"/></svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                      </svg>
+                    )}
+                  </button>
+
                   <div className="flex-1 relative">
                     <input
                       value={input}

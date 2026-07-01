@@ -3,6 +3,7 @@ const config = require('../config/env');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
 const { UnauthorizedError, ConflictError, NotFoundError } = require('../utils/apiError');
+const { ROLES } = require('../config/constants');
 
 const generateToken = (user) =>
   jwt.sign(
@@ -27,6 +28,12 @@ const register = async (data) => {
   }
 
   const user = await User.create({ ...data, organizationId: orgId });
+
+  // Auto-create Patient profile for patient role
+  if (user.role === ROLES.PATIENT) {
+    const Patient = require('../models/Patient');
+    await Patient.create({ userId: user._id, organizationId: orgId });
+  }
 
   // Send OTP for email verification
   const { sendOtp } = require('./otpService');

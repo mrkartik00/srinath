@@ -11,9 +11,13 @@ export default function DoctorProfile() {
   const [isOnline, setIsOnline] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const [avatar, setAvatar] = useState(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
   useEffect(() => {
     api.get('/api/v1/doctor/profile').then(({ data }) => {
       const { user, profile } = data;
+      setAvatar(user.avatar || null);
       setForm({ name: user.name, specialization: profile.specialization || '', qualification: profile.qualification || '', licenseNumber: profile.licenseNumber || '', experience: profile.experience || '', consultationFee: profile.consultationFee || '', clinicName: profile.clinicName || '', clinicAddress: profile.clinicAddress || '', aboutMe: profile.aboutMe || '' });
       setMaxPatients(profile.maxPatientsPerDay || 20);
       setIsOnline(profile.isOnline || false);
@@ -47,6 +51,44 @@ export default function DoctorProfile() {
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold text-[#1e293b]">Doctor Profile</h1>
+
+      {/* Avatar */}
+      <section className="bg-white border border-[#E8E5DE] rounded-[10px] p-6 flex items-center gap-6">
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#d4e8ec] to-[#b8d8df] border-3 border-white shadow-md overflow-hidden flex items-center justify-center text-2xl font-bold text-[#255946]">
+            {avatar ? <img src={avatar} alt="Profile" className="w-full h-full object-cover" /> : (form.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'DR')}
+          </div>
+          <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#255946] border-2 border-white flex items-center justify-center cursor-pointer shadow-md hover:bg-[#1a3f32] transition-colors">
+            {avatarUploading ? (
+              <svg className="animate-spin w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" className="opacity-25"/><path d="M4 12a8 8 0 018-8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="opacity-75"/></svg>
+            ) : (
+              <svg width="14" height="14" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg>
+            )}
+            <input type="file" accept="image/*" className="hidden" disabled={avatarUploading} onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+              setAvatarUploading(true);
+              const formData = new FormData();
+              formData.append('avatar', file);
+              try {
+                const baseUrl = import.meta.env.VITE_API_URL || '';
+                const token = localStorage.getItem('token');
+                const res = await fetch(`${baseUrl}/api/v1/auth/avatar`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+                const data = await res.json();
+                if (data.success) { setAvatar(data.data.avatar); toast.success('Profile picture updated!'); }
+                else toast.error(data.message || 'Upload failed');
+              } catch { toast.error('Failed to upload'); }
+              finally { setAvatarUploading(false); e.target.value = ''; }
+            }} />
+          </label>
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-[#1e293b]">{form.name}</h3>
+          <p className="text-sm text-[#64748b]">{form.specialization || 'Doctor'}</p>
+          <p className="text-xs text-[#94a3b8] mt-1">Click the + button to update your profile picture</p>
+        </div>
+      </section>
 
       {/* Profile Info */}
       <section className="bg-white border border-[#E8E5DE] rounded-[10px] p-6 space-y-4">

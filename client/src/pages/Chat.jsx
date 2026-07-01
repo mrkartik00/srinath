@@ -342,6 +342,40 @@ export default function Chat({ isEmbedded = false }) {
                             }`}>
                             <p className="leading-relaxed">{m.body}</p>
 
+                            {/* Attachments */}
+                            {m.attachments?.length > 0 && (
+                              <div className="mt-2 space-y-2">
+                                {m.attachments.map((att, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={async () => {
+                                      try {
+                                        const baseUrl = import.meta.env.VITE_API_URL || '';
+                                        const token = localStorage.getItem('token');
+                                        const res = await fetch(`${baseUrl}/api/v1/chat/attachments/${m._id}/download`, {
+                                          headers: { Authorization: `Bearer ${token}` }
+                                        });
+                                        const data = await res.json();
+                                        if (data.success && data.data.url) {
+                                          window.open(data.data.url, '_blank');
+                                        } else {
+                                          toast.error('Could not open file');
+                                        }
+                                      } catch { toast.error('Download failed'); }
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-[12px] text-[13px] font-medium transition-colors ${isMine ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-[#f0f4f8] hover:bg-[#E2F0F0] text-[#36565F]'}`}
+                                  >
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+                                      <polyline points="14 2 14 8 10 8"/>
+                                    </svg>
+                                    <span className="truncate max-w-[150px]">{att.fileName}</span>
+                                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v8m-3-3l3 3 3-3"/><path d="M2 12h10"/></svg>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+
                             {/* Time stamp inside bubble for sender */}
                             {isMine && (
                               <div className="flex items-center justify-end gap-1.5 mt-2 opacity-80">

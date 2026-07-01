@@ -94,7 +94,7 @@ export default function Login() {
             <div className="w-9 h-9 rounded-[12px] bg-white/15 backdrop-blur-sm border border-white/10 flex items-center justify-center font-bold text-sm">
               Dr.
             </div>
-            <span className="font-bold text-[18px] tracking-tight">Srinath Healthcare</span>
+            <span className="font-bold text-[18px] tracking-tight">Janki Care</span>
           </div>
 
           {/* Main text */}
@@ -127,8 +127,8 @@ export default function Login() {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-8">
             <div className="inline-flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-[12px] bg-[#253a5a] text-white flex items-center justify-center text-sm font-bold">Dr.</div>
-              <span className="font-bold text-[18px] text-[#253a5a] tracking-tight">Srinath Healthcare</span>
+              <div className="w-9 h-9 rounded-[12px] bg-[#253a5a] text-white flex items-center justify-center text-sm font-bold">JC</div>
+              <span className="font-bold text-[18px] text-[#253a5a] tracking-tight">Janki Care</span>
             </div>
           </div>
 

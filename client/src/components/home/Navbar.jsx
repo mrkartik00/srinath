@@ -117,7 +117,7 @@ export default function Navbar() {
               lineHeight: 1.1,
               letterSpacing: '-0.5px' 
             }}>
-              Dr. Srinath
+              Janki Care
             </span>
             <span style={{ 
               fontFamily: "'Inter', sans-serif", 
@@ -128,7 +128,7 @@ export default function Navbar() {
               letterSpacing: '1px',
               textTransform: 'uppercase'
             }}>
-              Medical Center
+              by Dr. Srinath Rathod
             </span>
           </div>
         </Link>

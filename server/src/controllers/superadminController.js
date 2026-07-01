@@ -254,10 +254,37 @@ const getLogs = asyncHandler(async (req, res) => {
   apiResponse.success(res, result.data, 'Logs fetched', result.meta);
 });
 
+// === AI CONFIG (Phase 6) ===
+const AIConfig = require('../models/AIConfig');
+
+const getAIConfig = asyncHandler(async (req, res) => {
+  let config = await AIConfig.findOne({ organizationId: req.scope.organizationId });
+  if (!config) {
+    config = await AIConfig.create({ organizationId: req.scope.organizationId });
+  }
+  apiResponse.success(res, config, 'AI config fetched');
+});
+
+const updateAIConfig = asyncHandler(async (req, res) => {
+  const allowed = ['model', 'systemPrompt', 'maxTokensPerResponse', 'maxDailyMessagesPerPatient', 'escalationKeywords', 'isEnabled'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  const config = await AIConfig.findOneAndUpdate(
+    { organizationId: req.scope.organizationId },
+    { $set: updates },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  apiResponse.success(res, config, 'AI config updated');
+});
+
 module.exports = {
   getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, reactivateDoctor, getDoctorActivity,
   getRegistrations, approveDoctor, rejectDoctor,
   getPatients, addPatient, getAppointments, getPrescriptions, getAnalytics,
   getPlans, getPlanFeatures, createPlan, updatePlan, togglePlan, deletePlan,
   getSettings, upsertSetting, getLogs,
+  getAIConfig, updateAIConfig,
 };

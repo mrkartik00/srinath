@@ -5,8 +5,10 @@ const User = require('../models/User');
 const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const pushService = require('../services/pushService');
+const aiChatService = require('../services/aiChatService');
 const logger = require('../config/logger');
 const { withOptionalTransaction } = require('../utils/dbUtils');
+const { ROLES, CONVERSATION_STATUS } = require('../config/constants');
 
 const onlineUsers = new Map();
 const messageCooldowns = new Map(); // userId -> lastMessageTime (rate limiting)
@@ -106,6 +108,7 @@ const initializeSocket = (server) => {
                 lastMessageAt: new Date(),
                 lastMessagePreview: body.trim().slice(0, 100),
                 ...(conversation.status === 'open' && isDoctor ? { status: 'active' } : {}),
+                ...(isDoctor && ['ai_handling', 'escalated', 'open'].includes(conversation.status) ? { status: CONVERSATION_STATUS.DOCTOR_HANDLING } : {}),
               },
             },
             { new: true, select: 'messageSeq', ...opts }
@@ -136,6 +139,17 @@ const initializeSocket = (server) => {
         }
 
         socket.emit('message:sent_ack', { messageId: message._id, conversationId, tempId, sequence });
+
+        // ── AI Chat Triage (Phase 6) ──────────────────────────────────
+        // If patient sent message and AI is eligible, process async
+        if (socket.user.role === ROLES.PATIENT) {
+          const freshConv = await Conversation.findById(conversationId);
+          if (freshConv) {
+            aiChatService.handlePatientMessage(freshConv, body.trim(), io).catch(err => {
+              logger.error('AI triage async error:', err);
+            });
+          }
+        }
       } catch (err) {
         logger.error('Socket message:send error:', err);
         socket.emit('error', { message: 'Failed to send message' });

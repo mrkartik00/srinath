@@ -40,7 +40,8 @@ export default function PrescriptionDetail() {
     const rxToast = toast.loading('Preparing download...');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/my/prescriptions/${id}/pdf`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/my/prescriptions/${id}/pdf`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) {

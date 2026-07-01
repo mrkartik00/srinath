@@ -44,8 +44,9 @@ export default function MyPrescriptions() {
     const t = toast.loading('Preparing download...');
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`/api/v1/my/prescriptions/${rxId}/pdf`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/v1/my/prescriptions/${rxId}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
       if (!res.ok) { toast.error('PDF not available yet', { id: t }); return; }
       const blob = await res.blob();

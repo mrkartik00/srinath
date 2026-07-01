@@ -160,21 +160,7 @@ jobs:
 
             cd $PROJECT_DIR
 
-            # Create ecosystem config
-            cat > ecosystem.config.cjs << 'ECOEOF'
-            module.exports = {
-              apps: [{
-                name: 'janki-backend',
-                script: 'server.js',
-                cwd: '/var/www/janki/server',
-                env: { NODE_ENV: 'production' },
-                max_memory_restart: '512M',
-                instances: 1,
-                autorestart: true,
-              }]
-            };
-            ECOEOF
-
+            # Use the ecosystem config that reads .env directly
             pm2 start ecosystem.config.cjs
             pm2 save
             cd $PROJECT_DIR

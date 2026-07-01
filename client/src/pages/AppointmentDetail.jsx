@@ -71,7 +71,7 @@ export default function AppointmentDetail() {
       {/* ═══════════════════════════════════════════════ */}
       {/* HERO BANNER — Deep premium gradient background  */}
       {/* ═══════════════════════════════════════════════ */}
-      <div style={{ background: '#f0f4f8', paddingTop: '120px', paddingBottom: '16px' }}>
+      <div style={{ background: '#f0f4f8', paddingTop: '32px', paddingBottom: '16px' }}>
         <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px', boxSizing: 'border-box' }}>
           
           <div style={{

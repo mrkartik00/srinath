@@ -1,461 +1,317 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-  
-  // Hover states for the distinct dropdown categories
-  const [consultHovered, setConsultHovered] = useState(false);
-  const [healthHovered, setHealthHovered] = useState(false);
-  const [accountHovered, setAccountHovered] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const menuRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  const isHome = location.pathname === '/';
 
   useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) setMobileOpen(false);
     };
-  }, [mobileMenuOpen]);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, []);
 
-  const handleLogout = () => {
-    if (!window.confirm('Sign out?')) return;
+  // Close on route change
+  useEffect(() => setMobileOpen(false), [location.pathname]);
+
+  // Close on outside click for mobile menu
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMobileOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [mobileOpen]);
+
+  // Close on outside click for desktop profile dropdown
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [dropdownOpen]);
+
+  const glass = isHome && !scrolled && !mobileOpen;
+
+  const handleSignOut = () => {
     logout();
     navigate('/');
   };
 
-  const isTransparent = location.pathname === '/';
-  const isBookAppointment = 
-    location.pathname === '/book-appointment' || 
-    location.pathname === '/services' || 
-    location.pathname.startsWith('/appointments') || 
-    location.pathname.startsWith('/prescriptions') ||
-    location.pathname.startsWith('/profile') ||
-    location.pathname.startsWith('/chat');
-  const elementColor = isBookAppointment ? '#36565F' : '#ffffff';
-
-  const navbarStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '90px',
-    background: isBookAppointment ? '#f0f4f8' : ((isTransparent && !mobileMenuOpen) ? 'transparent' : '#8db5c4'),
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: '0 40px',
-    zIndex: 100,
-    boxSizing: 'border-box',
-    boxShadow: 'none',
-    borderBottom: isBookAppointment ? '1px solid rgba(54, 86, 95, 0.08)' : 'none',
-  };
-
-  const linkStyle = {
-    color: elementColor,
-    fontSize: '15px',
-    fontWeight: 500,
-    textDecoration: 'none',
-    transition: 'opacity 0.2s',
-    cursor: 'pointer',
-    opacity: 0.95
-  };
-
-  const dropdownButtonStyle = {
-    background: 'transparent',
-    border: 'none',
-    color: elementColor,
-    fontSize: '15px',
-    fontWeight: 500,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    cursor: 'pointer',
-    padding: '10px 0',
-    opacity: 0.95
-  };
-
-  const dropdownMenuStyle = {
-    position: 'absolute',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    top: '100%',
-    width: '200px',
-    background: '#ffffff',
-    borderRadius: '16px',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-    border: '1px solid rgba(0,0,0,0.05)',
-    overflow: 'hidden',
-    zIndex: 1000,
-    padding: '8px 0',
-  };
-
   return (
-    <>
-      <nav style={navbarStyle} className="hp-animate-fade-up">
-        {/* Brand Logo & Name */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={elementColor} strokeWidth="2.5">
-            <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z"/>
-            <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z"/>
-            <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z"/>
-            <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z"/>
-            <path d="M12 9v6M9 12h6"/>
-          </svg>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ 
-              fontFamily: "'Figtree', sans-serif", 
-              fontWeight: 700, 
-              fontSize: '20px', 
-              color: elementColor, 
-              lineHeight: 1.1,
-              letterSpacing: '-0.5px' 
-            }}>
-              Dr. Srinath
-            </span>
-            <span style={{ 
-              fontFamily: "'Inter', sans-serif", 
-              fontWeight: 500, 
-              fontSize: '9px', 
-              color: isBookAppointment ? '#6B7C84' : '#ffffff', 
-              opacity: 0.85,
-              letterSpacing: '1px',
-              textTransform: 'uppercase'
-            }}>
-              Medical Center
-            </span>
+    <div ref={menuRef}>
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
+        height: '66px',
+        background: glass ? 'transparent' : 'rgba(255,255,255,0.97)',
+        backdropFilter: glass ? 'none' : 'blur(16px)',
+        borderBottom: glass ? 'none' : '1px solid #eaedf1',
+        boxShadow: glass ? 'none' : '0 2px 20px rgba(37,58,90,0.06)',
+        transition: 'background 0.3s, box-shadow 0.3s',
+        display: 'flex', alignItems: 'center',
+        padding: '0 32px', boxSizing: 'border-box',
+        justifyContent: 'space-between',
+      }}>
+
+        {/* ── Logo ── */}
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
+          <div style={{
+            width: '34px', height: '34px', borderRadius: '9px',
+            background: glass ? 'rgba(255,255,255,0.2)' : '#36565F',
+            border: glass ? '1px solid rgba(255,255,255,0.3)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.3s', flexShrink: 0,
+          }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
+              <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z" />
+              <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z" />
+              <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z" />
+              <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z" />
+              <path d="M12 9v6M9 12h6" />
+            </svg>
           </div>
+          <span style={{
+            fontFamily: "'Figtree', sans-serif", fontWeight: 800, fontSize: '18px',
+            color: glass ? '#ffffff' : '#253a5a', letterSpacing: '-0.3px',
+            transition: 'color 0.3s',
+          }}>
+            Dr. Srinath
+          </span>
         </Link>
 
-        {/* Center Links (Desktop) */}
-        <div className="hidden md:flex items-center gap-8">
-          <Link 
-            to="/" 
-            style={linkStyle}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            Home
-          </Link>
-          <Link 
-            to="/services" 
-            style={linkStyle}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            Find Doctors
-          </Link>
+        {/* ── Desktop Nav (hidden on mobile) ── */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-          <div 
-            className="relative"
-            onMouseEnter={() => setConsultHovered(true)}
-            onMouseLeave={() => setConsultHovered(false)}
-            style={{ display: 'inline-block' }}
-          >
-            <button style={dropdownButtonStyle}>
-              Consult <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
-            </button>
-            
-            {consultHovered && (
-              <div style={dropdownMenuStyle}>
-                <Link 
-                  to="/book-appointment"
+            <NavLink to="/" active={location.pathname === '/'} glass={glass}>Home</NavLink>
+            <NavLink to="/dashboard" active={location.pathname === '/dashboard'} glass={glass}>Patient Portal</NavLink>
+
+            <div style={{ width: '1px', height: '18px', background: glass ? 'rgba(255,255,255,0.2)' : '#eaedf1', margin: '0 8px' }} />
+
+            {user ? (
+              <div ref={dropdownRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setDropdownOpen(v => !v)}
                   style={{
-                    display: 'block',
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    color: '#36565f',
-                    textDecoration: 'none',
-                    transition: 'background-color 0.2s'
+                    display: 'flex', alignItems: 'center', gap: '10px',
+                    background: glass ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    border: glass ? '1px solid rgba(255,255,255,0.2)' : '1px solid #eaedf1',
+                    padding: '4px 12px 4px 4px', borderRadius: '999px',
+                    cursor: 'pointer', transition: 'all 0.2s',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                  onMouseEnter={e => { e.currentTarget.style.background = glass ? 'rgba(255,255,255,0.2)' : '#f0f4f8'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = glass ? 'rgba(255,255,255,0.1)' : 'transparent'; }}
                 >
-                  Book Appointment
-                </Link>
-                <Link 
-                  to="/chat"
-                  style={{
-                    display: 'block',
-                    padding: '10px 16px',
-                    fontSize: '14px',
-                    color: '#36565f',
-                    textDecoration: 'none',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                >
-                  Chat
-                </Link>
-              </div>
-            )}
-          </div>
-          
-          {user ? (
-            <>
-              {/* Dropdown 1: My Health */}
-              <div 
-                className="relative"
-                onMouseEnter={() => setHealthHovered(true)}
-                onMouseLeave={() => setHealthHovered(false)}
-                style={{ display: 'inline-block' }}
-              >
-                <button style={dropdownButtonStyle}>
-                  My Health <span style={{ fontSize: '10px', marginLeft: '2px' }}>▼</span>
+                  <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    background: glass ? 'rgba(255,255,255,0.2)' : '#eef5f7',
+                    color: glass ? '#ffffff' : '#253a5a',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '13px',
+                  }}>
+                    {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                  <span style={{
+                    fontFamily: "'Figtree', sans-serif", fontWeight: 600, fontSize: '13.5px',
+                    color: glass ? '#ffffff' : '#253a5a',
+                  }}>
+                    {user?.name?.split(' ')[0] || 'Patient'}
+                  </span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ color: glass ? 'rgba(255,255,255,0.6)' : '#6B7C84' }}>
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
                 </button>
-                
-                {healthHovered && (
-                  <div style={dropdownMenuStyle}>
-                    {[
-                      { label: 'Appointments', path: '/appointments' },
-                      { label: 'Prescriptions', path: '/prescriptions' },
-                      { label: 'Medical Records', path: '/medical-records' },
-                      { label: 'Health Feed', path: '/health-feed' },
-                    ].map((item) => (
-                      <Link 
-                        key={item.label}
-                        to={item.path}
-                        style={{
-                          display: 'block',
-                          padding: '10px 16px',
-                          fontSize: '14px',
-                          color: '#36565f',
-                          textDecoration: 'none',
-                          transition: 'background-color 0.2s'
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
-                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
+
+                {dropdownOpen && (
+                  <div style={{
+                    position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+                    width: '220px', background: '#ffffff',
+                    borderRadius: '16px', border: '1px solid #eaedf1',
+                    boxShadow: '0 8px 32px rgba(37,58,90,0.14)',
+                    padding: '8px', display: 'flex', flexDirection: 'column', gap: '2px',
+                    zIndex: 201,
+                  }}>
+                    <div style={{ padding: '8px 12px', borderBottom: '1px solid #f1f5f9', marginBottom: '4px' }}>
+                      <div style={{ fontWeight: 700, fontSize: '14px', color: '#253a5a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
+                      <div style={{ fontWeight: 500, fontSize: '11px', color: '#8db5c4', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
+                    </div>
+                    
+                    <Link
+                      to="/profile"
+                      onClick={() => setDropdownOpen(false)}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                        color: '#253a5a', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#f0f4f8'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" />
+                      </svg>
+                      My Profile
+                    </Link>
+
+                    <button
+                      onClick={() => { setDropdownOpen(false); handleSignOut(); }}
+                      style={{
+                        padding: '10px 12px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
+                        color: '#dc2626', background: 'transparent', border: 'none', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+                      </svg>
+                      Sign Out
+                    </button>
                   </div>
                 )}
               </div>
-
-              {/* Chat link removed */}
-            </>
-          ) : (
-            <Link 
-              to="/login" 
-              style={linkStyle}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-            >
-              Patient Portal
-            </Link>
-          )}
-        </div>
-
-        {/* Right Actions (Desktop) */}
-        <div className="hidden md:flex items-center gap-4">
-          <button style={{ background: 'none', border: 'none', color: elementColor, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-          </button>
-          
-          <button style={{ background: 'none', border: 'none', color: elementColor, cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '8px', opacity: 0.9 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.9'}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-              <line x1="3" y1="6" x2="21" y2="6"/>
-              <path d="M16 10a4 4 0 0 1-8 0"/>
-            </svg>
-          </button>
-
-          {user ? (
-            <div 
-              className="relative ml-2 pb-3"
-              onMouseEnter={() => setAccountHovered(true)}
-              onMouseLeave={() => setAccountHovered(false)}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: '#E2F0F0',
-                  color: '#36565F',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 'bold',
-                  fontSize: '14px',
-                  border: `2px solid ${isBookAppointment ? '#36565F' : 'rgba(255,255,255,0.4)'}`
-                }}>
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </div>
-                <span style={{ color: elementColor, fontSize: '14px', fontWeight: 600 }}>
-                  {user.name ? user.name.split(' ')[0] : 'Profile'}
-                </span>
-              </div>
-              
-              {accountHovered && (
-                <div style={{...dropdownMenuStyle, right: 0, left: 'auto', transform: 'none', top: '100%', marginTop: '4px'}}>
-                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0', background: '#fcfcfc' }}>
-                    <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1a2b30', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.name}</p>
-                    <p style={{ margin: 0, fontSize: '11px', color: '#6B7C84', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</p>
-                  </div>
-                  {[
-                    { label: 'Profile', path: '/profile' },
-                  ].map((item) => (
-                    <Link 
-                      key={item.label}
-                      to={item.path}
-                      style={{
-                        display: 'block',
-                        padding: '10px 16px',
-                        fontSize: '14px',
-                        color: '#36565f',
-                        textDecoration: 'none',
-                        transition: 'background-color 0.2s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eef5f7'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  <hr style={{ border: 'none', borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
-                  <button 
-                    onClick={handleLogout}
-                    style={{
-                      width: '100%',
-                      textAlign: 'left',
-                      background: 'none',
-                      border: 'none',
-                      padding: '10px 16px',
-                      fontSize: '14px',
-                      color: '#C62828',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Link 
-              to="/login"
-              style={{
-                border: isBookAppointment ? '1px solid #36565F' : '1px solid rgba(255,255,255,0.4)',
-                background: isBookAppointment ? '#36565F' : 'rgba(255,255,255,0.12)',
-                color: '#ffffff',
-                padding: '8px 20px',
-                borderRadius: '50px',
-                fontWeight: 600,
-                fontSize: '14px',
-                textDecoration: 'none',
-                transition: 'all 0.3s ease'
+            ) : (
+              <Link to="/login" style={{
+                padding: '8px 20px', borderRadius: '8px', fontSize: '13px', fontWeight: 700,
+                background: glass ? 'rgba(255,255,255,0.16)' : '#253a5a',
+                border: glass ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                color: '#ffffff', textDecoration: 'none', transition: 'all 0.18s',
               }}
-            >
-              Sign In
-            </Link>
-          )}
-        </div>
+                onMouseEnter={e => { e.currentTarget.style.background = glass ? 'rgba(255,255,255,0.28)' : '#36565F'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = glass ? 'rgba(255,255,255,0.16)' : '#253a5a'; }}
+              >
+                Login
+              </Link>
+            )}
+          </div>
+        )}
 
-        {/* Mobile Hamburger */}
-        <button 
-          className={`md:hidden p-2 ${isBookAppointment ? 'text-[#36565F]' : 'text-white'}`}
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={mobileMenuOpen ? "M6 18L18 6" : "M4 6h16M4 12h16M4 18h16"} />
-          </svg>
-        </button>
+        {/* ── Mobile Hamburger (only on mobile) ── */}
+        {isMobile && (
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '6px 8px', color: glass ? '#fff' : '#253a5a',
+              display: 'flex', alignItems: 'center', borderRadius: '8px',
+            }}
+          >
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
+                d={mobileOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'} />
+            </svg>
+          </button>
+        )}
       </nav>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
+      {/* ── Mobile Dropdown — compact card, NOT full screen ── */}
+      {isMobile && mobileOpen && (
         <div style={{
           position: 'fixed',
-          top: '90px',
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: '74px',         /* just below navbar */
+          left: '12px',
+          right: '12px',
+          width: 'auto',       /* explicit: not 100% */
+          zIndex: 199,
           background: '#ffffff',
-          zIndex: 99,
-          overflowY: 'auto',
-          padding: '24px',
+          borderRadius: '16px',
+          border: '1px solid #eaedf1',
+          boxShadow: '0 8px 32px rgba(37,58,90,0.14)',
+          padding: '8px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px'
+          gap: '2px',
+          overflow: 'hidden',
         }}>
-          <Link to="/" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Home</Link>
-          <Link to="/services" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '18px', fontWeight: 600, color: '#36565F', textDecoration: 'none' }}>Find Doctors</Link>
-          <div style={{ padding: '10px 0', borderBottom: '1px solid #eef5f7' }}>
-            <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: 700, color: '#6B7C84', textTransform: 'uppercase' }}>Consult</p>
-            <Link to="/book-appointment" onClick={() => setMobileMenuOpen(false)} style={{ display: 'block', fontSize: '16px', fontWeight: 500, color: '#36565F', textDecoration: 'none', marginBottom: '12px' }}>Book Appointment</Link>
-            <Link to="/chat" onClick={() => setMobileMenuOpen(false)} style={{ display: 'block', fontSize: '16px', fontWeight: 500, color: '#36565F', textDecoration: 'none' }}>Chat</Link>
-          </div>
-          
+          <MobileLink to="/" active={location.pathname === '/'} onClick={() => setMobileOpen(false)}>Home</MobileLink>
+          <MobileLink to="/dashboard" active={location.pathname === '/dashboard'} onClick={() => setMobileOpen(false)}>Patient Portal</MobileLink>
+
+          <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 8px' }} />
+
           {user ? (
-            <>
-              {/* Profile Header */}
-              <div style={{ padding: '10px 0', borderBottom: '1px solid #eef5f7' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1a2b30' }}>{user.name}</p>
-                <p style={{ margin: 0, fontSize: '11px', color: '#6B7C84' }}>{user.email}</p>
-              </div>
-              
-              {/* My Health Group */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#8db5c4', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '12px' }}>My Health</div>
-              <Link to="/appointments" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Appointments</Link>
-              <Link to="/prescriptions" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Prescriptions</Link>
-              <Link to="/medical-records" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Medical Records</Link>
-              <Link to="/health-feed" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Health Feed</Link>
-              
-              {/* My Account Group */}
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#8db5c4', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '12px' }}>My Account</div>
-              <Link to="/profile" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: '16px', color: '#36565F', textDecoration: 'none', paddingLeft: '8px' }}>Profile</Link>
-              
-              <button 
-                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
-                style={{
-                  textAlign: 'left',
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '16px',
-                  color: '#C62828',
-                  cursor: 'pointer',
-                  padding: '12px 0',
-                  marginTop: '12px',
-                  borderTop: '1px solid #eef5f7'
-                }}
-              >
-                Sign Out
-              </button>
-            </>
+            <button
+              onClick={() => { setMobileOpen(false); handleSignOut(); }}
+              style={{
+                padding: '12px 14px', borderRadius: '10px', fontSize: '15px', fontWeight: 600,
+                color: '#dc2626', background: '#fef2f2', border: 'none', cursor: 'pointer',
+                textAlign: 'left', width: '100%',
+              }}
+            >
+              Sign Out
+            </button>
           ) : (
-            <>
-              {/* Shop link removed */}
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} style={{
-                textAlign: 'center',
-                background: '#36565F',
-                color: '#ffffff',
-                padding: '12px',
-                borderRadius: '12px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                marginTop: '20px'
-              }}>
-                Patient Login ↗
-              </Link>
-            </>
+            <Link
+              to="/login"
+              onClick={() => setMobileOpen(false)}
+              style={{
+                padding: '12px 14px', borderRadius: '10px', fontSize: '15px', fontWeight: 700,
+                color: '#ffffff', background: '#253a5a', textDecoration: 'none', textAlign: 'center',
+                display: 'block',
+              }}
+            >
+              Login
+            </Link>
           )}
         </div>
       )}
-    </>
+    </div>
+  );
+}
+
+// ── Small helper components ───────────────────────────────────────────────────
+
+function NavLink({ to, active, glass, children }) {
+  return (
+    <Link
+      to={to}
+      style={{
+        padding: '7px 14px', borderRadius: '8px', fontSize: '14px', fontWeight: 600,
+        textDecoration: 'none', transition: 'all 0.18s',
+        color: glass ? 'rgba(255,255,255,0.92)' : (active ? '#253a5a' : '#6B7C84'),
+        background: !glass && active ? '#f0f4f8' : 'transparent',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = glass ? 'rgba(255,255,255,0.12)' : '#f8fafc'; e.currentTarget.style.color = glass ? '#fff' : '#253a5a'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = !glass && active ? '#f0f4f8' : 'transparent'; e.currentTarget.style.color = glass ? 'rgba(255,255,255,0.92)' : (active ? '#253a5a' : '#6B7C84'); }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MobileLink({ to, active, onClick, children }) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      style={{
+        padding: '12px 14px', borderRadius: '10px', fontSize: '15px', fontWeight: 600,
+        color: '#253a5a', textDecoration: 'none',
+        background: active ? '#f0f4f8' : 'transparent',
+        display: 'block',
+      }}
+    >
+      {children}
+    </Link>
   );
 }

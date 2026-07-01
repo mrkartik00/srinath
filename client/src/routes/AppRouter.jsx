@@ -1,10 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute, { GuestRoute } from './ProtectedRoute';
 
-// Layout
+// Layouts
 import MainLayout from '../components/layout/MainLayout';
+import PortalLayout from '../components/layout/PortalLayout';
 
 // Auth pages
 import Login from '../pages/Login';
@@ -19,7 +20,8 @@ import ServicesPage from '../pages/Services';
 import ContactPage from '../pages/Contact';
 import DoctorDetailPage from '../pages/DoctorDetail';
 
-// Flattened Dashboard pages
+// Portal pages
+import DashboardPage from '../pages/Dashboard';
 import AppointmentsPage from '../pages/Appointments';
 import AppointmentDetailPage from '../pages/Appointments/Detail';
 import BookAppointmentPage from '../pages/BookAppointment';
@@ -39,21 +41,30 @@ export default function AppRouter() {
       <AuthProvider>
         <Toaster position="top-right" />
         <Routes>
+          {/* ─── Public / Marketing Routes ─── */}
           <Route element={<MainLayout />}>
-            {/* ─── Public Routes ─── */}
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/services" element={<ServicesPage />} />
             <Route path="/doctors/:id" element={<DoctorDetailPage />} />
             <Route path="/contact" element={<ContactPage />} />
 
-            {/* ─── Auth Routes ─── */}
+            {/* Auth */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-otp" element={<VerifyOtp />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
 
-            {/* ─── Protected Routes (Flattened) ─── */}
+          {/* ─── Browsable Portal (guests can view, actions prompt login) ─── */}
+          <Route element={<GuestRoute><PortalLayout /></GuestRoute>}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/health-feed" element={<HealthFeedPage />} />
+            <Route path="/vip" element={<VIPPage />} />
+          </Route>
+
+          {/* ─── Protected Portal (PortalLayout always shows; LoginWall in content area if guest) ─── */}
+          <Route element={<GuestRoute><PortalLayout /></GuestRoute>}>
             <Route path="/appointments" element={<ProtectedRoute><AppointmentsPage /></ProtectedRoute>} />
             <Route path="/appointments/:id" element={<ProtectedRoute><AppointmentDetailPage /></ProtectedRoute>} />
             <Route path="/book-appointment" element={<ProtectedRoute><BookAppointmentPage /></ProtectedRoute>} />
@@ -64,12 +75,10 @@ export default function AppRouter() {
             <Route path="/medical-records" element={<ProtectedRoute><MedicalRecordsPage /></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
             <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
-            <Route path="/vip" element={<ProtectedRoute><VIPPage /></ProtectedRoute>} />
-            <Route path="/health-feed" element={<ProtectedRoute><HealthFeedPage /></ProtectedRoute>} />
-
-            {/* ─── Catch-all ─── */}
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+
+          {/* ─── Catch-all ─── */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

@@ -188,7 +188,7 @@ export default function BookAppointment() {
 
   return (
     <div className="w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col justify-between bg-[#f0f4f8]">
-      <div className="flex-grow flex items-center justify-center p-4 md:p-6 lg:px-8 lg:pb-8 pt-28 lg:pt-[120px] pb-4">
+      <div className="flex-grow flex items-center justify-center p-4 md:p-6 lg:px-8 lg:pb-8 pt-8 lg:pt-8 pb-4">
         {surgeonsLoading ? (
           <div className="py-12 flex justify-center w-full">
             <Spinner size="md" />
@@ -549,10 +549,6 @@ export default function BookAppointment() {
         )}
       </div>
 
-      {/* Mini copyright footer to replace heavy footer and avoid scrolling */}
-      <div className="py-4 text-center text-xs text-[#809196] border-t border-[#eaedf1] bg-white">
-        © 2026 Dr. Srinath Healthcare. All rights reserved.
-      </div>
     </div>
   );
 }

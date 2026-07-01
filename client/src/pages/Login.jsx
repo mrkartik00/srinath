@@ -9,18 +9,18 @@ function DnaVisual() {
   return (
     <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
       <div className="relative w-[300px] h-[500px]">
-        {[0,1,2,3,4,5,6,7,8,9,10].map((i) => (
-          <div key={`a${i}`} className="absolute" style={{ top: `${i*9}%`, left: `${50 + Math.sin(i*0.6)*35}%`, transform: 'translate(-50%,-50%)' }}>
-            <div className={`rounded-full ${i%3===0?'w-6 h-6 bg-white/30':i%3===1?'w-5 h-5 bg-white/20':'w-4 h-4 bg-[#E5B94E]/50'}`} />
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+          <div key={`a${i}`} className="absolute" style={{ top: `${i * 9}%`, left: `${50 + Math.sin(i * 0.6) * 35}%`, transform: 'translate(-50%,-50%)' }}>
+            <div className={`rounded-full ${i % 3 === 0 ? 'w-6 h-6 bg-white/30' : i % 3 === 1 ? 'w-5 h-5 bg-white/20' : 'w-4 h-4 bg-[#E5B94E]/50'}`} />
           </div>
         ))}
-        {[0,1,2,3,4,5,6,7,8,9,10].map((i) => (
-          <div key={`b${i}`} className="absolute" style={{ top: `${i*9+4}%`, left: `${50 - Math.sin(i*0.6)*35}%`, transform: 'translate(-50%,-50%)' }}>
-            <div className={`rounded-full ${i%3===0?'w-5 h-5 bg-white/25':i%3===1?'w-4 h-4 bg-white/15':'w-3 h-3 bg-[#E5B94E]/40'}`} />
+        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+          <div key={`b${i}`} className="absolute" style={{ top: `${i * 9 + 4}%`, left: `${50 - Math.sin(i * 0.6) * 35}%`, transform: 'translate(-50%,-50%)' }}>
+            <div className={`rounded-full ${i % 3 === 0 ? 'w-5 h-5 bg-white/25' : i % 3 === 1 ? 'w-4 h-4 bg-white/15' : 'w-3 h-3 bg-[#E5B94E]/40'}`} />
           </div>
         ))}
-        {[0,1,2,3,4,5].map((i) => (
-          <div key={`c${i}`} className="absolute h-[1px] bg-gradient-to-r from-white/10 via-white/20 to-white/10" style={{ top: `${i*18+5}%`, left: '20%', width: '60%', transform: `rotate(${Math.sin(i)*10}deg)` }} />
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div key={`c${i}`} className="absolute h-[1px] bg-gradient-to-r from-white/10 via-white/20 to-white/10" style={{ top: `${i * 18 + 5}%`, left: '20%', width: '60%', transform: `rotate(${Math.sin(i) * 10}deg)` }} />
         ))}
         <div className="absolute top-[15%] left-[25%] w-20 h-20 rounded-full bg-white/5 blur-2xl" />
         <div className="absolute top-[50%] right-[20%] w-24 h-24 rounded-full bg-[#E5B94E]/8 blur-2xl" />

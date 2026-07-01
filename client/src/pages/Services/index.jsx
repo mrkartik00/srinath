@@ -49,8 +49,8 @@ function DoctorCard({ doctor, user }) {
       <div className="fdc-specialty">{doctor.specialty}</div>
 
       <div className="fdc-footer">
-        <div 
-          className="fdc-footer-btn" 
+        <div
+          className="fdc-footer-btn"
           style={{ width: '100%', justifyContent: 'center' }}
           onClick={(e) => {
             e.stopPropagation();
@@ -83,7 +83,7 @@ export default function ServicesPage() {
     const fetchDoctors = async () => {
       try {
         const data = await api.get('/api/v1/config/doctors');
-        
+
         const placeholderImages = [
           'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=600&fit=crop',
           'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=600&fit=crop',
@@ -138,7 +138,7 @@ export default function ServicesPage() {
           {/* Section Label */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8db5c4', fontWeight: 600, fontSize: '16px', marginBottom: '24px' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="7" r="3"/><circle cx="7" cy="12" r="3"/><circle cx="17" cy="12" r="3"/><circle cx="12" cy="17" r="3"/>
+              <circle cx="12" cy="7" r="3" /><circle cx="7" cy="12" r="3" /><circle cx="17" cy="12" r="3" /><circle cx="12" cy="17" r="3" />
             </svg>
             medical team
           </div>

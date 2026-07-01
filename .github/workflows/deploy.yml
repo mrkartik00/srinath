@@ -1,0 +1,215 @@
+name: Deploy Janki Care to Production
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  USERNAME: root
+  PROJECT_DIR: /var/www/janki
+
+  # Server env vars
+  NODE_ENV: production
+  PORT: 4000
+  MONGODB_URI: ${{ secrets.MONGODB_URI }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+  JWT_ACCESS_EXPIRES_IN: ${{ secrets.JWT_ACCESS_EXPIRES_IN }}
+  JWT_REFRESH_EXPIRES_IN: ${{ secrets.JWT_REFRESH_EXPIRES_IN }}
+  CLIENT_URL: ${{ secrets.CLIENT_URL }}
+  ADMIN_URL: ${{ secrets.ADMIN_URL }}
+  SUPER_ADMIN_URL: ${{ secrets.SUPER_ADMIN_URL }}
+  REDIS_URL: ${{ secrets.REDIS_URL }}
+  RATE_LIMIT_WINDOW_MS: ${{ secrets.RATE_LIMIT_WINDOW_MS }}
+  RATE_LIMIT_MAX: ${{ secrets.RATE_LIMIT_MAX }}
+  RAZORPAY_ENABLED: ${{ secrets.RAZORPAY_ENABLED }}
+  RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
+  RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET }}
+  RAZORPAY_WEBHOOK_SECRET: ${{ secrets.RAZORPAY_WEBHOOK_SECRET }}
+  AI_PROVIDER: ${{ secrets.AI_PROVIDER }}
+  GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  AI_MODEL: ${{ secrets.AI_MODEL }}
+  AI_MAX_TOKENS: ${{ secrets.AI_MAX_TOKENS }}
+  BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+  BREVO_SENDER_EMAIL: ${{ secrets.BREVO_SENDER_EMAIL }}
+  BREVO_SENDER_NAME: ${{ secrets.BREVO_SENDER_NAME }}
+  STORAGE_DRIVER: ${{ secrets.STORAGE_DRIVER }}
+  DO_SPACES_ACCESS_KEY: ${{ secrets.DO_SPACES_ACCESS_KEY }}
+  DO_SPACES_SECRET_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
+  ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+  ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ env.USERNAME }}
+          key: ${{ secrets.DROPLET_SSH_PRIVATE_KEY }}
+          command_timeout: 45m
+          envs: HOST,USERNAME,PROJECT_DIR,NODE_ENV,PORT,MONGODB_URI,JWT_SECRET,JWT_REFRESH_SECRET,JWT_ACCESS_EXPIRES_IN,JWT_REFRESH_EXPIRES_IN,CLIENT_URL,ADMIN_URL,SUPER_ADMIN_URL,REDIS_URL,RATE_LIMIT_WINDOW_MS,RATE_LIMIT_MAX,RAZORPAY_ENABLED,RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET,RAZORPAY_WEBHOOK_SECRET,AI_PROVIDER,GEMINI_API_KEY,AI_MODEL,AI_MAX_TOKENS,BREVO_API_KEY,BREVO_SENDER_EMAIL,BREVO_SENDER_NAME,STORAGE_DRIVER,DO_SPACES_ACCESS_KEY,DO_SPACES_SECRET_KEY,ADMIN_EMAIL,ADMIN_PASSWORD
+          script: |
+            set -euo pipefail
+
+            # ── 0. Safety: Do NOT touch existing apps ───────────────────────
+            echo "⚠️  Existing apps (sutraGram on 5000/3004, estate100 on 5050) — NOT touching them"
+
+            # ── 1. Clone repo if first time ─────────────────────────────────
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+              echo "📦 Cloning repo for the first time..."
+              mkdir -p /var/www
+              git clone git@github-janki:mrkartik00/srinath.git $PROJECT_DIR
+              cd $PROJECT_DIR
+              git remote set-url origin git@github-janki:mrkartik00/srinath.git
+            fi
+
+            cd $PROJECT_DIR
+
+            # ── 2. Pull latest code ─────────────────────────────────────────
+            echo "📥 Pulling latest code from main"
+            git fetch origin main
+            git reset --hard origin/main
+            git log --oneline -1
+
+            # ── 3. Write .env for server ────────────────────────────────────
+            echo "📝 Writing server .env from GitHub Secrets"
+            {
+              echo "NODE_ENV=$NODE_ENV"
+              echo "PORT=$PORT"
+              echo "MONGODB_URI=mongodb+srv://jankicare_db_user:REDACTED_ROTATED_SECRET@cluster0.xostdjp.mongodb.net/janki-care?retryWrites=true&w=majority&appName=Cluster0"
+              echo "JWT_SECRET=$JWT_SECRET"
+              echo "JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET"
+              echo "JWT_ACCESS_EXPIRES_IN=$JWT_ACCESS_EXPIRES_IN"
+              echo "JWT_REFRESH_EXPIRES_IN=$JWT_REFRESH_EXPIRES_IN"
+              echo "CLIENT_URL=$CLIENT_URL"
+              echo "ADMIN_URL=$ADMIN_URL"
+              echo "SUPER_ADMIN_URL=$SUPER_ADMIN_URL"
+              echo "REDIS_URL=$REDIS_URL"
+              echo "RATE_LIMIT_WINDOW_MS=$RATE_LIMIT_WINDOW_MS"
+              echo "RATE_LIMIT_MAX=$RATE_LIMIT_MAX"
+              echo "STORAGE_DRIVER=$STORAGE_DRIVER"
+              echo "STORAGE_LOCAL_DIR=$PROJECT_DIR/server/uploads"
+              echo "RAZORPAY_ENABLED=$RAZORPAY_ENABLED"
+              echo "RAZORPAY_KEY_ID=$RAZORPAY_KEY_ID"
+              echo "RAZORPAY_KEY_SECRET=$RAZORPAY_KEY_SECRET"
+              echo "RAZORPAY_WEBHOOK_SECRET=$RAZORPAY_WEBHOOK_SECRET"
+              echo "AI_PROVIDER=$AI_PROVIDER"
+              echo "GEMINI_API_KEY=$GEMINI_API_KEY"
+              echo "AI_MODEL=$AI_MODEL"
+              echo "AI_MAX_TOKENS=$AI_MAX_TOKENS"
+              echo "BREVO_API_KEY=$BREVO_API_KEY"
+              echo "BREVO_SENDER_EMAIL=$BREVO_SENDER_EMAIL"
+              echo "BREVO_SENDER_NAME=$BREVO_SENDER_NAME"
+              echo "DO_SPACES_ENDPOINT=https://sgp1.digitaloceanspaces.com"
+              echo "DO_SPACES_REGION=sgp1"
+              echo "DO_SPACES_BUCKET=kartiksspace"
+              echo "DO_SPACES_ACCESS_KEY=$DO_SPACES_ACCESS_KEY"
+              echo "DO_SPACES_SECRET_KEY=$DO_SPACES_SECRET_KEY"
+              echo "DO_SPACES_CDN_ENDPOINT=https://kartiksspace.sgp1.cdn.digitaloceanspaces.com"
+              echo "FEATURE_AI=true"
+              echo "FEATURE_VAULT=true"
+              echo "FEATURE_DOCTOR_APPROVAL=true"
+              echo "FEATURE_PATIENT_SUBSCRIPTION=false"
+            } > $PROJECT_DIR/server/.env
+            chmod 600 $PROJECT_DIR/server/.env
+            echo "✅ .env written"
+
+            # ── 4. Install dependencies ─────────────────────────────────────
+            echo "📦 Installing dependencies"
+            cd $PROJECT_DIR && NODE_ENV=development npm install --no-audit --no-fund
+
+            # Fix workspace hoisting: symlink socket.io-client for Vite bundling
+            mkdir -p client/node_modules admin/node_modules
+            ln -sf ../../node_modules/socket.io-client client/node_modules/socket.io-client
+            ln -sf ../../node_modules/socket.io-client admin/node_modules/socket.io-client
+            ln -sf ../../node_modules/engine.io-client client/node_modules/engine.io-client 2>/dev/null || true
+            ln -sf ../../node_modules/engine.io-client admin/node_modules/engine.io-client 2>/dev/null || true
+            ln -sf ../../node_modules/socket.io-parser client/node_modules/socket.io-parser 2>/dev/null || true
+            ln -sf ../../node_modules/socket.io-parser admin/node_modules/socket.io-parser 2>/dev/null || true
+
+            # ── 5. Build all frontends ──────────────────────────────────────
+            echo "🏗️ Building Client (janki.care)"
+            VITE_API_URL=https://api.janki.care npm run build --prefix client
+
+            echo "🏗️ Building Admin (doctor.janki.care)"
+            VITE_API_URL=https://api.janki.care npm run build --prefix admin
+
+            echo "🏗️ Building SuperAdmin (admin.janki.care)"
+            VITE_API_URL=https://api.janki.care npm run build --prefix superadmin
+
+            # ── 6. Restart backend with PM2 ─────────────────────────────────
+            echo "🚀 Restarting backend with PM2"
+            pm2 stop janki-backend 2>/dev/null || true
+            pm2 delete janki-backend 2>/dev/null || true
+
+            # Kill anything lingering on port 4000
+            fuser -k 4000/tcp 2>/dev/null || true
+            sleep 1
+
+            cd $PROJECT_DIR
+
+            # Create ecosystem config
+            cat > ecosystem.config.cjs << 'ECOEOF'
+            module.exports = {
+              apps: [{
+                name: 'janki-backend',
+                script: 'server.js',
+                cwd: '/var/www/janki/server',
+                env: { NODE_ENV: 'production' },
+                max_memory_restart: '512M',
+                instances: 1,
+                autorestart: true,
+              }]
+            };
+            ECOEOF
+
+            pm2 start ecosystem.config.cjs
+            pm2 save
+            cd $PROJECT_DIR
+            echo "✅ PM2 started (janki-backend on port 4000)"
+
+            # ── 6.1 Seed admin credentials ──────────────────────────────────
+            echo "🔐 Seeding admin credentials"
+            cd $PROJECT_DIR/server && NODE_ENV=production node seed-admin.js
+            cd $PROJECT_DIR
+
+            # ── 7. Setup Nginx ──────────────────────────────────────────────
+            echo "🔧 Setting up Nginx"
+            cp $PROJECT_DIR/nginx/janki.conf /etc/nginx/sites-available/janki.conf
+            ln -sf /etc/nginx/sites-available/janki.conf /etc/nginx/sites-enabled/janki.conf
+
+            nginx -t
+            systemctl reload nginx || systemctl restart nginx
+            echo "✅ Nginx reloaded"
+
+            # ── 8. Health check ─────────────────────────────────────────────
+            echo "🏥 Running health check..."
+            sleep 4
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/v1/health || echo "000")
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "404" ]; then
+              echo "✅ Backend is up (HTTP $HTTP_STATUS)"
+            else
+              echo "⚠️  Backend returned HTTP $HTTP_STATUS — check: pm2 logs janki-backend"
+            fi
+
+            echo ""
+            echo "────────────────────────────────────"
+            echo "✅ Janki Care deployment complete!"
+            echo "   Client:     https://janki.care"
+            echo "   Admin:      https://doctor.janki.care"
+            echo "   SuperAdmin: https://admin.janki.care"
+            echo "   API:        https://api.janki.care"
+            echo "────────────────────────────────────"
+            pm2 status

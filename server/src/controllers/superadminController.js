@@ -121,6 +121,34 @@ const getPatients = asyncHandler(async (req, res) => {
   apiResponse.success(res, result.data, 'Patients fetched', result.meta);
 });
 
+const addPatient = asyncHandler(async (req, res) => {
+  const { name, email, phone, password, gender, bloodGroup, dateOfBirth } = req.body;
+  if (!name || !email || !password) return apiResponse.error(res, 'Name, email and password are required', 400);
+
+  const existing = await User.findOne({ email: email.toLowerCase() });
+  if (existing) return apiResponse.error(res, 'A user with this email already exists', 409);
+
+  const orgId = req.scope.organizationId;
+
+  const user = await User.create({
+    name, email: email.toLowerCase(), phone, password,
+    role: ROLES.PATIENT,
+    organizationId: orgId,
+    isEmailVerified: true,
+    registrationSource: 'admin_created',
+  });
+
+  const patient = await Patient.create({
+    userId: user._id,
+    organizationId: orgId,
+    gender: gender || undefined,
+    bloodGroup: bloodGroup || undefined,
+    dateOfBirth: dateOfBirth || undefined,
+  });
+
+  apiResponse.success(res, { user: { id: user._id, name: user.name, email: user.email }, patient: patient._id }, 'Patient added successfully', {}, 201);
+});
+
 // === APPOINTMENTS (platform-wide) ===
 const getAppointments = asyncHandler(async (req, res) => {
   const { status, date, page, limit } = req.query;
@@ -226,10 +254,37 @@ const getLogs = asyncHandler(async (req, res) => {
   apiResponse.success(res, result.data, 'Logs fetched', result.meta);
 });
 
+// === AI CONFIG (Phase 6) ===
+const AIConfig = require('../models/AIConfig');
+
+const getAIConfig = asyncHandler(async (req, res) => {
+  let config = await AIConfig.findOne({ organizationId: req.scope.organizationId });
+  if (!config) {
+    config = await AIConfig.create({ organizationId: req.scope.organizationId });
+  }
+  apiResponse.success(res, config, 'AI config fetched');
+});
+
+const updateAIConfig = asyncHandler(async (req, res) => {
+  const allowed = ['model', 'systemPrompt', 'maxTokensPerResponse', 'maxDailyMessagesPerPatient', 'escalationKeywords', 'isEnabled'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body[key] !== undefined) updates[key] = req.body[key];
+  }
+
+  const config = await AIConfig.findOneAndUpdate(
+    { organizationId: req.scope.organizationId },
+    { $set: updates },
+    { new: true, upsert: true, setDefaultsOnInsert: true }
+  );
+  apiResponse.success(res, config, 'AI config updated');
+});
+
 module.exports = {
   getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, reactivateDoctor, getDoctorActivity,
   getRegistrations, approveDoctor, rejectDoctor,
-  getPatients, getAppointments, getPrescriptions, getAnalytics,
+  getPatients, addPatient, getAppointments, getPrescriptions, getAnalytics,
   getPlans, getPlanFeatures, createPlan, updatePlan, togglePlan, deletePlan,
   getSettings, upsertSetting, getLogs,
+  getAIConfig, updateAIConfig,
 };

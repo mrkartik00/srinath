@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import '../../styles/home.css';
 
 const CONTACT_INFO = [
-  { icon: '📍', label: 'Clinic Address', value: 'Srinath Surgical Clinic, Bangalore, Karnataka' },
+  { icon: '📍', label: 'Clinic Address', value: 'Janki Care Clinic, Bangalore, Karnataka' },
   { icon: '📞', label: 'Phone', value: '+91 98765 43210' },
   { icon: '✉️', label: 'Email', value: 'contact@drsrinath.in' },
   { icon: '🕐', label: 'Clinic Hours', value: 'Mon–Sat: 9:00 AM – 6:00 PM' },

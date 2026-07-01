@@ -17,5 +17,6 @@ router.use('/my', require('./myRoutes'));
 router.use('/config', require('./configRoutes'));
 router.use('/chat', require('./chatRoutes'));
 router.use('/devices', require('./deviceRoutes'));
+router.use('/vault', require('./vaultRoutes'));
 
 module.exports = router;

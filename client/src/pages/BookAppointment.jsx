@@ -551,7 +551,7 @@ export default function BookAppointment() {
 
       {/* Mini copyright footer to replace heavy footer and avoid scrolling */}
       <div className="py-4 text-center text-xs text-[#809196] border-t border-[#eaedf1] bg-white">
-        © 2026 Dr. Srinath Healthcare. All rights reserved.
+        © 2026 Janki Care. All rights reserved.
       </div>
     </div>
   );

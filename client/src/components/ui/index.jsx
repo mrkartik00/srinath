@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   UI Primitives — Dr. Srinath Healthcare Design System
+   UI Primitives — Dr. Janki Care Design System
    All colors are aligned to the teal palette:
      Primary dark: #253a5a
      Primary:      #36565F

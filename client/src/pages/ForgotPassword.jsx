@@ -41,8 +41,8 @@ export default function ForgotPassword() {
       <div className="w-full max-w-[380px]">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-[12px] bg-[#253a5a] text-white flex items-center justify-center text-sm font-bold">Dr.</div>
-            <span className="font-bold text-[18px] text-[#253a5a] tracking-tight">Srinath Healthcare</span>
+            <div className="w-9 h-9 rounded-[12px] bg-[#253a5a] text-white flex items-center justify-center text-sm font-bold">JC</div>
+            <span className="font-bold text-[18px] text-[#253a5a] tracking-tight">Janki Care</span>
           </div>
         </div>
 

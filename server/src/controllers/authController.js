@@ -38,7 +38,7 @@ const getMe = asyncHandler(async (req, res) => {
 });
 
 const getDoctors = asyncHandler(async (req, res) => {
-  const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true, organizationId: req.user.organizationId }).select('name email phone');
+  const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true, organizationId: req.user.organizationId }).select('name email phone avatar');
   apiResponse.success(res, doctors, 'Doctors fetched');
 });
 

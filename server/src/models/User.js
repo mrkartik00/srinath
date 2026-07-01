@@ -45,6 +45,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\+?[\d\s-]{10,15}$/, 'Please provide a valid phone number'],
     },
+    avatar: {
+      type: String,
+      default: null,
+    },
     isActive: { type: Boolean, default: true },
     isEmailVerified: { type: Boolean, default: false },
     lastLogin: { type: Date },

@@ -7,6 +7,7 @@ const superAdminSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
     phone: { type: String, trim: true },
+    avatar: { type: String, default: null },
     role: { type: String, default: 'super_admin', immutable: true },
     organizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true },
     isEmailVerified: { type: Boolean, default: true },

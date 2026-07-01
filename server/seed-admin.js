@@ -41,7 +41,7 @@ const run = async () => {
   }
 
   // 2. Upsert Super Admin
-  const existing = await SuperAdmin.findOne({ email });
+  const existing = await SuperAdmin.findOne({ email }).select('+password');
   if (existing) {
     // Update password if changed (compare hash)
     const isSame = await bcrypt.compare(password, existing.password);

@@ -14,6 +14,9 @@ require('./events/listeners/prescriptionEvents');
 
 const app = express();
 
+// Trust proxy (behind nginx)
+app.set('trust proxy', 1);
+
 // Security headers
 app.use(helmet());
 

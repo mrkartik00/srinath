@@ -2,13 +2,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
-import { useEffect } from 'react';
-
-function ScrollToTop() {
-  const { pathname } = useLocation();
-  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
-  return null;
-}
 
 // Layout
 import MainLayout from '../components/layout/MainLayout';
@@ -44,7 +37,6 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ScrollToTop />
         <Toaster position="top-right" />
         <Routes>
           <Route element={<MainLayout />}>

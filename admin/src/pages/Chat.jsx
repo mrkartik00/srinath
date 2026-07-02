@@ -41,8 +41,9 @@ export default function Chat() {
       if (conversationId === activeIdRef.current) setTyping(t);
     });
     socket.on('messages:read_receipt', ({ conversationId }) => {
+      const myId = user?._id || user?.id;
       if (conversationId === activeIdRef.current)
-        setMessages(prev => prev.map(m => (m.senderId?._id === user?.id || m.senderId === user?.id) ? { ...m, readAt: m.readAt || new Date().toISOString() } : m));
+        setMessages(prev => prev.map(m => (m.senderId?._id === myId || m.senderId === myId) ? { ...m, readAt: m.readAt || new Date().toISOString() } : m));
     });
     socket.on('notification:message', () => fetchConversations());
     socket.on('conversation:escalated', ({ conversationId, reason }) => {
@@ -53,10 +54,28 @@ export default function Chat() {
   }, []);
 
   const fetchConversations = useCallback(() => {
-    api.get('/api/v1/chat/conversations').then(r => setConversations(r.data)).catch(() => {}).finally(() => setLoading(false));
+    api.get('/api/v1/chat/conversations').then(r => setConversations(r.data)).catch(() => { }).finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => { fetchConversations(); }, []);
+  useEffect(() => {
+    fetchConversations();
+    const interval = setInterval(() => {
+      fetchConversations();
+      if (activeIdRef.current) {
+        api.get(`/api/v1/chat/conversations/${activeIdRef.current}/messages`)
+          .then((res) => {
+            setMessages((prev) => {
+              if (JSON.stringify(prev) !== JSON.stringify(res.data)) {
+                return res.data;
+              }
+              return prev;
+            });
+          })
+          .catch(() => { });
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [fetchConversations]);
 
   useEffect(() => {
     const urlId = searchParams.get('id');
@@ -119,7 +138,7 @@ export default function Chat() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  if (loading) return <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-[#36565F] border-t-transparent rounded-full" /></div>;
+  if (loading) return <div className="flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-[#273d71] border-t-transparent rounded-full" /></div>;
 
   const activeConv = conversations.find(c => c._id === activeId);
 
@@ -150,7 +169,7 @@ export default function Chat() {
             return (
               <div key={c._id} onClick={() => selectConversation(c)} className={`px-5 py-4 cursor-pointer border-b border-[#eaedf1]/50 transition-colors ${isActive ? 'bg-[#f0f4f8]' : 'hover:bg-[#fafbfc]'}`}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#E2F0F0] text-[#36565F] text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#EFF6FF] text-[#273d71] text-xs font-bold flex items-center justify-center flex-shrink-0">
                     {getInitials(c.patientId?.name)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -160,7 +179,7 @@ export default function Chat() {
                     </div>
                     <div className="flex items-center justify-between mt-0.5">
                       <p className={`text-xs truncate ${hasUnread ? 'text-[#253a5a] font-medium' : 'text-[#6B7C84]'}`}>{c.lastMessagePreview || 'No messages'}</p>
-                      {hasUnread && <span className="w-5 h-5 rounded-full bg-[#36565F] text-white text-[10px] flex items-center justify-center flex-shrink-0 ml-1">{c.unreadByDoctor}</span>}
+                      {hasUnread && <span className="w-5 h-5 rounded-full bg-[#273d71] text-white text-[10px] flex items-center justify-center flex-shrink-0 ml-1">{c.unreadByDoctor}</span>}
                     </div>
                   </div>
                 </div>
@@ -170,7 +189,7 @@ export default function Chat() {
           {conversations.length === 0 && (
             <div className="p-8 text-center">
               <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[#f0f4f8] flex items-center justify-center">
-                <svg width="20" height="20" fill="none" stroke="#6B7C84" strokeWidth="1.5"><path d="M3 15l4-4 4 4 5-5"/><rect x="1" y="1" width="18" height="18" rx="3"/></svg>
+                <svg width="20" height="20" fill="none" stroke="#6B7C84" strokeWidth="1.5"><path d="M3 15l4-4 4 4 5-5" /><rect x="1" y="1" width="18" height="18" rx="3" /></svg>
               </div>
               <p className="text-sm text-[#6B7C84]">No conversations yet</p>
               <p className="text-xs text-[#94a3b8] mt-1">Patient messages will appear here</p>
@@ -183,8 +202,8 @@ export default function Chat() {
       <div className="flex-1 flex flex-col bg-[#fafbfc]">
         {!activeConv ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-            <div className="w-16 h-16 rounded-2xl bg-[#E2F0F0] flex items-center justify-center mb-4">
-              <svg width="28" height="28" fill="none" stroke="#36565F" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <div className="w-16 h-16 rounded-2xl bg-[#EFF6FF] flex items-center justify-center mb-4">
+              <svg width="28" height="28" fill="none" stroke="#273d71" strokeWidth="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
             </div>
             <h3 className="text-lg font-semibold text-[#253a5a]">Select a conversation</h3>
             <p className="text-sm text-[#6B7C84] mt-1">Choose a patient from the left to start chatting</p>
@@ -194,7 +213,7 @@ export default function Chat() {
             {/* Header */}
             <div className="px-6 py-4 bg-white border-b border-[#eaedf1] flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#E2F0F0] text-[#36565F] text-xs font-bold flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#EFF6FF] text-[#273d71] text-xs font-bold flex items-center justify-center">
                   {getInitials(activeConv.patientId?.name)}
                 </div>
                 <div>
@@ -206,7 +225,7 @@ export default function Chat() {
                 </div>
               </div>
               {activeConv.status !== 'resolved' && (
-                <button onClick={resolveConversation} className="text-xs px-4 py-2 bg-[#f0f4f8] hover:bg-[#36565F] hover:text-white border border-[#eaedf1] rounded-full text-[#6B7C84] font-medium transition-colors">
+                <button onClick={resolveConversation} className="text-xs px-4 py-2 bg-[#f0f4f8] hover:bg-[#273d71] hover:text-white border border-[#eaedf1] rounded-full text-[#6B7C84] font-medium transition-colors">
                   ✓ Resolve
                 </button>
               )}
@@ -215,21 +234,20 @@ export default function Chat() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
               {messages.map(m => {
-                const isMine = (m.senderId?._id || m.senderId) === user?.id;
+                const isMine = (m.senderId?._id || m.senderId) === (user?._id || user?.id);
                 const isAI = m.senderRole === 'ai';
                 return (
                   <div key={m._id} className={`flex ${isMine ? 'justify-end' : 'justify-start'} gap-2`}>
                     {!isMine && (
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${isAI ? 'bg-[#EDE9FE] text-[#7C3AED]' : 'bg-[#E2F0F0] text-[#36565F]'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${isAI ? 'bg-[#EDE9FE] text-[#7C3AED]' : 'bg-[#EFF6FF] text-[#273d71]'}`}>
                         {isAI ? 'AI' : getInitials(activeConv.patientId?.name)}
                       </div>
                     )}
                     <div className={`max-w-[65%] ${isMine ? 'order-first' : ''}`}>
-                      <div className={`px-4 py-3 rounded-[18px] text-[14px] leading-relaxed ${
-                        isMine ? 'bg-[#36565F] text-white rounded-br-[6px]'
-                        : isAI ? 'bg-[#F5F3FF] text-[#4C1D95] border border-[#EDE9FE] rounded-bl-[6px]'
-                        : 'bg-white text-[#253a5a] border border-[#eaedf1] rounded-bl-[6px] shadow-sm'
-                      }`}>
+                      <div className={`px-4 py-3 rounded-[18px] text-[14px] leading-relaxed ${isMine ? 'bg-[#273d71] text-white rounded-br-[6px]'
+                          : isAI ? 'bg-[#F5F3FF] text-[#4C1D95] border border-[#EDE9FE] rounded-bl-[6px]'
+                            : 'bg-white text-[#253a5a] border border-[#eaedf1] rounded-bl-[6px] shadow-sm'
+                        }`}>
                         <p>{m.body}</p>
                         {m.attachments?.length > 0 && (
                           <div className="mt-2">
@@ -243,8 +261,8 @@ export default function Chat() {
                                   if (data.success) window.open(data.data.url, '_blank');
                                   else toast.error('Cannot open');
                                 } catch { toast.error('Failed'); }
-                              }} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium mt-1 ${isMine ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-[#f0f4f8] hover:bg-[#E2F0F0] text-[#36565F]'}`}>
-                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
+                              }} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium mt-1 ${isMine ? 'bg-white/15 hover:bg-white/25 text-white' : 'bg-[#f0f4f8] hover:bg-[#EFF6FF] text-[#273d71]'}`}>
+                                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z" /></svg>
                                 <span className="truncate max-w-[140px]">{att.fileName}</span>
                               </button>
                             ))}
@@ -262,7 +280,7 @@ export default function Chat() {
               })}
               {typing && (
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#E2F0F0] text-[#36565F] text-[10px] font-bold flex items-center justify-center">{getInitials(activeConv.patientId?.name)}</div>
+                  <div className="w-8 h-8 rounded-full bg-[#EFF6FF] text-[#273d71] text-[10px] font-bold flex items-center justify-center">{getInitials(activeConv.patientId?.name)}</div>
                   <div className="bg-white border border-[#eaedf1] px-4 py-2.5 rounded-[18px] rounded-bl-[6px]">
                     <div className="flex gap-1"><span className="w-2 h-2 bg-[#94a3b8] rounded-full animate-bounce" /><span className="w-2 h-2 bg-[#94a3b8] rounded-full animate-bounce [animation-delay:0.1s]" /><span className="w-2 h-2 bg-[#94a3b8] rounded-full animate-bounce [animation-delay:0.2s]" /></div>
                   </div>
@@ -275,13 +293,13 @@ export default function Chat() {
             <div className="px-6 py-4 bg-white border-t border-[#eaedf1]">
               <form onSubmit={sendMessage} className="flex items-center gap-3">
                 <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf,.jpg,.jpeg,.png,.webp" className="hidden" />
-                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-10 h-10 rounded-full bg-[#f0f4f8] hover:bg-[#E2F0F0] text-[#36565F] flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40">
-                  {uploading ? <div className="w-4 h-4 border-2 border-[#36565F] border-t-transparent rounded-full animate-spin" />
-                  : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>}
+                <button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-10 h-10 rounded-full bg-[#f0f4f8] hover:bg-[#EFF6FF] text-[#273d71] flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40">
+                  {uploading ? <div className="w-4 h-4 border-2 border-[#273d71] border-t-transparent rounded-full animate-spin" />
+                    : <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>}
                 </button>
-                <input value={input} onChange={handleTyping} placeholder="Type your message..." className="flex-1 px-5 py-3 bg-[#f0f4f8] border border-[#eaedf1] rounded-full text-sm text-[#253a5a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#36565F] focus:ring-2 focus:ring-[#36565F]/10 transition-all" />
-                <button type="submit" disabled={!input.trim()} className="w-10 h-10 rounded-full bg-[#36565F] hover:bg-[#253a5a] text-white flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                <input value={input} onChange={handleTyping} placeholder="Type your message..." className="flex-1 px-5 py-3 bg-[#f0f4f8] border border-[#eaedf1] rounded-full text-sm text-[#253a5a] placeholder:text-[#94a3b8] focus:outline-none focus:border-[#273d71] focus:ring-2 focus:ring-[#273d71]/10 transition-all" />
+                <button type="submit" disabled={!input.trim()} className="w-10 h-10 rounded-full bg-[#273d71] hover:bg-[#1e2f58] text-white flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
                 </button>
               </form>
             </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../api/axios';
 
 const Icons = {
   Dashboard: <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
@@ -41,6 +42,17 @@ export default function DashboardLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [specialty, setSpecialty] = useState('Doctor');
+
+  useEffect(() => {
+    api.get('/api/v1/doctor/profile')
+      .then(({ data }) => {
+        if (data?.profile?.specialization) {
+          setSpecialty(data.profile.specialization);
+        }
+      })
+      .catch(() => { });
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,9 +71,9 @@ export default function DashboardLayout() {
 
   let currentTitle = 'Dashboard';
   let currentIcon = Icons.Grid;
-  
+
   const allItems = navConfig.flatMap(g => g.items);
-  const activeItem = allItems.find(item => 
+  const activeItem = allItems.find(item =>
     item.to === '/' ? location.pathname === '/' : location.pathname.startsWith(item.to)
   );
 
@@ -78,16 +90,33 @@ export default function DashboardLayout() {
       )}
 
       <aside className={`bg-[#273d71] text-white flex flex-col transition-all duration-300 ${isMobile ? `fixed inset-y-0 left-0 z-50 w-64 transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}` : sidebarOpen ? 'w-64' : 'w-[72px]'}`}>
-        
+
         {/* Header Logo */}
         <div className="h-16 flex items-center px-4 mt-2">
           {sidebarOpen ? (
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-[#eb8c68] flex items-center justify-center text-white font-bold text-sm leading-none">S+</div>
-              <span className="text-xl font-bold tracking-tight">Surgirize</span>
+            <div className="flex items-center gap-2">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5" className="shrink-0">
+                <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z" />
+                <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z" />
+                <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z" />
+                <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z" />
+                <path d="M12 9v6M9 12h6" />
+              </svg>
+              <div className="flex flex-col">
+                <span className="text-base font-bold tracking-tight text-white leading-none">Janki Care</span>
+                <span className="text-[8px] font-semibold text-slate-300 tracking-wider uppercase mt-0.5">Admin Portal</span>
+              </div>
             </div>
           ) : (
-            <div className="w-8 h-8 mx-auto rounded-md bg-[#eb8c68] flex items-center justify-center text-white font-bold text-sm leading-none">S+</div>
+            <div className="mx-auto">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2.5">
+                <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z" />
+                <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z" />
+                <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z" />
+                <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z" />
+                <path d="M12 9v6M9 12h6" />
+              </svg>
+            </div>
           )}
         </div>
 
@@ -99,7 +128,7 @@ export default function DashboardLayout() {
                 {initials}
               </div>
               <h3 className="text-[#273d71] font-bold text-sm">Dr. {cleanName}</h3>
-              <p className="text-[#64748b] text-xs mt-0.5">Dermatologist</p>
+              <p className="text-[#64748b] text-xs mt-0.5">{specialty}</p>
             </div>
           </div>
         )}
@@ -108,10 +137,10 @@ export default function DashboardLayout() {
           {navConfig.map((group, idx) => (
             <div key={idx} className="space-y-1">
               {group.items.map((item) => (
-                <NavLink 
-                  key={item.to} 
-                  to={item.to} 
-                  end={item.to === '/'} 
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.to === '/'}
                   onClick={() => isMobile && setSidebarOpen(false)}
                   className={({ isActive }) => `flex items-center justify-between px-4 py-3 rounded-lg text-sm transition-all duration-200 ${isActive ? 'bg-white/10 text-white font-medium' : 'text-white/70 hover:text-white hover:bg-white/5'}`}
                 >
@@ -131,7 +160,7 @@ export default function DashboardLayout() {
           ))}
         </nav>
       </aside>
-      
+
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header */}
         <header className="h-16 bg-[#f4f5f9] flex items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -145,8 +174,8 @@ export default function DashboardLayout() {
             <h1 className="text-xl font-bold" style={{ fontFamily: '"Figtree", sans-serif' }}>{currentTitle}</h1>
           </div>
           <div className="flex items-center gap-3">
-            <button 
-              onClick={handleLogout} 
+            <button
+              onClick={handleLogout}
               className="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center gap-2 text-[#b91c1c] font-medium text-sm hover:bg-[#b91c1c] hover:text-white transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

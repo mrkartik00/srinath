@@ -147,34 +147,57 @@ export default function RightUtilityPanel({ isMobile }) {
 
   // If a doctor is clicked, show details page in this right panel
   if (selectedDoctor) {
-    const rate = selectedDoctor.rate || '$20/hour';
+    const rate = selectedDoctor.fee ? `₹${selectedDoctor.fee} Consultation Fee` : (selectedDoctor.rate || '₹500 Consultation Fee');
     
     const getDocExpText = (spec) => {
+      if (selectedDoctor.aboutMe) {
+        return selectedDoctor.aboutMe;
+      }
+      const expPrefix = selectedDoctor.experience ? `Over ${selectedDoctor.experience} years of specialized practice` : 'Specialized practice';
       const lower = (spec || '').toLowerCase();
       if (lower.includes('cardio')) {
-        return 'Over 12 years of specialized practice in cardiology, focusing on preventative care, heart rate analysis, and non-invasive cardiovascular imaging.';
+        return `${expPrefix} in cardiology, focusing on preventative care, heart rate analysis, and non-invasive cardiovascular imaging.`;
       }
       if (lower.includes('dent') || lower.includes('teeth')) {
-        return 'Over 8 years of cosmetic and general dentistry, focusing on preventive treatments, root canals, and structural restorations.';
+        return `${expPrefix} in cosmetic and general dentistry, focusing on preventive treatments, root canals, and restorations.`;
       }
       if (lower.includes('dermat') || lower.includes('skin')) {
-        return 'Over 10 years in clinical dermatology, treating a wide range of conditions from eczema and acne to autoimmune skin disorders.';
+        return `${expPrefix} in clinical dermatology, treating a wide range of conditions from eczema and acne to autoimmune skin disorders.`;
       }
-      return 'Over 10 years of clinical experience, specializing in advanced diagnostics and personalized treatment plans for diverse patient needs.';
+      if (lower.includes('ortho')) {
+        return `${expPrefix} in orthopedic surgery and joint care, focusing on joint replacements, fracture treatment, and musculoskeletal health.`;
+      }
+      if (lower.includes('pulmon')) {
+        return `${expPrefix} in pulmonology, focusing on respiratory therapy, lung function, and asthma/allergy management.`;
+      }
+      if (lower.includes('neuro')) {
+        return `${expPrefix} in neurology and brain care, focusing on cognitive health, nerve function, and sleep disorders.`;
+      }
+      return `${expPrefix} specializing in advanced diagnostics and personalized treatment plans for diverse patient needs.`;
     };
 
     const getDocSpecialitiesList = (spec) => {
+      const list = [];
+      if (selectedDoctor.qualification) {
+        list.push(selectedDoctor.qualification);
+      }
       const lower = (spec || '').toLowerCase();
       if (lower.includes('cardio')) {
-        return ['Coronary Care', 'Heart Rhythm Therapy', 'Hypertension Management'];
+        list.push('Coronary Care', 'Heart Rhythm Therapy', 'Hypertension Management');
+      } else if (lower.includes('dent') || lower.includes('teeth')) {
+        list.push('Teeth Restoration', 'Cosmetic Veneers', 'Gum Health Care');
+      } else if (lower.includes('dermat') || lower.includes('skin')) {
+        list.push('General Dermatology', 'Skin Allergy Treatment', 'Acne & Scarring Care');
+      } else if (lower.includes('ortho')) {
+        list.push('Joint Replacements', 'Fracture Care', 'Sports Medicine');
+      } else if (lower.includes('pulmon')) {
+        list.push('Asthma Management', 'COPD Care', 'Lung Function Testing');
+      } else if (lower.includes('neuro')) {
+        list.push('Cognitive Assessment', 'Neuromuscular Care', 'Sleep Therapy');
+      } else {
+        list.push('General Consultation', 'Diagnostic Screenings', 'Preventative Therapy');
       }
-      if (lower.includes('dent') || lower.includes('teeth')) {
-        return ['Teeth Restoration', 'Cosmetic Veneers', 'Gum Health Care'];
-      }
-      if (lower.includes('dermat') || lower.includes('skin')) {
-        return ['General Dermatology', 'Skin Allergy Treatment', 'Acne & Scarring Care'];
-      }
-      return ['General Consultation', 'Diagnostic Screenings', 'Preventative Therapy'];
+      return list;
     };
 
     return (
@@ -297,24 +320,7 @@ export default function RightUtilityPanel({ isMobile }) {
 
   if (isMobile && !selectedDoctor) return null;
 
-  const displayConvs = conversations.length > 0 ? conversations.slice(0, 2) : [
-    {
-      _id: 'mock-conv-1',
-      doctorId: { name: 'Dr. Arun Sharma' },
-      lastMessagePreview: 'Sent you the prescription updates. Please review...',
-      lastMessageAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-      unreadByPatient: 1,
-      isMock: true
-    },
-    {
-      _id: 'mock-conv-2',
-      doctorId: { name: 'Dr. Priya Mehta' },
-      lastMessagePreview: 'Your lab reports look excellent. No further actions needed.',
-      lastMessageAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-      unreadByPatient: 1,
-      isMock: true
-    }
-  ];
+  const displayConvs = conversations.slice(0, 2);
 
   const formatMsgTime = (dateStr) => {
     if (!dateStr) return '';
@@ -337,7 +343,7 @@ export default function RightUtilityPanel({ isMobile }) {
 
   // If viewing all notifications, take over the right panel
   if (viewingMode === 'notifications') {
-    const allConvs = conversations.length > 0 ? conversations : displayConvs;
+    const allConvs = conversations;
     return (
       <aside className="w-[380px] h-screen overflow-y-auto hide-scrollbar bg-[#F8F9FA] flex flex-col gap-5 p-6 sticky top-0 right-0 shrink-0 z-40 hidden xl:flex font-['Figtree'] border-l border-slate-100 animate-[fadeIn_0.2s_ease-out]">
         <style>{`
@@ -363,33 +369,39 @@ export default function RightUtilityPanel({ isMobile }) {
 
         {/* List of all notifications */}
         <div className="flex flex-col gap-3">
-          {allConvs.map((conv) => {
-            const hasUnread = conv.unreadByPatient > 0;
-            const docName = conv.doctorId?.name || 'Doctor';
-            return (
-              <div 
-                key={conv._id}
-                onClick={() => { navigate('/chat'); setViewingMode('calendar'); }}
-                className="flex items-start gap-3 bg-white hover:bg-slate-50 p-4 rounded-2xl cursor-pointer transition-all border border-[#eaedf1] shadow-xs group"
-              >
-                <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#253a5a] shrink-0 font-bold text-xs">
-                  {getInitials(docName)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-xs text-[#111827] group-hover:text-[#253a5a] transition-colors truncate">{docName}</h4>
-                    <span className="text-[9px] text-[#A0AEC0] font-semibold">{formatMsgTime(conv.lastMessageAt)}</span>
+          {allConvs.length > 0 ? (
+            allConvs.map((conv) => {
+              const hasUnread = conv.unreadByPatient > 0;
+              const docName = conv.doctorId?.name || 'Doctor';
+              return (
+                <div 
+                  key={conv._id}
+                  onClick={() => { navigate('/chat'); setViewingMode('calendar'); }}
+                  className="flex items-start gap-3 bg-white hover:bg-slate-50 p-4 rounded-2xl cursor-pointer transition-all border border-[#eaedf1] shadow-xs group"
+                >
+                  <div className="w-10 h-10 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#253a5a] shrink-0 font-bold text-xs">
+                    {getInitials(docName)}
                   </div>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5 pr-2">
-                    {conv.lastMessagePreview || 'No messages yet...'}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-xs text-[#111827] group-hover:text-[#253a5a] transition-colors truncate">{docName}</h4>
+                      <span className="text-[9px] text-[#A0AEC0] font-semibold">{formatMsgTime(conv.lastMessageAt)}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5 pr-2">
+                      {conv.lastMessagePreview || 'No messages yet...'}
+                    </p>
+                  </div>
+                  {hasUnread && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                  )}
                 </div>
-                {hasUnread && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="text-center py-8 text-slate-400 text-xs font-medium bg-white rounded-2xl border border-dashed border-slate-200">
+              No notifications yet
+            </div>
+          )}
         </div>
       </aside>
     );
@@ -572,33 +584,39 @@ export default function RightUtilityPanel({ isMobile }) {
         <p className="text-[11px] text-[#A0AEC0] font-medium mb-5">Latest messages from your doctors</p>
 
         <div className="flex flex-col gap-3.5">
-          {displayConvs.map((conv) => {
-            const hasUnread = conv.unreadByPatient > 0;
-            const docName = conv.doctorId?.name || 'Doctor';
-            return (
-              <div 
-                key={conv._id}
-                onClick={() => navigate('/chat')}
-                className="flex items-start gap-3 bg-slate-50/50 hover:bg-slate-100/50 p-3 rounded-2xl cursor-pointer transition-all border border-slate-100/30 group"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#253a5a] shrink-0 font-bold text-xs">
-                  {getInitials(docName)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center">
-                    <h4 className="font-bold text-xs text-[#111827] group-hover:text-[#253a5a] transition-colors truncate">{docName}</h4>
-                    <span className="text-[9px] text-[#A0AEC0] font-semibold">{formatMsgTime(conv.lastMessageAt)}</span>
+          {displayConvs.length > 0 ? (
+            displayConvs.map((conv) => {
+              const hasUnread = conv.unreadByPatient > 0;
+              const docName = conv.doctorId?.name || 'Doctor';
+              return (
+                <div 
+                  key={conv._id}
+                  onClick={() => navigate('/chat')}
+                  className="flex items-start gap-3 bg-slate-50/50 hover:bg-slate-100/50 p-3 rounded-2xl cursor-pointer transition-all border border-slate-100/30 group"
+                >
+                  <div className="w-9 h-9 rounded-full bg-[#EFF6FF] flex items-center justify-center text-[#253a5a] shrink-0 font-bold text-xs">
+                    {getInitials(docName)}
                   </div>
-                  <p className="text-[10px] text-slate-500 font-medium mt-0.5 truncate pr-2">
-                    {conv.lastMessagePreview || 'No messages yet...'}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center">
+                      <h4 className="font-bold text-xs text-[#111827] group-hover:text-[#253a5a] transition-colors truncate">{docName}</h4>
+                      <span className="text-[9px] text-[#A0AEC0] font-semibold">{formatMsgTime(conv.lastMessageAt)}</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 font-medium mt-0.5 truncate pr-2">
+                      {conv.lastMessagePreview || 'No messages yet...'}
+                    </p>
+                  </div>
+                  {hasUnread && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                  )}
                 </div>
-                {hasUnread && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })
+          ) : (
+            <div className="text-center py-6 text-slate-400 text-xs font-medium bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+              No recent notifications
+            </div>
+          )}
         </div>
       </div>
 

@@ -82,8 +82,8 @@ export default function DoctorDetailPage() {
           const found = data.data.find(d => d.id === id);
           if (found) {
             found.image = found.image || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=600&fit=crop';
-            found.location = found.clinicAddress || 'Not specified';
-            found.currency = 'EGP';
+            found.location = found.clinicAddress || 'Janki Care Clinic, Bangalore';
+            found.currency = 'INR';
             found.bio = found.aboutMe || '';
             
             setDoctor(found);
@@ -135,7 +135,7 @@ export default function DoctorDetailPage() {
                 </div>
                 
                 <div className="dd-fee">
-                  $ {doctor.fee || 0} {doctor.currency} <span>Consultation Fee</span>
+                  ₹ {doctor.fee || 500} <span>Consultation Fee</span>
                 </div>
                 
                 <div className="dd-actions" style={{ marginTop: '24px' }}>
@@ -259,7 +259,7 @@ export default function DoctorDetailPage() {
               </div>
               <div className="dd-summary-text">
                 Appointment duration: 30 mins<br/>
-                Consultation fee: <strong>{doctor.fee} {doctor.currency}</strong>
+                Consultation fee: <strong>₹{doctor.fee || 500}</strong>
               </div>
             </div>
 

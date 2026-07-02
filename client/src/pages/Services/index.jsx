@@ -44,7 +44,7 @@ function DoctorCard({ doctor, user }) {
       </div>
 
       <h3 className="fdc-name">{doctor.name}</h3>
-      <p className="fdc-address">1288 Natalie Brook Apt. 966</p>
+      <p className="fdc-address">{doctor.clinicAddress || 'Janki Care Clinic, Bangalore'}</p>
 
       <div className="fdc-specialty">{doctor.specialty}</div>
 

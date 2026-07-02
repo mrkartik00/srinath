@@ -90,7 +90,7 @@ export default function MedicalVault() {
   };
 
   return (
-    <div className="space-y-6" style={{ fontFamily: "'Figtree', sans-serif" }}>
+    <div className="space-y-6 px-4 py-6 md:px-8 md:py-8" style={{ fontFamily: "'Figtree', sans-serif" }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

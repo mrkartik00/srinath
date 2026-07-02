@@ -3,12 +3,12 @@ import { useNavigate, Link } from 'react-router-dom';
 import useRequireAuth from '../hooks/useRequireAuth';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
-import { 
-  Calendar, 
-  Clock, 
-  Video, 
-  FileText, 
-  Brain, 
+import {
+  Calendar,
+  Clock,
+  Video,
+  FileText,
+  Brain,
   Heart,
   ChevronRight,
   Activity,
@@ -31,14 +31,14 @@ import toast from 'react-hot-toast';
 
 // Custom Lungs SVG icon since older lucide-react versions don't export it
 const Lungs = (props) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
     {...props}
   >
     <path d="M12 3v7" />
@@ -75,17 +75,45 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
-  // Filter scheduled appointments
-  const upcomingAppointments = appointments.filter(
-    (appt) => appt.status === 'scheduled' || appt.status === 'rescheduled'
-  );
-  
+  // Filter scheduled/rescheduled appointments that are in the future, and sort chronologically (earliest first)
+  const now = new Date();
+  const upcomingAppointments = appointments
+    .filter((appt) =>
+      (appt.status === 'scheduled' || appt.status === 'rescheduled') &&
+      new Date(appt.dateTime) >= now
+    )
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+
   // Use first scheduled appointment or null (no fake data)
   const activeAppt = upcomingAppointments.length > 0 ? upcomingAppointments[0] : null;
 
   const formatDateLabel = (date) => {
     const d = new Date(date);
-    return `Today, ${d.toLocaleString('default', { month: 'short' })} ${d.getDate()}`;
+    const today = new Date();
+
+    const isToday =
+      d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear();
+
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    const isTomorrow =
+      d.getDate() === tomorrow.getDate() &&
+      d.getMonth() === tomorrow.getMonth() &&
+      d.getFullYear() === tomorrow.getFullYear();
+
+    const weekday = d.toLocaleString('default', { weekday: 'short' });
+    const month = d.toLocaleString('default', { month: 'short' });
+    const day = d.getDate();
+
+    if (isToday) {
+      return `Today, ${month} ${day}`;
+    }
+    if (isTomorrow) {
+      return `Tomorrow, ${month} ${day}`;
+    }
+    return `${weekday}, ${month} ${day}`;
   };
 
   const formatTimeLabel = (date) => {
@@ -159,9 +187,9 @@ export default function Dashboard() {
 
   // Determine if active appointment is video or clinic visit
   const isVideoConsultation = activeAppt && (
-    activeAppt.type?.toLowerCase().includes('video') || 
-    activeAppt.type?.toLowerCase().includes('online') || 
-    activeAppt.notes?.toLowerCase().includes('video') || 
+    activeAppt.type?.toLowerCase().includes('video') ||
+    activeAppt.type?.toLowerCase().includes('online') ||
+    activeAppt.notes?.toLowerCase().includes('video') ||
     activeAppt.notes?.toLowerCase().includes('online')
   );
 
@@ -177,17 +205,17 @@ export default function Dashboard() {
   // If viewing a department, show the dynamic sub-page list of doctors
   if (viewingDept) {
     const deptDoctors = getDoctorsInDept(viewingDept.name);
-    const filteredDoctors = deptDoctors.filter(doc => 
+    const filteredDoctors = deptDoctors.filter(doc =>
       doc.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     return (
       <div className="flex-1 flex flex-col gap-4 md:gap-6 p-4 md:p-6 bg-[#f8fafb] min-h-screen font-['Figtree'] max-w-[850px] mx-auto xl:mx-0 animate-[fadeIn_0.2s_ease-out]">
-        
+
         {/* Department Page Header */}
         <div className="flex flex-col gap-4 pb-4 md:pb-5 border-b border-[#eaedf1]">
           <div>
-            <button 
+            <button
               onClick={() => { setViewingDept(null); setSearchQuery(''); }}
               className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#36565F] hover:text-[#253a5a] transition-colors mb-2 focus:outline-none uppercase tracking-wider"
             >
@@ -221,9 +249,9 @@ export default function Dashboard() {
         {/* Grid of Specialists */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           {filteredDoctors.map((doc, idx) => {
-            const rate = doc.rate || (idx % 3 === 0 ? '$20/hour' : idx % 3 === 1 ? '$30/hour' : '$32/hour');
+            const rate = doc.fee ? `₹${doc.fee}` : (doc.rate || (idx % 3 === 0 ? '₹500' : idx % 3 === 1 ? '₹600' : '₹700'));
             return (
-              <div 
+              <div
                 key={doc._id || idx}
                 className="bg-white border border-[#eaedf1] rounded-[20px] md:rounded-[24px] p-4 md:p-5 flex flex-col gap-4 shadow-[0_4px_12px_rgba(0,0,0,0.015)]"
               >
@@ -240,7 +268,7 @@ export default function Dashboard() {
                     <h3 className="font-bold text-[16px] md:text-[17px] text-[#253a5a] font-['Figtree'] leading-tight truncate">
                       {doc.name}
                     </h3>
-                    
+
                     {/* Specialty Row */}
                     <div className="flex items-center gap-2 text-slate-500 text-[11px] md:text-xs font-semibold">
                       <User size={13} className="text-slate-400 flex-shrink-0" />
@@ -386,7 +414,7 @@ export default function Dashboard() {
 
 
   return (
-    <div className="flex-1 flex flex-col gap-6 p-6 bg-[#f8fafb] min-h-screen font-['Figtree'] max-w-[850px] mx-auto xl:mx-0">
+    <div className="flex-1 flex flex-col gap-4 md:gap-6 p-4 md:p-6 bg-[#f8fafb] min-h-screen font-['Figtree'] w-full max-w-full md:max-w-[850px] mx-auto xl:mx-0 overflow-x-hidden">
 
       {/* ─── Welcome Header ─── */}
       <div className="flex items-center justify-between">
@@ -406,102 +434,102 @@ export default function Dashboard() {
 
       {/* ─── Upcoming Consultation Hero Card ─── */}
       {activeAppt ? (
-      <div className="bg-white rounded-[24px] p-6 shadow-sm border border-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="bg-white rounded-[24px] p-5 md:p-6 shadow-sm border border-slate-100/50 flex flex-col md:flex-row md:items-center justify-between gap-5 md:gap-6 w-full">
         <div 
-          onClick={() => window.dispatchEvent(new CustomEvent('show-doctor-details', { detail: getActiveApptDoc() }))}
-          className="flex gap-4 items-center cursor-pointer hover:opacity-90 transition-opacity"
-        >
-          <div className="relative shrink-0">
-            <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center font-bold text-lg text-slate-700">
-              {activeAppt?.doctorId?.name ? activeAppt.doctorId.name.charAt(0) : 'D'}
+            onClick={() => window.dispatchEvent(new CustomEvent('show-doctor-details', { detail: getActiveApptDoc() }))}
+            className="flex gap-4 items-center cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center font-bold text-lg text-slate-700">
+                {activeAppt?.doctorId?.name ? activeAppt.doctorId.name.charAt(0) : 'D'}
+              </div>
+              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-white rounded-full"></span>
             </div>
-            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#10B981] border-2 border-white rounded-full"></span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="bg-[#EFF6FF] text-[#3B82F6] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Upcoming
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {isVideoConsultation ? 'Video Consultation' : 'Clinic Consultation'}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-[#253a5a] mt-1.5 font-['Figtree']">
+                {(() => {
+                  const docName = activeAppt?.doctorId?.name || activeAppt?.doctor || '';
+                  return docName.startsWith('Dr.') ? docName : `Dr. ${docName}`;
+                })()}
+              </h2>
+              <p className="text-xs text-slate-500 font-medium capitalize mt-0.5">
+                {activeAppt?.type || 'General Consultation'}
+              </p>
+
+              <div className="flex items-center gap-4 mt-3 text-xs text-slate-600 font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <Calendar size={14} className="text-[#3B82F6]" />
+                  {formatDateLabel(activeAppt.dateTime)}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock size={14} className="text-[#3B82F6]" />
+                  {formatTimeLabel(activeAppt.dateTime)}
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="bg-[#EFF6FF] text-[#3B82F6] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                Upcoming
-              </span>
-              <span className="text-xs text-slate-500 font-medium">
-                {isVideoConsultation ? 'Video Consultation' : 'Clinic Consultation'}
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-[#253a5a] mt-1.5 font-['Figtree']">
-              {(() => {
-                const docName = activeAppt?.doctorId?.name || activeAppt?.doctor || '';
-                return docName.startsWith('Dr.') ? docName : `Dr. ${docName}`;
-              })()}
-            </h2>
-            <p className="text-xs text-slate-500 font-medium capitalize mt-0.5">
-              {activeAppt?.type || 'General Consultation'}
-            </p>
-            
-            <div className="flex items-center gap-4 mt-3 text-xs text-slate-600 font-semibold">
-              <span className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-[#3B82F6]" />
-                {formatDateLabel(activeAppt.dateTime)}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Clock size={14} className="text-[#3B82F6]" />
-                {formatTimeLabel(activeAppt.dateTime)}
-              </span>
-            </div>
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-4 md:mt-0">
+          {isVideoConsultation ? (
+              <button
+                onClick={() => requireAuth(() => toast.success('Joining video consultation room...'))}
+                className="flex items-center justify-center gap-2 bg-[#253a5a] hover:bg-[#1a2c44] text-white font-bold text-sm px-5 py-3 rounded-full transition-all shadow-sm"
+              >
+                <Video size={16} /> Join Call
+              </button>
+            ) : (
+              <button
+                onClick={() => requireAuth(() => navigate('/appointments'))}
+                className="flex items-center justify-center gap-2 bg-[#253a5a] hover:bg-[#1a2c44] text-white font-bold text-sm px-5 py-3 rounded-full transition-all shadow-sm"
+              >
+                <FileText size={16} /> View Details
+              </button>
+            )}
+            <button
+              onClick={() => requireAuth(() => navigate('/book-appointment'))}
+              className="border border-[#253a5a] text-[#253a5a] hover:bg-slate-50 font-bold text-sm px-5 py-3 rounded-full transition-all"
+            >
+              Reschedule
+            </button>
           </div>
         </div>
-
-        <div className="flex items-center gap-3">
-          {isVideoConsultation ? (
-            <button 
-              onClick={() => requireAuth(() => toast.success('Joining video consultation room...'))}
-              className="flex items-center justify-center gap-2 bg-[#253a5a] hover:bg-[#1a2c44] text-white font-bold text-sm px-5 py-3 rounded-full transition-all shadow-sm"
-            >
-              <Video size={16} /> Join Call
-            </button>
-          ) : (
-            <button 
-              onClick={() => requireAuth(() => navigate('/appointments'))}
-              className="flex items-center justify-center gap-2 bg-[#253a5a] hover:bg-[#1a2c44] text-white font-bold text-sm px-5 py-3 rounded-full transition-all shadow-sm"
-            >
-              <FileText size={16} /> View Details
-            </button>
-          )}
-          <button 
-            onClick={() => requireAuth(() => navigate('/book-appointment'))}
-            className="border border-[#253a5a] text-[#253a5a] hover:bg-slate-50 font-bold text-sm px-5 py-3 rounded-full transition-all"
-          >
-            Reschedule
+      ) : (
+        <div className="bg-white rounded-[24px] p-8 shadow-sm border border-slate-100/50 text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f0f4f8] flex items-center justify-center">
+            <Calendar size={24} className="text-[#36565F]" />
+          </div>
+          <h3 className="text-lg font-semibold text-[#253a5a] mb-2">No Upcoming Appointments</h3>
+          <p className="text-sm text-slate-500 mb-4">Book your first appointment with our doctors</p>
+          <button onClick={() => navigate('/book-appointment')} className="bg-[#253a5a] hover:bg-[#1a2c44] text-white font-semibold text-sm px-6 py-3 rounded-full transition-all">
+            Book Appointment
           </button>
         </div>
-      </div>
-      ) : (
-      <div className="bg-white rounded-[24px] p-8 shadow-sm border border-slate-100/50 text-center">
-        <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-[#f0f4f8] flex items-center justify-center">
-          <Calendar size={24} className="text-[#36565F]" />
-        </div>
-        <h3 className="text-lg font-semibold text-[#253a5a] mb-2">No Upcoming Appointments</h3>
-        <p className="text-sm text-slate-500 mb-4">Book your first appointment with our doctors</p>
-        <button onClick={() => navigate('/book-appointment')} className="bg-[#253a5a] hover:bg-[#1a2c44] text-white font-semibold text-sm px-6 py-3 rounded-full transition-all">
-          Book Appointment
-        </button>
-      </div>
       )}
 
       {/* ─── Explore Departments Section ─── */}
       <div>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-[20px] font-semibold text-[#253a5a] font-['Figtree']">Explore Departments</h3>
+        <div className="flex justify-between items-center mb-4 md:mb-5">
+          <h3 className="text-[18px] md:text-[20px] font-semibold text-[#253a5a] font-['Figtree']">Explore Departments</h3>
           <Link to="/book-appointment" className="text-xs font-bold text-[#36565F] hover:text-[#253a5a] hover:underline">View All</Link>
         </div>
-        
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 md:gap-4">
           {departments.map((dept, idx) => {
             return (
-              <div 
+              <div
                 key={idx}
                 onClick={() => setViewingDept(dept)}
                 className="bg-white border border-[#eaedf1] rounded-[24px] p-5 flex flex-col items-center justify-center gap-3 cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.015)] transition-all duration-300 hover:bg-[#f0f4f8] hover:border-transparent group text-center"
               >
-                <div 
+                <div
                   className="w-14 h-14 rounded-full flex items-center justify-center bg-[#E6F2F5] transition-all duration-300 group-hover:bg-[#253a5a]"
                 >
                   {dept.icon}
@@ -521,14 +549,14 @@ export default function Dashboard() {
       </div>
 
       {/* ─── Recent Consultations Table Card ─── */}
-      <div className="bg-white rounded-[24px] p-6 shadow-sm border border-[#eaedf1]">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-[20px] font-semibold text-[#253a5a] font-['Figtree']">Recent Consultations</h3>
+      <div className="bg-white rounded-[24px] p-5 md:p-6 shadow-sm border border-[#eaedf1] w-full overflow-hidden">
+        <div className="flex justify-between items-center mb-4 md:mb-6">
+          <h3 className="text-[18px] md:text-[20px] font-semibold text-[#253a5a] font-['Figtree']">Recent Consultations</h3>
           <Link to="/appointments" className="text-xs font-bold text-[#36565F] hover:text-[#253a5a] hover:underline">View All</Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto w-full pb-2">
+          <table className="w-full text-left border-collapse whitespace-nowrap min-w-[600px]">
             <thead>
               <tr className="border-b border-[#eaedf1] text-[10px] font-bold text-[#8db5c4] uppercase tracking-wider">
                 <th className="pb-3 font-semibold">Doctor</th>
@@ -543,11 +571,11 @@ export default function Dashboard() {
                 pastAppointments.slice(0, 3).map((appt, idx) => {
                   const isCompleted = appt.status === 'completed';
                   const isCancelled = appt.status === 'cancelled';
-                  
+
                   let statusText = 'Scheduled';
                   let statusBg = '#EFF6FF';
                   let statusColor = '#3B82F6';
-                  
+
                   if (isCompleted || new Date(appt.dateTime) < new Date()) {
                     statusText = 'Completed';
                     statusBg = '#ECFDF5';
@@ -560,13 +588,13 @@ export default function Dashboard() {
 
                   return (
                     <tr key={appt._id || idx} className="text-xs text-slate-700 hover:bg-slate-50/50 transition-colors">
-                      <td 
-                        onClick={() => window.dispatchEvent(new CustomEvent('show-doctor-details', { 
+                      <td
+                        onClick={() => window.dispatchEvent(new CustomEvent('show-doctor-details', {
                           detail: appt.doctorId || {
                             name: appt.doctor || 'Doctor',
                             specialty: appt.type || 'General Practitioner',
                             email: 'contact@healthsrinath.com'
-                          } 
+                          }
                         }))}
                         className="py-3.5 flex items-center gap-3 cursor-pointer hover:text-[#253a5a]"
                       >
@@ -587,7 +615,7 @@ export default function Dashboard() {
                         {new Date(appt.dateTime).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className="py-3.5">
-                        <span 
+                        <span
                           className="px-2.5 py-0.5 rounded-full font-bold text-[9px] uppercase tracking-wider"
                           style={{ background: statusBg, color: statusColor }}
                         >
@@ -595,7 +623,7 @@ export default function Dashboard() {
                         </span>
                       </td>
                       <td className="py-3.5 text-right">
-                        <button 
+                        <button
                           onClick={() => navigate('/appointments')}
                           className="inline-flex items-center gap-1 text-[#36565F] hover:text-[#253a5a] font-bold transition-colors"
                         >

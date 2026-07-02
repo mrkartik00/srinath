@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function Hero() {
   const { user } = useAuth();
-  
+
   return (
     <div className="hp-hero-container">
       {/* Background Typography */}

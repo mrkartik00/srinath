@@ -16,7 +16,7 @@ export default function Navbar() {
   const isHome = location.pathname === '/';
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 80);
     const onResize = () => {
       setIsMobile(window.innerWidth < 768);
       if (window.innerWidth >= 768) setMobileOpen(false);
@@ -62,42 +62,45 @@ export default function Navbar() {
   return (
     <div ref={menuRef}>
       <nav style={{
-        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 200,
-        height: '66px',
-        background: glass ? 'transparent' : 'rgba(255,255,255,0.97)',
+        position: 'fixed',
+        top: scrolled ? '16px' : '0',
+        left: scrolled ? '24px' : '0',
+        right: scrolled ? '24px' : '0',
+        maxWidth: scrolled ? '1100px' : 'none',
+        margin: scrolled ? '0 auto' : 'none',
+        height: scrolled ? '56px' : '80px',
+        background: glass ? 'transparent' : (scrolled ? 'rgba(255, 255, 255, 0.88)' : 'rgba(255,255,255,0.97)'),
         backdropFilter: glass ? 'none' : 'blur(16px)',
-        borderBottom: glass ? 'none' : '1px solid #eaedf1',
-        boxShadow: glass ? 'none' : '0 2px 20px rgba(37,58,90,0.06)',
-        transition: 'background 0.3s, box-shadow 0.3s',
-        display: 'flex', alignItems: 'center',
-        padding: '0 32px', boxSizing: 'border-box',
+        borderBottom: (glass || scrolled) ? 'none' : '1px solid #eaedf1',
+        border: scrolled ? '1px solid rgba(234, 237, 241, 0.8)' : undefined,
+        borderRadius: scrolled ? '20px' : '0',
+        boxShadow: glass ? 'none' : (scrolled ? '0 8px 32px rgba(37, 58, 90, 0.08)' : '0 2px 20px rgba(37,58,90,0.06)'),
+        transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: scrolled ? '0 24px' : '0 32px',
+        boxSizing: 'border-box',
         justifyContent: 'space-between',
+        zIndex: 200,
       }}>
 
         {/* ── Logo ── */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', flexShrink: 0 }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '9px',
-            background: glass ? 'rgba(255,255,255,0.2)' : '#36565F',
-            border: glass ? '1px solid rgba(255,255,255,0.3)' : 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background 0.3s', flexShrink: 0,
-          }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5">
-              <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z" />
-              <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z" />
-              <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z" />
-              <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z" />
-              <path d="M12 9v6M9 12h6" />
-            </svg>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#253a5a" strokeWidth="2.5" style={{ transition: 'stroke 0.3s' }}>
+            <path d="M12 2C10.5 2 9 3.5 9 5c0 1.5 1.5 3 3 3s3-1.5 3-3c0-1.5-1.5-3-3-3z" />
+            <path d="M12 22C13.5 22 15 20.5 15 19c0-1.5-1.5-3-3-3s-3 1.5-3 3c0 1.5 1.5 3 3 3z" />
+            <path d="M2 12C2 13.5 3.5 15 5 15c1.5 0 3-1.5 3-3S6.5 9 5 9c-1.5 0-3 1.5-3 3z" />
+            <path d="M22 12C22 10.5 20.5 9 19 9c-1.5 0-3 1.5-3 3s1.5 3 3 3c1.5 0 3-1.5 3-3z" />
+            <path d="M12 9v6M9 12h6" />
+          </svg>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontFamily: "'Figtree', sans-serif", fontWeight: 700, fontSize: '16px', color: '#253a5a', lineHeight: 1.1, letterSpacing: '-0.5px', transition: 'color 0.3s' }}>
+              Janki Care
+            </span>
+            <span style={{ fontFamily: "'Inter', sans-serif", fontWeight: 600, fontSize: '8.5px', color: glass ? 'rgba(255,255,255,0.85)' : '#8db5c4', letterSpacing: '1px', textTransform: 'uppercase', transition: 'color 0.3s' }}>
+              by Dr. Srinath Rathod
+            </span>
           </div>
-          <span style={{
-            fontFamily: "'Figtree', sans-serif", fontWeight: 800, fontSize: '18px',
-            color: glass ? '#ffffff' : '#253a5a', letterSpacing: '-0.3px',
-            transition: 'color 0.3s',
-          }}>
-            Dr. Srinath
-          </span>
         </Link>
 
         {/* ── Desktop Nav (hidden on mobile) ── */}
@@ -229,7 +232,7 @@ export default function Navbar() {
       {isMobile && mobileOpen && (
         <div style={{
           position: 'fixed',
-          top: '74px',         /* just below navbar */
+          top: scrolled ? '82px' : '92px',         /* just below navbar */
           left: '12px',
           right: '12px',
           width: 'auto',       /* explicit: not 100% */

@@ -57,9 +57,9 @@ export default function AboutSection() {
                 </svg>
               </div>
               <p className="about-section__exp-label">
-                Years of Experience in the Medical Field with Kids
+                Years of Experience in Advanced Surgical Care
               </p>
-              <h3 className="about-section__exp-number">20+</h3>
+              <h3 className="about-section__exp-number">10+</h3>
             </div>
           </div>
 
@@ -73,19 +73,15 @@ export default function AboutSection() {
                 <path d="M16 12h0" />
                 <path d="M12 16h0" />
               </svg>
-              <span>expert pediatric specialists</span>
+              <span>expert surgical care</span>
             </div>
 
             <h2 className="about-section__heading">
-              Comprehensive Care<br />for Every Age
+              Advanced General &<br />Laparoscopic Surgery
             </h2>
 
             <p className="about-section__text">
-              At our pediatric clinic, we are dedicated to providing exceptional
-              medical care tailored to the unique needs of children, from newborns
-              to adolescents. Our team of experienced pediatricians and child
-              health specialists ensures that every child receives compassionate,
-              comprehensive, and age-appropriate care in a warm.
+              We are dedicated to providing exceptional surgical care tailored to the unique needs of each patient. Dr. Srinath brings years of expertise in general and minimally invasive laparoscopic procedures, ensuring the highest standards of safety, precision, and rapid recovery.
             </p>
 
             <Link to="/about" className="about-section__btn">

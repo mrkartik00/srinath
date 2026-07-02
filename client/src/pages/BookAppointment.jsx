@@ -287,7 +287,7 @@ export default function BookAppointment() {
                 <div>
                   <h4 className="font-bold text-sm text-white mb-0.5">Need Booking Assistance?</h4>
                   <p className="text-[12px] text-[#94a3b8]">
-                    Call support at <span className="text-white font-semibold">+91 98765 43210</span> or email <span className="text-white font-semibold">care@srplus.com</span>
+                    Reach out to our support team through the <span className="text-white font-semibold">in-app Chat</span> for quick help.
                   </p>
                 </div>
               </div>

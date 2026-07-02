@@ -24,6 +24,13 @@ export default function Chat({ isEmbedded = false }) {
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Sync ref
   useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
 
@@ -153,17 +160,17 @@ export default function Chat({ isEmbedded = false }) {
   const formattedInitials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase() : 'U';
 
   return (
-    <div className={isEmbedded ? "w-full h-[calc(100vh-200px)] min-h-[600px]" : "p-6 md:p-8 flex flex-col gap-6 font-['Figtree'] bg-[#f8fafb] min-h-screen"}>
-      {!isEmbedded && (
-        <div className="flex flex-col gap-1">
+    <div className={isEmbedded ? "w-full h-[calc(100vh-200px)] min-h-[600px]" : (isMobile ? "w-full h-[calc(100vh-60px)] flex flex-col font-['Figtree'] bg-white" : "p-6 md:p-8 flex flex-col gap-6 font-['Figtree'] bg-[#f8fafb] min-h-[calc(100vh-80px)]")}>
+      {!isEmbedded && !isMobile && (
+        <div className="flex flex-col gap-1 shrink-0">
           <h1 className="text-3xl font-extrabold text-[#253a5a] tracking-tight">Chat Conversations</h1>
           <p className="text-[#8db5c4] text-xs font-semibold uppercase tracking-wider">Securely communicate with your medical practitioners</p>
         </div>
       )}
 
-      <div className={isEmbedded ? "w-full h-full flex bg-white border border-[#eaedf1] overflow-hidden rounded-[20px] shadow-sm" : "w-full flex-1 bg-white border border-[#eaedf1] overflow-hidden rounded-[24px] shadow-sm flex h-[calc(100vh-180px)]"}>
+      <div className={isEmbedded ? "w-full h-full flex bg-white border border-[#eaedf1] overflow-hidden rounded-[20px] shadow-sm" : (isMobile ? "w-full flex-1 bg-white flex min-h-0 overflow-hidden" : "w-full flex-1 bg-white border border-[#eaedf1] overflow-hidden rounded-[24px] shadow-sm flex h-[calc(100vh-180px)]")}>
         {/* Messages Sidebar (History List) */}
-        <div className={`w-full md:w-[340px] border-r border-[#eaedf1] flex flex-col flex-shrink-0 bg-white relative ${activeConv ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-[340px] border-[#eaedf1] flex flex-col flex-shrink-0 bg-white relative ${isMobile ? '' : 'border-r'} ${activeConv ? 'hidden md:flex' : 'flex'}`}>
           <div className="px-6 py-5 border-b border-[#eaedf1]/60 flex items-center justify-between bg-white">
             <h4 className="text-[20px] font-extrabold text-[#253a5a]">
               All Conversations

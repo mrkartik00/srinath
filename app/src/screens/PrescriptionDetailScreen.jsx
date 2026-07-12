@@ -145,7 +145,7 @@ const PrescriptionDetailScreen = ({ route, navigation }) => {
 
   return (
     <LinearGradient
-      colors={theme.gradientBackground}
+      colors={theme.gradient}
       style={styles.container}
     >
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>

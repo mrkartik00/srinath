@@ -15,9 +15,9 @@ import {
   PressableButton,
   ScreenHeader,
   StatusBadge,
-  SegmentedControl,
   EmptyState,
   SkeletonList,
+  PageLoader,
 } from '../components/ui';
 import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
 import { getMyPrescriptions } from '../api/prescriptions';
@@ -28,23 +28,16 @@ const PrescriptionsScreen = ({ navigation }) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeSegment, setActiveSegment] = useState(0);
-
   const { fadeAnim, slideAnim } = useScreenAnimation();
 
-  const filteredPrescriptions = prescriptions.filter((p) => {
-    if (activeSegment === 0) {
-      return p.status === 'active';
-    }
-    return p.status === 'completed' || p.status === 'cancelled';
-  });
-
-  const { staggerStyles } = useStaggerAnimation(filteredPrescriptions.length);
+  const { getItemStyle, triggerStagger } = useStaggerAnimation(prescriptions.length);
 
   const fetchPrescriptions = async () => {
     try {
       const response = await getMyPrescriptions();
-      setPrescriptions(response.data || []);
+      const list = response.data || [];
+      setPrescriptions(list);
+      triggerStagger(list.length || 0);
     } catch (error) {
       console.error('Failed to fetch prescriptions:', error);
     } finally {
@@ -57,7 +50,9 @@ const PrescriptionsScreen = ({ navigation }) => {
     setRefreshing(true);
     try {
       const response = await getMyPrescriptions();
-      setPrescriptions(response.data || []);
+      const list = response.data || [];
+      setPrescriptions(list);
+      triggerStagger(list.length || 0);
     } catch (error) {
       console.error('Failed to refresh prescriptions:', error);
     } finally {
@@ -77,6 +72,12 @@ const PrescriptionsScreen = ({ navigation }) => {
     fetchPrescriptions();
   }, []);
 
+  useEffect(() => {
+    if (prescriptions.length > 0) {
+      triggerStagger(prescriptions.length);
+    }
+  }, [prescriptions]);
+
   const formatDate = (dateString) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -88,7 +89,7 @@ const PrescriptionsScreen = ({ navigation }) => {
   };
 
   const renderPrescriptionCard = (prescription, index) => {
-    const itemStyle = staggerStyles[index] || {};
+    const itemStyle = getItemStyle(index);
 
     return (
       <Animated.View key={prescription._id} style={itemStyle}>
@@ -130,20 +131,14 @@ const PrescriptionsScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={theme.gradientBackground}
+      colors={theme.gradient}
       style={styles.container}
     >
       <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
         <ScreenHeader title="Prescriptions" onBack={() => navigation.goBack()} />
 
-        <SegmentedControl
-          segments={['Active', 'Past']}
-          selectedIndex={activeSegment}
-          onChange={setActiveSegment}
-        />
-
         {loading ? (
-          <SkeletonList count={4} />
+          <PageLoader />
         ) : (
           <ScrollView
             style={styles.scrollView}
@@ -157,18 +152,14 @@ const PrescriptionsScreen = ({ navigation }) => {
               />
             }
           >
-            {filteredPrescriptions.length === 0 ? (
+            {prescriptions.length === 0 ? (
               <EmptyState
                 icon="document-text-outline"
-                title={activeSegment === 0 ? 'No Active Prescriptions' : 'No Past Prescriptions'}
-                subtitle={
-                  activeSegment === 0
-                    ? 'Your active prescriptions will appear here'
-                    : 'Your completed or cancelled prescriptions will appear here'
-                }
+                title="No Prescriptions"
+                subtitle="Your prescriptions will appear here"
               />
             ) : (
-              filteredPrescriptions.map((prescription, index) =>
+              prescriptions.map((prescription, index) =>
                 renderPrescriptionCard(prescription, index)
               )
             )}

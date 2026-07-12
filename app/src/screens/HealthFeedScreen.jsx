@@ -159,12 +159,14 @@ const HealthFeedScreen = () => {
       colors={theme.gradient}
       style={styles.container}
     >
-      <ScreenHeader
-        title="Health Feed"
-        subtitle="Daily wellness tips"
-        rightIcon="bookmark-outline"
-        onRightPress={handleBookmark}
-      />
+      <View style={styles.headerWrapper}>
+        <ScreenHeader
+          title="Health Feed"
+          subtitle="Daily wellness tips"
+          rightIcon="bookmark-outline"
+          onRightPress={handleBookmark}
+        />
+      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -189,6 +191,9 @@ const HealthFeedScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  headerWrapper: {
+    paddingHorizontal: 20,
   },
   scrollView: {
     flex: 1,

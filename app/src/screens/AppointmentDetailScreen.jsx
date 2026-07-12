@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Text, StyleSheet, Alert, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, ScrollView, Text, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import { useTheme } from '../context/ThemeContext';
 import {
   ScreenHeader,
-  GlassCard,
   StatusBadge,
   SkeletonList,
   PressableButton,
@@ -14,6 +13,11 @@ import {
 import { useScreenAnimation } from '../hooks/useAnimations';
 import { getAppointmentById, cancelAppointment } from '../api/appointments';
 import haptics from '../utils/haptics';
+
+const BG_COLOR = '#F5F7FA';
+const PRIMARY_COLOR = '#223263';
+const TEXT_SECONDARY = '#8F9BB3';
+const BLUE_LIGHT = '#EEF2F8';
 
 const AppointmentDetailScreen = ({ route, navigation }) => {
   const { id } = route.params;
@@ -24,6 +28,8 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelSheet, setShowCancelSheet] = useState(false);
+
+  const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
 
   useEffect(() => {
     fetchAppointment();
@@ -81,42 +87,41 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
     return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
   };
 
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+      </View>
+    );
+  }
+
   if (loading) {
     return (
-      <LinearGradient
-        colors={theme.gradient}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <ScreenHeader title="Appointment" onBack={() => navigation.goBack()} />
         <View style={styles.loadingContainer}>
           <SkeletonList count={3} />
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   if (!appointment) {
     return (
-      <LinearGradient
-        colors={theme.gradient}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <ScreenHeader title="Appointment" onBack={() => navigation.goBack()} />
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={theme.textMuted} />
-          <Text style={[styles.emptyText, { color: theme.textMuted }]}>
+          <Ionicons name="alert-circle-outline" size={48} color={TEXT_SECONDARY} />
+          <Text style={styles.emptyText}>
             Appointment not found
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <LinearGradient
-      colors={theme.gradient}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <ScreenHeader title="Appointment" onBack={() => navigation.goBack()} />
 
       <ScrollView
@@ -131,54 +136,54 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
           </View>
 
           {/* Appointment Info Card */}
-          <GlassCard style={styles.infoCard}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+          <View style={styles.infoCard}>
+            <Text style={styles.sectionTitle}>
               Appointment Details
             </Text>
 
             <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={20} color={theme.primary} />
+              <Ionicons name="calendar-outline" size={20} color={PRIMARY_COLOR} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>
+                <Text style={styles.infoLabel}>
                   Date & Time
                 </Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
+                <Text style={styles.infoValue}>
                   {formatDateTime(appointment.dateTime)}
                 </Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="person-outline" size={20} color={theme.primary} />
+              <Ionicons name="person-outline" size={20} color={PRIMARY_COLOR} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>
+                <Text style={styles.infoLabel}>
                   Doctor
                 </Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
+                <Text style={styles.infoValue}>
                   {appointment.doctorId?.name || 'N/A'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="medical-outline" size={20} color={theme.primary} />
+              <Ionicons name="medical-outline" size={20} color={PRIMARY_COLOR} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>
+                <Text style={styles.infoLabel}>
                   Type
                 </Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
+                <Text style={styles.infoValue}>
                   {appointment.type || 'General'}
                 </Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="time-outline" size={20} color={theme.primary} />
+              <Ionicons name="time-outline" size={20} color={PRIMARY_COLOR} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textMuted }]}>
+                <Text style={styles.infoLabel}>
                   Duration
                 </Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
+                <Text style={styles.infoValue}>
                   {formatDuration(appointment.duration)}
                 </Text>
               </View>
@@ -186,37 +191,37 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
 
             {appointment.reason ? (
               <View style={styles.infoRow}>
-                <Ionicons name="document-text-outline" size={20} color={theme.primary} />
+                <Ionicons name="document-text-outline" size={20} color={PRIMARY_COLOR} />
                 <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: theme.textMuted }]}>
+                  <Text style={styles.infoLabel}>
                     Reason
                   </Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                  <Text style={styles.infoValue}>
                     {appointment.reason}
                   </Text>
                 </View>
               </View>
             ) : null}
-          </GlassCard>
+          </View>
 
           {/* Notes Card */}
           {appointment.notes ? (
-            <GlassCard style={styles.infoCard}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Notes</Text>
-              <Text style={[styles.notesText, { color: theme.textMuted }]}>
+            <View style={styles.infoCard}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+              <Text style={styles.notesText}>
                 {appointment.notes}
               </Text>
-            </GlassCard>
+            </View>
           ) : null}
 
           {/* Cancel Button */}
           {appointment.status === 'scheduled' && (
             <PressableButton
               onPress={handleCancelPress}
-              style={[styles.cancelButton, { backgroundColor: theme.error + '15' }]}
+              style={[styles.cancelButton, { backgroundColor: '#FF6B6B' + '15' }]}
             >
-              <Ionicons name="close-circle-outline" size={20} color={theme.error} />
-              <Text style={[styles.cancelButtonText, { color: theme.error }]}>
+              <Ionicons name="close-circle-outline" size={20} color={'#FF6B6B'} />
+              <Text style={[styles.cancelButtonText, { color: '#FF6B6B' }]}>
                 Cancel Appointment
               </Text>
             </PressableButton>
@@ -230,39 +235,40 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
         onClose={() => setShowCancelSheet(false)}
       >
         <View style={styles.sheetContent}>
-          <Ionicons name="warning-outline" size={48} color={theme.error} />
-          <Text style={[styles.sheetTitle, { color: theme.text }]}>
+          <Ionicons name="warning-outline" size={48} color={'#FF6B6B'} />
+          <Text style={styles.sheetTitle}>
             Cancel Appointment?
           </Text>
-          <Text style={[styles.sheetDescription, { color: theme.textMuted }]}>
+          <Text style={styles.sheetDescription}>
             Are you sure you want to cancel this appointment? This action cannot be undone.
           </Text>
 
           <PressableButton
             onPress={handleConfirmCancel}
             loading={cancelling}
-            style={[styles.confirmCancelButton, { backgroundColor: theme.error }]}
+            style={[styles.confirmCancelButton, { backgroundColor: '#FF6B6B' }]}
           >
             <Text style={styles.confirmCancelText}>Yes, Cancel Appointment</Text>
           </PressableButton>
 
           <PressableButton
             onPress={() => setShowCancelSheet(false)}
-            style={[styles.keepButton, { borderColor: theme.border }]}
+            style={[styles.keepButton, { borderColor: PRIMARY_COLOR }]}
           >
-            <Text style={[styles.keepButtonText, { color: theme.text }]}>
+            <Text style={styles.keepButtonText}>
               Keep Appointment
             </Text>
           </PressableButton>
         </View>
       </BottomSheet>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
   scrollView: {
     flex: 1,
@@ -284,58 +290,70 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
   },
   statusContainer: {
     alignItems: 'center',
     marginVertical: 20,
   },
   infoCard: {
-    padding: 20,
-    marginBottom: 16,
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    marginBottom: 20,
+    borderRadius: 24,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 16,
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
+    marginBottom: 20,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 20,
+    gap: 14,
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
     fontSize: 12,
-    fontWeight: '500',
-    marginBottom: 2,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+    marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   infoValue: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
   },
   notesText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 15,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+    lineHeight: 24,
   },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginTop: 8,
+    paddingVertical: 18,
+    borderRadius: 16,
+    marginTop: 12,
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Urbanist_700Bold',
   },
   sheetContent: {
     alignItems: 'center',
@@ -344,37 +362,41 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sheetTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
     marginTop: 8,
   },
   sheetDescription: {
-    fontSize: 14,
+    fontSize: 15,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 8,
+    lineHeight: 22,
+    marginBottom: 12,
   },
   confirmCancelButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
   },
   confirmCancelText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Urbanist_700Bold',
   },
   keepButton: {
     width: '100%',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
   },
   keepButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
   },
 });
 

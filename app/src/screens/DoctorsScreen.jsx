@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, Text, Animated } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, Text, Animated, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { ScreenHeader, GlassCard, Avatar, SkeletonList, EmptyState, PressableButton } from '../components/ui';
+import { ScreenHeader, SkeletonList, EmptyState, PageLoader } from '../components/ui';
 import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
 import { getDoctors } from '../api/config';
 import haptics from '../utils/haptics';
 
-export default function DoctorsScreen({ navigation }) {
+export default function DoctorsScreen({ navigation, route }) {
   const { theme } = useTheme();
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,13 +19,18 @@ export default function DoctorsScreen({ navigation }) {
   const fetchDoctors = async () => {
     try {
       const res = await getDoctors();
-      setDoctors(res.data || []);
-      triggerStagger(res.data?.length || 0);
+      let list = res.data || [];
+      const filterSpecialty = route.params?.specialty;
+      if (filterSpecialty) {
+        list = list.filter(doc => doc.specialty && doc.specialty.toLowerCase() === filterSpecialty.toLowerCase());
+      }
+      setDoctors(list);
+      triggerStagger(list.length || 0);
     } catch {}
     setLoading(false);
   };
 
-  useEffect(() => { fetchDoctors(); }, []);
+  useEffect(() => { fetchDoctors(); }, [route.params?.specialty]);
 
   const onRefresh = async () => {
     haptics.light();
@@ -46,10 +51,14 @@ export default function DoctorsScreen({ navigation }) {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
       >
-        <ScreenHeader title="Doctors" subtitle="Browse available doctors" onBack={() => navigation.goBack()} />
+        <ScreenHeader 
+          title={route.params?.specialty || "Doctors"} 
+          subtitle={route.params?.specialty ? `Browse ${route.params.specialty} doctors` : "Browse available doctors"} 
+          onBack={() => navigation.goBack()} 
+        />
 
         {loading ? (
-          <SkeletonList count={5} />
+          <PageLoader />
         ) : doctors.length === 0 ? (
           <EmptyState
             icon="people-outline"
@@ -57,37 +66,56 @@ export default function DoctorsScreen({ navigation }) {
             message="No doctors are currently available. Please check back later."
           />
         ) : (
-          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <Animated.View style={[styles.gridContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             {doctors.map((doc, index) => (
-              <Animated.View key={doc.id || index} style={getItemStyle(index)}>
-                <PressableButton onPress={() => openDoctor(doc)} hapticType="light" scaleTo={0.98} style={{ marginBottom: 12 }}>
-                  <GlassCard>
-                    <View style={styles.docRow}>
-                      <Avatar name={doc.name} size={52} color={theme.primary} />
-                      <View style={styles.docInfo}>
-                        <Text style={[styles.docName, { color: theme.text }]}>{doc.name}</Text>
-                        <Text style={[styles.docSpecialty, { color: theme.textMuted }]}>{doc.specialty || 'General Physician'}</Text>
-                        <View style={styles.metaRow}>
-                          {doc.experience > 0 && (
-                            <View style={styles.metaChip}>
-                              <Ionicons name="time-outline" size={12} color={theme.primary} />
-                              <Text style={[styles.metaText, { color: theme.textSecondary }]}>{doc.experience} yrs</Text>
-                            </View>
-                          )}
-                          {doc.fee > 0 && (
-                            <View style={styles.metaChip}>
-                              <Ionicons name="cash-outline" size={12} color={theme.success} />
-                              <Text style={[styles.metaText, { color: theme.textSecondary }]}>₹{doc.fee}</Text>
-                            </View>
-                          )}
-                        </View>
+              <Animated.View key={doc.id || index} style={[getItemStyle(index), { width: '48%' }]}>
+                <TouchableOpacity 
+                  style={[styles.popularCard, { backgroundColor: theme.card }]}
+                  onPress={() => openDoctor(doc)}
+                  activeOpacity={0.9}
+                >
+                  <View style={[styles.popularImageContainer, { backgroundColor: theme.chipBg }]}>
+                    {(!doc.image || doc.image.includes('ui-avatars.com')) && !(doc.name?.toLowerCase().includes('arun') || doc.name?.toLowerCase().includes('sharma')) ? (
+                      <View style={styles.popularEmojiContainer}>
+                        <Ionicons name="person" size={54} color={theme.textSecondary} />
                       </View>
-                      <View style={[styles.bookBadge, { backgroundColor: `${theme.primary}14` }]}>
-                        <Ionicons name="chevron-forward" size={18} color={theme.primary} />
+                    ) : (
+                      <Image 
+                        source={(doc.name?.toLowerCase().includes('arun') || doc.name?.toLowerCase().includes('sharma'))
+                          ? require('../../assets/images/dummy_doctor.png')
+                          : { uri: doc.image }} 
+                        style={styles.popularImage} 
+                        resizeMode="cover" 
+                      />
+                    )}
+                    <View style={styles.popularTopIcons}>
+                      <View style={styles.ratingBadgePopular}>
+                        <Ionicons name="star" size={10} color="#FFB800" />
+                        <Text style={styles.ratingTextPopular}>{doc.rating || '4.8'}</Text>
                       </View>
+                      <TouchableOpacity>
+                        <Ionicons name="heart-outline" size={18} color="#FF3B30" />
+                      </TouchableOpacity>
                     </View>
-                  </GlassCard>
-                </PressableButton>
+                  </View>
+                  <View style={styles.popularInfoPanel}>
+                    <Text style={[styles.popularName, { color: theme.text }]} numberOfLines={1}>{doc.name}</Text>
+                    <View style={styles.popularMetaRow}>
+                      <MaterialCommunityIcons name="stethoscope" size={12} color={theme.textSecondary} />
+                      <Text style={[styles.popularMetaText, { color: theme.textSecondary }]} numberOfLines={1}>{doc.specialty || 'General Physician'}</Text>
+                    </View>
+                    <View style={styles.popularMetaRow}>
+                      <Ionicons name="time-outline" size={12} color={theme.textSecondary} />
+                      <Text style={[styles.popularMetaText, { color: theme.textSecondary }]} numberOfLines={1}>{doc.experience ? `${doc.experience} Years Exp` : '3+ Years Exp'}</Text>
+                    </View>
+                    <TouchableOpacity 
+                      style={[styles.viewProfileBtn, { borderColor: theme.border }]}
+                      onPress={() => openDoctor(doc)}
+                    >
+                      <Text style={[styles.viewProfileText, { color: theme.text }]}>View Profile</Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
               </Animated.View>
             ))}
           </Animated.View>
@@ -101,12 +129,99 @@ export default function DoctorsScreen({ navigation }) {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 20 },
-  docRow: { flexDirection: 'row', alignItems: 'center' },
-  docInfo: { flex: 1, marginLeft: 14 },
-  docName: { fontSize: 16, fontWeight: '700' },
-  docSpecialty: { fontSize: 13, marginTop: 2 },
-  metaRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
-  metaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, fontWeight: '500' },
-  bookBadge: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  popularCard: {
+    borderRadius: 20,
+    marginBottom: 16,
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  popularImageContainer: {
+    width: '100%',
+    height: 140,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    position: 'relative',
+  },
+  popularTopIcons: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  ratingBadgePopular: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  ratingTextPopular: {
+    fontSize: 10,
+    fontFamily: 'Urbanist_700Bold',
+    color: '#223263',
+    marginLeft: 3,
+  },
+  popularImage: {
+    width: '100%',
+    height: 160,
+    marginTop: -20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  popularEmojiContainer: {
+    width: '100%',
+    height: 160,
+    marginTop: -20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popularEmojiText: {
+    fontSize: 54,
+  },
+  popularInfoPanel: {
+    padding: 12,
+  },
+  popularName: {
+    fontSize: 14,
+    fontFamily: 'Urbanist_700Bold',
+    marginBottom: 6,
+  },
+  popularMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  popularMetaText: {
+    fontSize: 11,
+    fontFamily: 'Urbanist_600SemiBold',
+    marginLeft: 5,
+    flex: 1,
+  },
+  viewProfileBtn: {
+    marginTop: 8,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  viewProfileText: {
+    fontSize: 12,
+    fontFamily: 'Urbanist_700Bold',
+  },
 });

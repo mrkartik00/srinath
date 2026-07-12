@@ -34,11 +34,12 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-audio"
     ],
     "experiments": {},
     "extra": {
-      "apiUrl": "http://localhost:5001"
+      "apiUrl": "https://api.janki.care"
     }
   }
 }

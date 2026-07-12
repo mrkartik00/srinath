@@ -13,12 +13,12 @@ import PressableButton from './PressableButton';
  *   onPress (fn) — tap handler
  *   color (string) — gradient start (defaults to theme.primary)
  */
-export default function FAB({ icon = 'add', onPress, color }) {
+export default function FAB({ icon = 'add', onPress, color, style }) {
   const { theme } = useTheme();
   const accent = color || theme.primary;
 
   return (
-    <PressableButton onPress={onPress} hapticType="medium" style={styles.container} scaleTo={0.9}>
+    <PressableButton onPress={onPress} hapticType="medium" style={[styles.container, style]} scaleTo={0.9}>
       <LinearGradient colors={[accent, `${accent}DD`]} style={styles.fab}>
         <Ionicons name={icon} size={26} color="#fff" />
       </LinearGradient>
@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? 100 : 82,
     right: 20,
     zIndex: 100,
+    borderRadius: 28,
   },
   fab: {
     width: 56,

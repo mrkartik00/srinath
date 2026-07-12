@@ -31,7 +31,7 @@ router.get('/doctors', async (req, res) => {
     const DoctorProfile = require('../models/DoctorProfile');
     const { ROLES } = require('../config/constants');
 
-    const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true }).select('name email phone');
+    const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true }).select('name email phone avatar');
     const doctorIds = doctors.map(d => d._id);
     const profiles = await DoctorProfile.find({ userId: { $in: doctorIds } });
 
@@ -45,6 +45,7 @@ router.get('/doctors', async (req, res) => {
         name: doctor.name,
         email: doctor.email,
         phone: doctor.phone,
+        avatar: doctor.avatar || null,
         specialty: profile ? profile.specialization : 'General Physician',
         experience: profile ? profile.experience : 0,
         qualification: profile ? profile.qualification : '',

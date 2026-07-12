@@ -133,7 +133,7 @@ const initializeSocket = (server) => {
         // Push notification if recipient is OFFLINE
         const recipientId = isDoctor ? conversation.patientId.toString() : conversation.doctorId.toString();
         if (!onlineUsers.has(recipientId)) {
-          pushService.sendChatNotification(recipientId, socket.user.name, body.trim().slice(0, 80), conversationId).catch(() => {});
+          pushService.sendChatNotification(recipientId, socket.user.name, body.trim().slice(0, 80), conversationId).catch(() => { });
         } else {
           io.to(`user:${recipientId}`).emit('notification:message', { conversationId, senderName: socket.user.name, preview: body.trim().slice(0, 50) });
         }

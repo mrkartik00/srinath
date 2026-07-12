@@ -6,12 +6,12 @@ import {
   RefreshControl,
   Animated,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import { useTheme } from '../context/ThemeContext';
 import {
-  GlassCard,
   PressableButton,
   ScreenHeader,
   StatusBadge,
@@ -19,10 +19,16 @@ import {
   EmptyState,
   SkeletonList,
   FAB,
+  PageLoader,
 } from '../components/ui';
 import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
 import { getMyAppointments } from '../api/appointments';
 import haptics from '../utils/haptics';
+
+const BG_COLOR = '#F5F7FA';
+const PRIMARY_COLOR = '#223263';
+const TEXT_SECONDARY = '#8F9BB3';
+const BLUE_LIGHT = '#EEF2F8';
 
 const AppointmentsScreen = ({ navigation }) => {
   const { theme } = useTheme();
@@ -33,14 +39,22 @@ const AppointmentsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const { getItemStyle, triggerStagger } = useStaggerAnimation(appointments.length);
+  const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
+
+  const { getItemStyle, triggerStagger, resetAnimations } = useStaggerAnimation(appointments.length);
 
   const fetchAppointments = useCallback(async () => {
     try {
       const response = await getMyAppointments();
-      if (response?.data) {
-        setAppointments(response.data);
+      let list = [];
+      if (Array.isArray(response)) {
+        list = response;
+      } else if (Array.isArray(response?.data)) {
+        list = response.data;
+      } else if (Array.isArray(response?.data?.data)) {
+        list = response.data.data;
       }
+      setAppointments(list);
     } catch (error) {
       console.error('Failed to fetch appointments:', error);
     } finally {
@@ -51,6 +65,21 @@ const AppointmentsScreen = ({ navigation }) => {
   useEffect(() => {
     fetchAppointments();
   }, [fetchAppointments]);
+
+  const now = new Date();
+  const upcomingAppointments = appointments.filter((apt) => new Date(apt.dateTime) >= now);
+  const pastAppointments = appointments.filter((apt) => new Date(apt.dateTime) < now);
+
+  const filteredAppointments = selectedTab === 0 ? upcomingAppointments : pastAppointments;
+  const upcomingCount = upcomingAppointments.length;
+  const pastCount = pastAppointments.length;
+
+  useEffect(() => {
+    if (appointments.length > 0) {
+      resetAnimations();
+      triggerStagger(filteredAppointments.length);
+    }
+  }, [selectedTab, appointments, filteredAppointments.length, resetAnimations, triggerStagger]);
 
   const onRefresh = useCallback(async () => {
     haptics.light();
@@ -68,16 +97,6 @@ const AppointmentsScreen = ({ navigation }) => {
     navigation.navigate('BookAppointment');
   };
 
-  const now = new Date();
-
-  const filteredAppointments = appointments.filter((apt) => {
-    const aptDate = new Date(apt.dateTime);
-    if (selectedTab === 0) {
-      return aptDate >= now;
-    }
-    return aptDate < now;
-  });
-
   const formatDateTime = (dateTime) => {
     const date = new Date(dateTime);
     const dayOptions = { weekday: 'short', month: 'short', day: 'numeric' };
@@ -91,15 +110,23 @@ const AppointmentsScreen = ({ navigation }) => {
   const getTypeBadgeColor = (type) => {
     switch (type?.toLowerCase()) {
       case 'consultation':
-        return theme.primary;
+        return PRIMARY_COLOR;
       case 'follow-up':
-        return theme.textSecondary;
+        return TEXT_SECONDARY;
       case 'checkup':
         return theme.warning;
       default:
-        return theme.textSecondary;
+        return TEXT_SECONDARY;
     }
   };
+
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+      </View>
+    );
+  }
 
   const renderAppointmentCard = (appointment, index) => {
     const { date, time } = formatDateTime(appointment.dateTime);
@@ -108,24 +135,24 @@ const AppointmentsScreen = ({ navigation }) => {
     return (
       <Animated.View key={appointment._id} style={animatedStyle}>
         <PressableButton onPress={() => handleCardPress(appointment)}>
-          <GlassCard style={styles.appointmentCard}>
+          <View style={styles.appointmentCard}>
             <View style={styles.cardHeader}>
               <View style={styles.dateTimeContainer}>
                 <Ionicons
                   name="calendar-outline"
                   size={18}
-                  color={theme.primary}
+                  color={PRIMARY_COLOR}
                 />
-                <Text style={[styles.dateText, { color: theme.text }]}>
+                <Text style={styles.dateText}>
                   {date}
                 </Text>
                 <Ionicons
                   name="time-outline"
                   size={16}
-                  color={theme.textSecondary}
+                  color={TEXT_SECONDARY}
                   style={styles.timeIcon}
                 />
-                <Text style={[styles.timeText, { color: theme.textSecondary }]}>
+                <Text style={styles.timeText}>
                   {time}
                 </Text>
               </View>
@@ -137,9 +164,9 @@ const AppointmentsScreen = ({ navigation }) => {
                 <Ionicons
                   name="person-outline"
                   size={18}
-                  color={theme.textSecondary}
+                  color={TEXT_SECONDARY}
                 />
-                <Text style={[styles.doctorName, { color: theme.text }]}>
+                <Text style={styles.doctorName}>
                   {appointment.doctorId?.name || 'Unknown Doctor'}
                 </Text>
               </View>
@@ -166,11 +193,9 @@ const AppointmentsScreen = ({ navigation }) => {
                     <Ionicons
                       name="hourglass-outline"
                       size={14}
-                      color={theme.textSecondary}
+                      color={TEXT_SECONDARY}
                     />
-                    <Text
-                      style={[styles.durationText, { color: theme.textSecondary }]}
-                    >
+                    <Text style={styles.durationText}>
                       {appointment.duration} min
                     </Text>
                   </View>
@@ -182,10 +207,10 @@ const AppointmentsScreen = ({ navigation }) => {
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={theme.textSecondary}
+                color={TEXT_SECONDARY}
               />
             </View>
-          </GlassCard>
+          </View>
         </PressableButton>
       </Animated.View>
     );
@@ -193,7 +218,7 @@ const AppointmentsScreen = ({ navigation }) => {
 
   const renderContent = () => {
     if (loading) {
-      return <SkeletonList count={5} />;
+      return <PageLoader />;
     }
 
     if (filteredAppointments.length === 0) {
@@ -218,18 +243,14 @@ const AppointmentsScreen = ({ navigation }) => {
   };
 
   return (
-    <LinearGradient
-      colors={theme.gradient}
-      style={styles.container}
-    >
-      <Animated.View style={[styles.content, screenAnimation]}>
+    <View style={styles.container}>
+      <Animated.View style={[styles.content, { opacity: screenAnimation.fadeAnim, transform: [{ translateY: screenAnimation.slideAnim }] }]}>
         <ScreenHeader title="Appointments" />
 
         <SegmentedControl
-          tabs={['Upcoming', 'Past']}
-          selectedIndex={selectedTab}
-          onTabPress={setSelectedTab}
-          style={styles.segmentedControl}
+          segments={['Upcoming', 'Past']}
+          activeIndex={selectedTab}
+          onChange={setSelectedTab}
         />
 
         <ScrollView
@@ -240,8 +261,8 @@ const AppointmentsScreen = ({ navigation }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={theme.primary}
-              colors={[theme.primary]}
+              tintColor={PRIMARY_COLOR}
+              colors={[PRIMARY_COLOR]}
             />
           }
         >
@@ -254,14 +275,16 @@ const AppointmentsScreen = ({ navigation }) => {
         icon="add"
         onPress={handleBookAppointment}
         style={styles.fab}
+        color={PRIMARY_COLOR}
       />
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
   content: {
     flex: 1,
@@ -277,15 +300,22 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   appointmentCard: {
-    marginBottom: 12,
-    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    marginBottom: 16,
+    padding: 18,
     position: 'relative',
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 8,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   dateTimeContainer: {
     flexDirection: 'row',
@@ -293,7 +323,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
     marginLeft: 6,
   },
   timeIcon: {
@@ -301,10 +332,12 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 13,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
     marginLeft: 4,
   },
   cardBody: {
-    gap: 10,
+    gap: 12,
   },
   doctorRow: {
     flexDirection: 'row',
@@ -313,43 +346,46 @@ const styles = StyleSheet.create({
   },
   doctorName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
   },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginTop: 4,
   },
   typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 12,
   },
   typeBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Urbanist_700Bold',
     textTransform: 'capitalize',
   },
   durationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   durationText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
   },
   cardArrow: {
     position: 'absolute',
-    right: 16,
-    top: '50%',
-    marginTop: -10,
+    right: 22,
+    top: 50,
   },
   bottomSpacer: {
     height: 120,
   },
   fab: {
     position: 'absolute',
-    bottom: 32,
+    bottom: 130,
     right: 20,
   },
 });

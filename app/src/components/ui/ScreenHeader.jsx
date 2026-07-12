@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
   leftRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   backBtn: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   titleBlock: { flex: 1 },
-  title: { fontSize: 32, fontWeight: '700', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, marginTop: 2 },
+  title: { fontSize: 32, fontFamily: 'Urbanist_700Bold', letterSpacing: -0.5 },
+  subtitle: { fontSize: 14, marginTop: 2, fontFamily: 'Urbanist_600SemiBold' },
   rightBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 });

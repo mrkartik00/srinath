@@ -117,16 +117,20 @@ const getDocument = asyncHandler(async (req, res) => {
 });
 
 /**
- * GET /vault/documents/:id/download — Get download URL (presigned or stream)
+ * Shared ownership/access check: loads the document (scoped to org) and
+ * verifies the requester is the owning patient, an assigned doctor, or a
+ * super admin. Returns the doc, or null after sending an error response.
  */
-const downloadDocument = asyncHandler(async (req, res) => {
+const findAuthorizedDocument = async (req, res) => {
   const doc = await VaultDocument.findOne({
     _id: req.params.id,
     organizationId: req.scope.organizationId,
   });
-  if (!doc) return apiResponse.error(res, 'Document not found', 404);
+  if (!doc) {
+    apiResponse.error(res, 'Document not found', 404);
+    return null;
+  }
 
-  // Verify access
   const isOwner = doc.patientId.toString() === req.user.id.toString();
   if (!isOwner && req.user.role === ROLES.DOCTOR) {
     const rel = await DoctorPatient.findOne({
@@ -134,26 +138,58 @@ const downloadDocument = asyncHandler(async (req, res) => {
       patientId: doc.patientId,
       status: DOCTOR_PATIENT_STATUS.ACTIVE,
     });
-    if (!rel) return apiResponse.error(res, 'Access denied', 403);
+    if (!rel) {
+      apiResponse.error(res, 'Access denied', 403);
+      return null;
+    }
   } else if (!isOwner && req.user.role !== ROLES.SUPER_ADMIN) {
-    return apiResponse.error(res, 'Access denied', 403);
+    apiResponse.error(res, 'Access denied', 403);
+    return null;
   }
 
-  // Log access
+  return doc;
+};
+
+/**
+ * GET /vault/documents/:id/download — Get download URL (presigned or stream)
+ *
+ * Cloud storage (DO Spaces configured): returns a presigned URL the client
+ * fetches directly. Local disk storage: streaming the file directly from
+ * this JSON endpoint doesn't work (the client always expects a JSON body
+ * with a `url` field) — so instead this returns a URL pointing back at
+ * GET /vault/documents/:id/raw, which the client downloads with its own
+ * auth header attached.
+ */
+const downloadDocument = asyncHandler(async (req, res) => {
+  const doc = await findAuthorizedDocument(req, res);
+  if (!doc) return;
+
   await VaultDocument.findByIdAndUpdate(doc._id, {
     $push: { accessLog: { userId: req.user.id, role: req.user.role, accessedAt: new Date() } },
   });
 
-  // Generate presigned URL or serve local file
   try {
     const url = await spaces.getPresignedDownloadUrl(doc.fileKey);
     apiResponse.success(res, { url, fileName: doc.fileName, mimeType: doc.mimeType }, 'Download URL generated');
   } catch {
-    // Fallback: try local storage service
-    const storageService = require('../services/storageService');
-    const sent = await storageService.sendDownload(res, doc.fileKey, doc.fileName);
-    if (!sent) apiResponse.error(res, 'File not found in storage', 404);
+    const rawUrl = `${req.protocol}://${req.get('host')}/api/v1/vault/documents/${doc._id}/raw`;
+    apiResponse.success(res, { url: rawUrl, fileName: doc.fileName, mimeType: doc.mimeType }, 'Download URL generated');
   }
+});
+
+/**
+ * GET /vault/documents/:id/raw — Streams the file directly (local disk
+ * storage fallback for when no cloud storage is configured). Requires the
+ * same Bearer auth as every other route; the client must attach it as a
+ * header when downloading (expo-file-system's downloadAsync supports this).
+ */
+const downloadDocumentRaw = asyncHandler(async (req, res) => {
+  const doc = await findAuthorizedDocument(req, res);
+  if (!doc) return;
+
+  const storageService = require('../services/storageService');
+  const sent = await storageService.sendDownload(res, doc.fileKey, doc.fileName);
+  if (!sent) apiResponse.error(res, 'File not found in storage', 404);
 });
 
 /**
@@ -213,4 +249,4 @@ const patientVault = asyncHandler(async (req, res) => {
   apiResponse.success(res, result.data, 'Patient vault fetched', result.meta);
 });
 
-module.exports = { uploadDocument, listDocuments, getDocument, downloadDocument, deleteDocument, patientVault };
+module.exports = { uploadDocument, listDocuments, getDocument, downloadDocument, downloadDocumentRaw, deleteDocument, patientVault };

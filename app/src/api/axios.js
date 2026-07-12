@@ -2,6 +2,7 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { emitUnauthorized } from '../utils/authEvents';
 
 const PORT = 5001;
 
@@ -22,7 +23,7 @@ function resolveBaseUrl() {
   return `http://localhost:${PORT}`;
 }
 
-const API_BASE_URL = 'https://api.janki.care';
+export const API_BASE_URL = resolveBaseUrl();
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -40,8 +41,11 @@ api.interceptors.response.use(
   async (error) => {
     if (error.response?.status === 401) {
       await AsyncStorage.multiRemove(['token', 'user']);
+      emitUnauthorized();
     }
-    return Promise.reject(error.response?.data?.errors || error.response?.data?.message || 'Network error');
+    return Promise.reject(
+      error.response?.data?.errors || error.response?.data?.message || error.message || 'Network error'
+    );
   }
 );
 

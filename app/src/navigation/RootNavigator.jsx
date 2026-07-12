@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
+import SplashScreen from '../screens/SplashScreen';
 import BookAppointmentScreen from '../screens/BookAppointmentScreen';
 import AppointmentDetailScreen from '../screens/AppointmentDetailScreen';
 import PrescriptionsScreen from '../screens/PrescriptionsScreen';
@@ -17,6 +18,8 @@ import DoctorDetailScreen from '../screens/DoctorDetailScreen';
 import SubscriptionScreen from '../screens/SubscriptionScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -31,14 +34,26 @@ const navTheme = {
   },
 };
 
+const MIN_SPLASH_MS = 1600;
+
 export default function RootNavigator() {
-  const { user, loading } = useAuth();
-  if (loading) return null;
+  const { user, loading, justLoggedIn } = useAuth();
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setMinTimeElapsed(true), MIN_SPLASH_MS);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading || !minTimeElapsed) {
+    return <SplashScreen />;
+  }
 
   return (
     <NavigationContainer theme={navTheme} independent={true}>
       {user ? (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={justLoggedIn ? 'Welcome' : 'Main'}>
+          <Stack.Screen name="Welcome" component={WelcomeScreen} />
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} options={{ presentation: 'modal' }} />
           <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} />
@@ -52,6 +67,7 @@ export default function RootNavigator() {
           <Stack.Screen name="Subscription" component={SubscriptionScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="Profile" component={ProfileScreen} />
         </Stack.Navigator>
       ) : (
         <AuthStack />

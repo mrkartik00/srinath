@@ -68,18 +68,21 @@ export default function EditProfileScreen({ navigation }) {
       setLoading(true);
       const res = await getMyProfile();
       const profile = res.data || res;
-      setName(profile.name || user?.name || '');
-      setEmail(profile.email || user?.email || '');
-      setDob(profile.dob || '');
+      // getMyProfile populates `userId` with the account's name/email/phone/avatar
+      // rather than flattening them onto the patient record itself.
+      const account = profile.userId || {};
+      setName(account.name || user?.name || '');
+      setEmail(account.email || user?.email || '');
+      setDob(profile.dateOfBirth ? new Date(profile.dateOfBirth).toISOString().split('T')[0] : '');
       setGender(profile.gender || '');
       setBloodGroup(profile.bloodGroup || '');
-      setAllergies(profile.allergies || '');
-      setAvatarUrl(profile.avatar || '');
+      setAllergies(profile.allergies?.join(', ') || '');
+      setAvatarUrl(account.avatar || '');
       if (profile.address) {
         setStreet(profile.address.street || '');
         setCity(profile.address.city || '');
         setState(profile.address.state || '');
-        setZip(profile.address.zip || '');
+        setZip(profile.address.zipCode || '');
       }
       if (profile.emergencyContact) {
         setEmergencyName(profile.emergencyContact.name || '');
@@ -98,11 +101,14 @@ export default function EditProfileScreen({ navigation }) {
     setSaving(true);
     try {
       await updateMyProfile({
-        dob,
-        gender,
-        bloodGroup,
-        allergies,
-        address: { street, city, state, zip },
+        dateOfBirth: dob || undefined,
+        // gender/bloodGroup are strict enums on the server — omit them
+        // entirely rather than send '' when nothing's been picked yet,
+        // which Mongoose rejects as an invalid enum value.
+        ...(gender ? { gender } : {}),
+        ...(bloodGroup ? { bloodGroup } : {}),
+        allergies: allergies ? allergies.split(',').map((a) => a.trim()).filter(Boolean) : [],
+        address: { street, city, state, zipCode: zip },
         emergencyContact: { name: emergencyName, phone: emergencyPhone, relation: emergencyRelation },
       });
       haptics.success();
@@ -111,7 +117,18 @@ export default function EditProfileScreen({ navigation }) {
       ]);
     } catch (err) {
       haptics.error();
-      Alert.alert('Error', err?.message || 'Failed to update profile');
+      // The axios interceptor unwraps failed requests into a plain string or
+      // an array of validation errors (see api/axios.js), not an Error
+      // object — err.message is always undefined for those, which is why
+      // this was always showing the generic fallback instead of the real
+      // validation reason.
+      const msg =
+        (Array.isArray(err) && err.join('\n')) ||
+        (typeof err === 'string' && err) ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to update profile';
+      Alert.alert('Error', msg);
     } finally {
       setSaving(false);
     }
@@ -130,7 +147,7 @@ export default function EditProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -148,7 +165,7 @@ export default function EditProfileScreen({ navigation }) {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -210,7 +227,7 @@ export default function EditProfileScreen({ navigation }) {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.avatarSection}>
           <PressableButton onPress={handleAvatarPress} style={styles.avatarWrapper}>
-            <Avatar source={avatarUrl} size={72} name={name} />
+            <Avatar uri={avatarUrl} size={72} name={name} />
             <View style={[styles.avatarBadge, { backgroundColor: theme.primary }]}>
               <Ionicons name="camera" size={14} color="#fff" />
             </View>
@@ -229,13 +246,13 @@ export default function EditProfileScreen({ navigation }) {
           <Text style={[styles.label, { color: theme.textSecondary }]}>Gender</Text>
           <View style={styles.chipRow}>
             {GENDER_OPTIONS.map((opt) => (
-              <Chip key={opt} label={opt.charAt(0).toUpperCase() + opt.slice(1)} selected={gender === opt} onPress={() => handleGenderSelect(opt)} />
+              <Chip key={opt} label={opt.charAt(0).toUpperCase() + opt.slice(1)} active={gender === opt} onPress={() => handleGenderSelect(opt)} />
             ))}
           </View>
           <Text style={[styles.label, { color: theme.textSecondary }]}>Blood Group</Text>
           <View style={styles.chipRow}>
             {BLOOD_GROUP_OPTIONS.map((opt) => (
-              <Chip key={opt} label={opt} selected={bloodGroup === opt} onPress={() => handleBloodGroupSelect(opt)} />
+              <Chip key={opt} label={opt} active={bloodGroup === opt} onPress={() => handleBloodGroupSelect(opt)} />
             ))}
           </View>
           <Text style={[styles.label, { color: theme.textSecondary }]}>Allergies</Text>

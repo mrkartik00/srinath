@@ -1,87 +1,122 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, Text, TextInput, Alert, Platform, ActivityIndicator, Animated } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, ScrollView, Text, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import GlassCard from '../components/ui/GlassCard';
-import PressableButton from '../components/ui/PressableButton';
-import { getMyProfile, updateMyProfile } from '../api/patient';
-import { haptics } from '../utils/haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { ScreenHeader, GlassCard, PressableButton, Avatar, PageLoader } from '../components/ui';
+import { getMyProfile } from '../api/patient';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import haptics from '../utils/haptics';
 
-export default function ProfileScreen() {
+const formatDate = (value) => {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+};
+
+export default function ProfileScreen({ navigation }) {
   const { theme } = useTheme();
+  const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ dateOfBirth: '', gender: '', bloodGroup: '', address: { street: '', city: '', state: '', zipCode: '' }, emergencyContact: { name: '', phone: '', relation: '' }, allergies: '' });
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [profile, setProfile] = useState(null);
 
-  useEffect(() => {
-    getMyProfile().then((res) => {
-      const p = res.data;
-      setForm({ dateOfBirth: p.dateOfBirth ? new Date(p.dateOfBirth).toISOString().split('T')[0] : '', gender: p.gender || '', bloodGroup: p.bloodGroup || '', address: p.address || { street: '', city: '', state: '', zipCode: '' }, emergencyContact: p.emergencyContact || { name: '', phone: '', relation: '' }, allergies: p.allergies?.join(', ') || '' });
-    }).catch(() => {}).finally(() => { setLoading(false); Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start(); });
-  }, []);
+  const handleLogout = () => {
+    haptics.light();
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: () => { haptics.heavy(); logout(); },
+      },
+    ]);
+  };
 
-  const handleSave = async () => { haptics.medium(); setSaving(true); try { await updateMyProfile({ ...form, allergies: form.allergies ? form.allergies.split(',').map(a => a.trim()).filter(Boolean) : [] }); haptics.success(); Alert.alert('Success', 'Profile updated!'); } catch (err) { haptics.error(); Alert.alert('Error', Array.isArray(err) ? err.join('\n') : (typeof err === 'string' ? err : 'Update failed')); } finally { setSaving(false); } };
-
-  if (loading) return <View style={[styles.center, { backgroundColor: theme.bg }]}><ActivityIndicator size="large" color={theme.primary} /></View>;
-
-  const Field = ({ label, value, onChangeText, placeholder, ...props }) => (
-    <>
-      <Text style={[styles.fieldLabel, { color: theme.text }]}>{label}</Text>
-      <TextInput style={[styles.input, { backgroundColor: theme.inputBg, color: theme.text }]} value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor={theme.textMuted} {...props} />
-    </>
+  // Refetch every time this screen regains focus — a plain mount-only effect
+  // would leave stale data on screen after returning from EditProfile, since
+  // navigation.goBack() reveals this already-mounted screen rather than
+  // remounting it.
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      getMyProfile()
+        .then((res) => { if (!cancelled) setProfile(res.data); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setLoading(false); });
+      return () => { cancelled = true; };
+    }, [])
   );
 
-  const Chip = ({ label, active, onPress }) => (
-    <PressableButton onPress={onPress} hapticType="selection" style={[styles.chip, { backgroundColor: active ? theme.primary : theme.chipBg }]} scaleTo={0.94}>
-      <Text style={[styles.chipText, { color: active ? '#fff' : theme.text }]}>{label}</Text>
-    </PressableButton>
+  if (loading) return <PageLoader />;
+
+  const p = profile || {};
+  const account = p.userId || {};
+  const address = p.address || {};
+  const emergency = p.emergencyContact || {};
+  const addressLine = [address.street, address.city, address.state, address.zipCode].filter(Boolean).join(', ');
+  const allergies = p.allergies?.length ? p.allergies.join(', ') : null;
+
+  const Row = ({ label, value }) => (
+    <View style={styles.row}>
+      <Text style={[styles.rowLabel, { color: theme.textMuted }]}>{label}</Text>
+      <Text style={[styles.rowValue, { color: value ? theme.text : theme.textMuted }]}>{value || 'Not set'}</Text>
+    </View>
   );
 
   return (
     <LinearGradient colors={theme.gradient} style={[styles.flex, { backgroundColor: theme.bg }]}>
-      <ScrollView style={styles.flex} contentContainerStyle={styles.content}>
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <Text style={[styles.title, { color: theme.text }]}>My Profile</Text>
-          <Text style={{ fontSize: 15, color: theme.textMuted, marginTop: 2, marginBottom: 20 }}>Manage your medical and personal information</Text>
+      <ScreenHeader
+        title="My Profile"
+        subtitle="Your medical and personal information"
+        onBack={() => navigation.goBack()}
+        rightIcon="create-outline"
+        onRightPress={() => navigation.navigate('EditProfile')}
+      />
+      <ScrollView style={styles.flex} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.avatarSection}>
+          <Avatar uri={account.avatar || user?.avatar} name={account.name || user?.name} size={84} />
+          <Text style={[styles.name, { color: theme.text }]}>{account.name || user?.name || 'Patient'}</Text>
+          {(account.email || user?.email) ? (
+            <Text style={[styles.email, { color: theme.textMuted }]}>{account.email || user?.email}</Text>
+          ) : null}
+        </View>
 
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PERSONAL INFORMATION</Text>
-          <GlassCard style={styles.cardSpacing}>
-            <Field label="Date of Birth" value={form.dateOfBirth} onChangeText={(v) => setForm({ ...form, dateOfBirth: v })} placeholder="1990-01-15" />
-            <Text style={[styles.fieldLabel, { color: theme.text }]}>Gender</Text>
-            <View style={styles.chipRow}>{['male', 'female', 'other'].map(g => <Chip key={g} label={g} active={form.gender === g} onPress={() => { haptics.selection(); setForm({ ...form, gender: g }); }} />)}</View>
-            <Text style={[styles.fieldLabel, { color: theme.text }]}>Blood Group</Text>
-            <View style={styles.chipRow}>{['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <Chip key={bg} label={bg} active={form.bloodGroup === bg} onPress={() => { haptics.selection(); setForm({ ...form, bloodGroup: bg }); }} />)}</View>
-          </GlassCard>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>PERSONAL INFORMATION</Text>
+        <GlassCard style={styles.cardSpacing}>
+          <Row label="Date of Birth" value={formatDate(p.dateOfBirth)} />
+          <Row label="Gender" value={p.gender} />
+          <Row label="Blood Group" value={p.bloodGroup} />
+        </GlassCard>
 
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ADDRESS</Text>
-          <GlassCard style={styles.cardSpacing}>
-            <Field label="Street" value={form.address.street} onChangeText={(v) => setForm({ ...form, address: { ...form.address, street: v } })} placeholder="Street" />
-            <Field label="City" value={form.address.city} onChangeText={(v) => setForm({ ...form, address: { ...form.address, city: v } })} placeholder="City" />
-            <Field label="State" value={form.address.state} onChangeText={(v) => setForm({ ...form, address: { ...form.address, state: v } })} placeholder="State" />
-            <Field label="Zip Code" value={form.address.zipCode} onChangeText={(v) => setForm({ ...form, address: { ...form.address, zipCode: v } })} placeholder="Zip" keyboardType="numeric" />
-          </GlassCard>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>ADDRESS</Text>
+        <GlassCard style={styles.cardSpacing}>
+          <Row label="Address" value={addressLine} />
+        </GlassCard>
 
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>EMERGENCY CONTACT</Text>
-          <GlassCard style={styles.cardSpacing}>
-            <Field label="Name" value={form.emergencyContact.name} onChangeText={(v) => setForm({ ...form, emergencyContact: { ...form.emergencyContact, name: v } })} placeholder="Contact name" />
-            <Field label="Phone" value={form.emergencyContact.phone} onChangeText={(v) => setForm({ ...form, emergencyContact: { ...form.emergencyContact, phone: v } })} placeholder="Phone" keyboardType="phone-pad" />
-            <Field label="Relation" value={form.emergencyContact.relation} onChangeText={(v) => setForm({ ...form, emergencyContact: { ...form.emergencyContact, relation: v } })} placeholder="e.g. Spouse" />
-          </GlassCard>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>EMERGENCY CONTACT</Text>
+        <GlassCard style={styles.cardSpacing}>
+          <Row label="Name" value={emergency.name} />
+          <Row label="Phone" value={emergency.phone} />
+          <Row label="Relation" value={emergency.relation} />
+        </GlassCard>
 
-          <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MEDICAL INFO</Text>
-          <GlassCard style={styles.cardSpacing}>
-            <Field label="Allergies (comma separated)" value={form.allergies} onChangeText={(v) => setForm({ ...form, allergies: v })} placeholder="e.g. penicillin, peanuts" multiline style={{ height: 60, textAlignVertical: 'top' }} />
-          </GlassCard>
+        <Text style={[styles.sectionLabel, { color: theme.textMuted }]}>MEDICAL INFO</Text>
+        <GlassCard style={styles.cardSpacing}>
+          <Row label="Allergies" value={allergies} />
+        </GlassCard>
 
-          <PressableButton onPress={handleSave} hapticType="medium" disabled={saving} style={{ marginTop: 24, borderRadius: 14 }} scaleTo={0.97}>
-            <LinearGradient colors={[theme.primary, theme.primaryDark]} style={styles.saveBtn}>
-              <Ionicons name={saving ? 'hourglass' : 'checkmark-circle'} size={18} color="#fff" />
-              <Text style={styles.saveBtnText}>{saving ? 'Saving...' : 'Save Profile'}</Text>
-            </LinearGradient>
-          </PressableButton>
-        </Animated.View>
+        <PressableButton
+          onPress={handleLogout}
+          hapticType="heavy"
+          style={[styles.logoutBtn, { backgroundColor: `${theme.danger}14` }]}
+          scaleTo={0.97}
+        >
+          <Ionicons name="log-out-outline" size={18} color={theme.danger} />
+          <Text style={[styles.logoutBtnText, { color: theme.danger }]}>Log Out</Text>
+        </PressableButton>
+
         <View style={{ height: 120 }} />
       </ScrollView>
     </LinearGradient>
@@ -90,16 +125,23 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, paddingTop: Platform.OS === 'ios' ? 60 : 20 },
-  title: { fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
-  sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginTop: 20, marginBottom: 10 },
-  cardSpacing: { marginBottom: 10 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6, marginTop: 14 },
-  input: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  chip: { paddingHorizontal: 16, paddingVertical: 11, borderRadius: 10 },
-  chipText: { fontSize: 14, fontWeight: '500', textTransform: 'capitalize' },
-  saveBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 16 },
-  saveBtnText: { color: '#fff', fontSize: 17, fontWeight: '600' },
+  content: { padding: 20 },
+  avatarSection: { alignItems: 'center', marginBottom: 24 },
+  name: { fontSize: 20, fontWeight: '700', marginTop: 12 },
+  email: { fontSize: 14, marginTop: 2 },
+  sectionLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, marginBottom: 10 },
+  cardSpacing: { marginBottom: 16 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingVertical: 10 },
+  rowLabel: { fontSize: 14, fontWeight: '500', flex: 0.4 },
+  rowValue: { fontSize: 14, fontWeight: '600', flex: 0.6, textAlign: 'right' },
+  logoutBtn: {
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  logoutBtnText: { fontSize: 15, fontWeight: '700' },
 });

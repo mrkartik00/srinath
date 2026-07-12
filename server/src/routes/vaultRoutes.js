@@ -29,6 +29,7 @@ router.post('/upload', ...guard, authorize(ROLES.PATIENT, ROLES.DOCTOR), vaultUp
 router.get('/documents', ...guard, authorize(ROLES.PATIENT), vault.listDocuments);
 router.get('/documents/:id', ...guard, authorize(ROLES.PATIENT, ROLES.DOCTOR, ROLES.SUPER_ADMIN), vault.getDocument);
 router.get('/documents/:id/download', ...guard, authorize(ROLES.PATIENT, ROLES.DOCTOR, ROLES.SUPER_ADMIN), vault.downloadDocument);
+router.get('/documents/:id/raw', ...guard, authorize(ROLES.PATIENT, ROLES.DOCTOR, ROLES.SUPER_ADMIN), vault.downloadDocumentRaw);
 router.delete('/documents/:id', ...guard, authorize(ROLES.PATIENT), vault.deleteDocument);
 
 // ── Doctor routes ────────────────────────────────────────────────────────────

@@ -3,6 +3,7 @@ import {
   View,
   ScrollView,
   Text,
+  TextInput,
   RefreshControl,
   Animated,
   StyleSheet,
@@ -24,8 +25,9 @@ import {
   BottomSheet,
   Chip,
   FAB,
+  PageLoader,
 } from '../components/ui';
-import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
+import { useScreenAnimation } from '../hooks/useAnimations';
 import {
   getVaultDocuments,
   getDocumentDownloadUrl,
@@ -94,24 +96,31 @@ const MedicalVaultScreen = ({ navigation }) => {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [detailsSheetVisible, setDetailsSheetVisible] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadCategory, setUploadCategory] = useState('other');
+  const [uploadDescription, setUploadDescription] = useState('');
 
   const filteredDocuments =
     selectedCategory === 'all'
       ? documents
       : documents.filter((doc) => doc.category === selectedCategory);
 
-  const { getItemStyle, triggerStagger } = useStaggerAnimation(filteredDocuments.length);
-
   // --- Data Fetching ---
 
   const fetchDocuments = useCallback(async () => {
     try {
       const response = await getVaultDocuments();
-      if (response?.data) {
-        setDocuments(response.data);
-      }
+      setDocuments(response?.data || []);
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch documents. Please try again.');
+      const msg =
+        (Array.isArray(error) && error.join('\n')) ||
+        (typeof error === 'string' && error) ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to fetch documents. Please try again.';
+      Alert.alert('Error', msg);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -134,19 +143,38 @@ const MedicalVaultScreen = ({ navigation }) => {
     try {
       const response = await getDocumentDownloadUrl(doc._id);
       const url = response?.data?.url || response?.url;
-      if (url) {
-        const fileUri = FileSystem.documentDirectory + doc.fileName;
-        const downloadResult = await FileSystem.downloadAsync(url, fileUri);
-        if (downloadResult.status === 200) {
-          haptics.success();
-          const canShare = await Sharing.isAvailableAsync();
-          if (canShare) {
-            await Sharing.shareAsync(downloadResult.uri);
-          }
+      if (!url) {
+        Alert.alert('Error', 'No download URL was returned for this document.');
+        return;
+      }
+
+      // The /raw fallback route (used when no cloud storage is configured)
+      // requires the same Bearer auth as every other request — presigned
+      // cloud URLs are self-authenticating and ignore this header.
+      const token = await AsyncStorage.getItem('token');
+      const fileUri = FileSystem.documentDirectory + doc.fileName;
+      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+
+      if (downloadResult.status === 200) {
+        haptics.success();
+        const canShare = await Sharing.isAvailableAsync();
+        if (canShare) {
+          await Sharing.shareAsync(downloadResult.uri);
         }
+      } else {
+        Alert.alert('Error', `Download failed (status ${downloadResult.status}).`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to download document.');
+      haptics.error();
+      const msg =
+        (Array.isArray(error) && error.join('\n')) ||
+        (typeof error === 'string' && error) ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to download document.';
+      Alert.alert('Error', msg);
     }
   };
 
@@ -177,6 +205,16 @@ const MedicalVaultScreen = ({ navigation }) => {
     setUploadSheetVisible(true);
   };
 
+  // A file was picked — stage it and open the details step (title/category/
+  // description) instead of uploading immediately.
+  const openDetailsFor = (file) => {
+    setPendingFile(file);
+    setUploadTitle(file.fileName || file.name || 'Untitled Document');
+    setUploadCategory('other');
+    setUploadDescription('');
+    setDetailsSheetVisible(true);
+  };
+
   const handleTakePhoto = async () => {
     setUploadSheetVisible(false);
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -185,11 +223,11 @@ const MedicalVaultScreen = ({ navigation }) => {
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.[0]) {
-      await processUpload(result.assets[0]);
+      openDetailsFor(result.assets[0]);
     }
   };
 
@@ -201,11 +239,11 @@ const MedicalVaultScreen = ({ navigation }) => {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      mediaTypes: ['images', 'videos'],
       quality: 0.8,
     });
     if (!result.canceled && result.assets?.[0]) {
-      await processUpload(result.assets[0]);
+      openDetailsFor(result.assets[0]);
     }
   };
 
@@ -217,14 +255,25 @@ const MedicalVaultScreen = ({ navigation }) => {
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets?.[0]) {
-        await processUpload(result.assets[0]);
+        openDetailsFor(result.assets[0]);
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick document.');
     }
   };
 
-  const processUpload = async (file) => {
+  const handleConfirmUpload = async () => {
+    if (!pendingFile) return;
+    setDetailsSheetVisible(false);
+    await processUpload(pendingFile, {
+      title: uploadTitle.trim() || 'Untitled Document',
+      category: uploadCategory,
+      description: uploadDescription.trim(),
+    });
+    setPendingFile(null);
+  };
+
+  const processUpload = async (file, details) => {
     haptics.medium();
     setUploading(true);
     setUploadProgress(0);
@@ -236,8 +285,9 @@ const MedicalVaultScreen = ({ navigation }) => {
         name: file.fileName || file.name || 'document',
         type: file.mimeType || file.type || 'application/octet-stream',
       });
-      formData.append('title', file.fileName || file.name || 'Untitled Document');
-      formData.append('category', selectedCategory === 'all' ? 'other' : selectedCategory);
+      formData.append('title', details?.title || file.fileName || file.name || 'Untitled Document');
+      formData.append('category', details?.category || 'other');
+      if (details?.description) formData.append('description', details.description);
 
       // Simulate progress updates
       const progressInterval = setInterval(() => {
@@ -256,7 +306,17 @@ const MedicalVaultScreen = ({ navigation }) => {
       haptics.success();
       fetchDocuments();
     } catch (error) {
-      Alert.alert('Upload Failed', 'Could not upload the document. Please try again.');
+      haptics.error();
+      // The axios interceptor already unwraps failed requests into a plain
+      // string or an array of validation errors (see api/axios.js), not an
+      // Error/AxiosError — surface that real reason instead of a generic one.
+      const msg =
+        (Array.isArray(error) && error.join('\n')) ||
+        (typeof error === 'string' && error) ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Could not upload the document. Please try again.';
+      Alert.alert('Upload Failed', msg);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -270,23 +330,23 @@ const MedicalVaultScreen = ({ navigation }) => {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.chipRow}
+      style={styles.filterScroll}
     >
       {CATEGORIES.map((cat) => (
         <Chip
           key={cat.value}
           label={cat.label}
-          selected={selectedCategory === cat.value}
+          active={selectedCategory === cat.value}
           onPress={() => {
             haptics.light();
             setSelectedCategory(cat.value);
           }}
-          style={styles.chip}
         />
       ))}
     </ScrollView>
   );
 
-  const renderDocumentCard = (doc, index) => {
+  const renderDocumentCard = (doc) => {
     const fileType = getFileTypeIcon(doc.mimeType);
     const categoryInfo = getCategoryIcon(doc.category);
     const categoryLabel =
@@ -299,65 +359,66 @@ const MedicalVaultScreen = ({ navigation }) => {
         })
       : '';
 
-    const animatedStyle = getItemStyle(index);
-
     return (
-      <Animated.View key={doc._id} style={animatedStyle}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => handleDocumentTap(doc)}
-          onLongPress={() => handleDocumentLongPress(doc)}
-          delayLongPress={500}
-        >
-          <GlassCard style={styles.documentCard}>
-            <View style={styles.cardContent}>
-              {/* File Type Icon */}
-              <View style={[styles.fileIconContainer, { backgroundColor: fileType.color + '20' }]}>
-                <Ionicons name={fileType.icon} size={24} color={fileType.color} />
-              </View>
-
-              {/* Document Info */}
-              <View style={styles.docInfo}>
-                <Text style={[styles.docTitle, { color: theme.text }]} numberOfLines={1}>
-                  {doc.title}
-                </Text>
-                <View style={styles.docMeta}>
-                  <StatusBadge
-                    label={categoryLabel}
-                    color={categoryInfo.color}
-                    size="small"
-                  />
-                  <Text style={[styles.docSize, { color: theme.textSecondary }]}>
-                    {formatFileSize(doc.fileSize)}
-                  </Text>
-                </View>
-                <View style={styles.docFooter}>
-                  <Text style={[styles.docDate, { color: theme.textMuted }]}>
-                    {uploadDate}
-                  </Text>
-                  {doc.uploaderRole && (
-                    <Text style={[styles.uploaderRole, { color: theme.textMuted }]}>
-                      • {doc.uploaderRole}
-                    </Text>
-                  )}
-                </View>
-              </View>
-
-              {/* Download/Chevron Icon */}
-              <TouchableOpacity
-                onPress={() => handleDocumentTap(doc)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name="cloud-download-outline"
-                  size={22}
-                  color={theme.primary}
-                />
-              </TouchableOpacity>
+      <TouchableOpacity
+        key={doc._id}
+        activeOpacity={0.7}
+        onPress={() => handleDocumentTap(doc)}
+        onLongPress={() => handleDocumentLongPress(doc)}
+        delayLongPress={500}
+      >
+        <GlassCard style={styles.documentCard}>
+          <View style={styles.cardContent}>
+            {/* File Type Icon */}
+            <View style={[styles.fileIconContainer, { backgroundColor: fileType.color + '20' }]}>
+              <Ionicons name={fileType.icon} size={24} color={fileType.color} />
             </View>
-          </GlassCard>
-        </TouchableOpacity>
-      </Animated.View>
+
+            {/* Document Info */}
+            <View style={styles.docInfo}>
+              <Text style={[styles.docTitle, { color: theme.text }]} numberOfLines={1}>
+                {doc.title}
+              </Text>
+              <View style={styles.docMeta}>
+                <View style={[styles.categoryBadge, { backgroundColor: `${categoryInfo.color}1A` }]}>
+                  <View style={[styles.categoryDot, { backgroundColor: categoryInfo.color }]} />
+                  <Text style={[styles.categoryBadgeText, { color: categoryInfo.color }]}>{categoryLabel}</Text>
+                </View>
+                <Text style={[styles.docSize, { color: theme.textSecondary }]}>
+                  {formatFileSize(doc.fileSize)}
+                </Text>
+              </View>
+              {doc.description ? (
+                <Text style={[styles.docDescription, { color: theme.textMuted }]} numberOfLines={2}>
+                  {doc.description}
+                </Text>
+              ) : null}
+              <View style={styles.docFooter}>
+                <Text style={[styles.docDate, { color: theme.textMuted }]}>
+                  {uploadDate}
+                </Text>
+                {doc.uploaderRole && (
+                  <Text style={[styles.uploaderRole, { color: theme.textMuted }]}>
+                    • {doc.uploaderRole}
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* Download/Chevron Icon */}
+            <TouchableOpacity
+              onPress={() => handleDocumentTap(doc)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons
+                name="cloud-download-outline"
+                size={22}
+                color={theme.primary}
+              />
+            </TouchableOpacity>
+          </View>
+        </GlassCard>
+      </TouchableOpacity>
     );
   };
 
@@ -390,7 +451,7 @@ const MedicalVaultScreen = ({ navigation }) => {
       colors={theme.gradient || [theme.bg, theme.bg]}
       style={styles.container}
     >
-      <Animated.View style={[styles.content, screenAnimation]}>
+      <Animated.View style={[styles.content, { opacity: screenAnimation.fadeAnim, transform: [{ translateY: screenAnimation.slideAnim }] }]}>
         <ScreenHeader
           title="Medical Vault"
           subtitle="Your secure documents"
@@ -402,36 +463,40 @@ const MedicalVaultScreen = ({ navigation }) => {
         {renderCategoryFilter()}
         {renderUploadProgress()}
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={theme.primary}
-            />
-          }
-        >
-          {loading ? (
-            <SkeletonList count={5} />
-          ) : filteredDocuments.length === 0 ? (
-            <EmptyState
-              icon="document-text-outline"
-              title="No documents yet"
-              subtitle="Upload your first document"
-              actionLabel="Upload Document"
-              onAction={handleUploadPress}
-            />
-          ) : (
-            <View style={styles.documentList}>
-              {filteredDocuments.map((doc, index) => renderDocumentCard(doc, index))}
-            </View>
-          )}
+        {loading ? (
+          <View style={styles.loaderContainer}>
+            <PageLoader fullScreen={false} />
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={theme.primary}
+              />
+            }
+          >
+            {filteredDocuments.length === 0 ? (
+              <EmptyState
+                icon="document-text-outline"
+                title="No documents yet"
+                message="Upload your first document"
+                actionLabel="Upload Document"
+                onAction={handleUploadPress}
+              />
+            ) : (
+              <View style={styles.documentList}>
+                {filteredDocuments.map((doc) => renderDocumentCard(doc))}
+              </View>
+            )}
 
-          <View style={styles.bottomSpacer} />
-        </ScrollView>
+            <View style={styles.bottomSpacer} />
+          </ScrollView>
+        )}
 
         {/* Upload Options BottomSheet */}
         <BottomSheet
@@ -484,6 +549,65 @@ const MedicalVaultScreen = ({ navigation }) => {
           </View>
         </BottomSheet>
 
+        {/* Document Details BottomSheet — title, category, optional description */}
+        <BottomSheet
+          visible={detailsSheetVisible}
+          onClose={() => {
+            setDetailsSheetVisible(false);
+            setPendingFile(null);
+          }}
+          title="Document Details"
+          height={560}
+        >
+          <ScrollView style={styles.detailsContent} keyboardShouldPersistTaps="handled">
+            <Text style={[styles.detailsLabel, { color: theme.textMuted }]}>Title</Text>
+            <TextInput
+              style={[styles.detailsInput, { color: theme.text, backgroundColor: theme.chipBg }]}
+              value={uploadTitle}
+              onChangeText={setUploadTitle}
+              placeholder="Document title"
+              placeholderTextColor={theme.textMuted}
+            />
+
+            <Text style={[styles.detailsLabel, { color: theme.textMuted, marginTop: 16 }]}>Type of Document</Text>
+            <View style={styles.detailsChipRow}>
+              {CATEGORIES.filter((cat) => cat.value !== 'all').map((cat) => (
+                <Chip
+                  key={cat.value}
+                  label={cat.label}
+                  active={uploadCategory === cat.value}
+                  onPress={() => { haptics.selection(); setUploadCategory(cat.value); }}
+                />
+              ))}
+            </View>
+
+            <Text style={[styles.detailsLabel, { color: theme.textMuted, marginTop: 16 }]}>Description (optional)</Text>
+            <TextInput
+              style={[styles.detailsInput, styles.detailsTextarea, { color: theme.text, backgroundColor: theme.chipBg }]}
+              value={uploadDescription}
+              onChangeText={setUploadDescription}
+              placeholder="Add any notes about this document..."
+              placeholderTextColor={theme.textMuted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <PressableButton
+              onPress={handleConfirmUpload}
+              hapticType="medium"
+              style={styles.detailsUploadBtnWrapper}
+              scaleTo={0.97}
+            >
+              <View style={[styles.detailsUploadBtn, { backgroundColor: theme.primary }]}>
+                <Ionicons name="cloud-upload-outline" size={18} color="#fff" />
+                <Text style={styles.detailsUploadBtnText}>Upload Document</Text>
+              </View>
+            </PressableButton>
+            <View style={{ height: 24 }} />
+          </ScrollView>
+        </BottomSheet>
+
         {/* Delete Confirmation BottomSheet */}
         <BottomSheet
           visible={deleteSheetVisible}
@@ -533,11 +657,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 8,
   },
+  filterScroll: {
+    flexGrow: 0,
+  },
   chip: {
     marginRight: 8,
   },
   scrollView: {
     flex: 1,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollContent: {
     paddingHorizontal: 16,
@@ -578,6 +710,28 @@ const styles = StyleSheet.create({
   },
   docSize: {
     fontSize: 12,
+  },
+  categoryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  categoryDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  docDescription: {
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 4,
   },
   docFooter: {
     flexDirection: 'row',
@@ -638,6 +792,46 @@ const styles = StyleSheet.create({
   uploadOptionText: {
     fontSize: 15,
     fontWeight: '500',
+  },
+  detailsContent: {
+    padding: 16,
+  },
+  detailsLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  detailsInput: {
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+  },
+  detailsTextarea: {
+    minHeight: 90,
+  },
+  detailsChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  detailsUploadBtnWrapper: {
+    marginTop: 24,
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  detailsUploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 14,
+  },
+  detailsUploadBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   deleteConfirmContent: {
     padding: 16,

@@ -6,24 +6,32 @@ import {
   RefreshControl,
   Animated,
   StyleSheet,
+  ActivityIndicator,
+  Platform,
+  TouchableOpacity,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import { useTheme } from '../context/ThemeContext';
 import {
   ScreenHeader,
-  GlassCard,
   PressableButton,
   Avatar,
   StatusBadge,
   EmptyState,
   SkeletonList,
   BottomSheet,
+  FAB,
 } from '../components/ui';
 import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
 import { getConversations, createConversation } from '../api/chat';
 import { getDoctors } from '../api/config';
 import haptics from '../utils/haptics';
+
+const BG_COLOR = '#F5F7FA';
+const PRIMARY_COLOR = '#223263';
+const TEXT_SECONDARY = '#8F9BB3';
+const BLUE_LIGHT = '#EEF2F8';
 
 // Helper: format relative time
 const formatRelativeTime = (dateString) => {
@@ -56,6 +64,7 @@ const ChatListScreen = ({ navigation }) => {
   const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
 
+  const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
   const { getItemStyle, triggerStagger } = useStaggerAnimation(conversations.length);
 
   // Fetch conversations
@@ -65,7 +74,9 @@ const ChatListScreen = ({ navigation }) => {
       else setLoading(true);
 
       const response = await getConversations();
-      setConversations(response.data || []);
+      const fetchedConversations = response.data || [];
+      setConversations(fetchedConversations);
+      triggerStagger(fetchedConversations.length);
     } catch (error) {
       console.error('Failed to fetch conversations:', error);
     } finally {
@@ -105,12 +116,13 @@ const ChatListScreen = ({ navigation }) => {
     try {
       setCreatingChat(true);
       haptics.medium();
-      const response = await createConversation(doctor._id);
+      const docId = doctor.id || doctor._id;
+      const response = await createConversation(docId);
       setSheetVisible(false);
       navigation.navigate('ChatConversation', {
         conversationId: response.data._id,
         doctorName: doctor.name,
-        doctorId: doctor._id,
+        doctorId: docId,
       });
       // Refresh list when returning
       fetchConversations();
@@ -135,6 +147,14 @@ const ChatListScreen = ({ navigation }) => {
     return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
   };
 
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+      </View>
+    );
+  }
+
   const renderConversationCard = (conversation, index) => {
     const animStyle = getItemStyle(index);
 
@@ -143,76 +163,75 @@ const ChatListScreen = ({ navigation }) => {
 
     return (
       <Animated.View key={conversation._id} style={animStyle}>
-        <GlassCard
+        <PressableButton
           onPress={() => handleConversationTap(conversation)}
-          style={styles.conversationCard}
         >
-          <View style={styles.cardContent}>
-            {/* Avatar */}
-            <View style={styles.avatarContainer}>
-              <Avatar name={doctorName} size={50} />
-              {unread > 0 && (
-                <View style={[styles.unreadBadge, { backgroundColor: theme.primary }]}>
-                  <Text style={styles.unreadText}>
-                    {unread > 99 ? '99+' : unread}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Content */}
-            <View style={styles.cardBody}>
-              <View style={styles.cardHeader}>
-                <Text
-                  style={[
-                    styles.doctorName,
-                    { color: theme.text },
-                    unread > 0 && styles.doctorNameUnread,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {doctorName}
-                </Text>
-                <Text style={[styles.timeText, { color: theme.textSecondary }]}>
-                  {formatRelativeTime(conversation.lastMessageAt)}
-                </Text>
+          <View style={styles.conversationCard}>
+            <View style={styles.cardContent}>
+              {/* Avatar */}
+              <View style={styles.avatarContainer}>
+                <Avatar name={doctorName} size={50} />
+                {unread > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadText}>
+                      {unread > 99 ? '99+' : unread}
+                    </Text>
+                  </View>
+                )}
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text
-                  style={[
-                    styles.previewText,
-                    { color: theme.textSecondary },
-                    unread > 0 && { color: theme.text },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {truncatePreview(conversation.lastMessagePreview)}
-                </Text>
-                <StatusBadge status={conversation.status} />
+              {/* Content */}
+              <View style={styles.cardBody}>
+                <View style={styles.cardHeader}>
+                  <Text
+                    style={[
+                      styles.doctorName,
+                      unread > 0 && styles.doctorNameUnread,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {doctorName}
+                  </Text>
+                  <Text style={[styles.timeText, unread > 0 && styles.timeTextUnread]}>
+                    {formatRelativeTime(conversation.lastMessageAt)}
+                  </Text>
+                </View>
+
+                <View style={styles.cardFooter}>
+                  <Text
+                    style={[
+                      styles.previewText,
+                      unread > 0 && styles.previewTextUnread,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {truncatePreview(conversation.lastMessagePreview)}
+                  </Text>
+                  <StatusBadge status={conversation.status} />
+                </View>
               </View>
             </View>
           </View>
-        </GlassCard>
+        </PressableButton>
       </Animated.View>
     );
   };
 
   const renderDoctorItem = (doctor) => (
     <PressableButton
-      key={doctor._id}
+      key={doctor.id || doctor._id}
       onPress={() => handleSelectDoctor(doctor)}
       disabled={creatingChat}
       style={styles.doctorItem}
     >
       <View style={styles.doctorItemContent}>
-        <Avatar name={doctor.name} size={42} />
+        <Avatar name={doctor.name} size={48} />
         <View style={styles.doctorItemInfo}>
-          <Text style={[styles.doctorItemName, { color: theme.text }]}>
+          <Text style={styles.doctorItemName}>
             {doctor.name}
           </Text>
           {doctor.email && (
-            <Text style={[styles.doctorItemEmail, { color: theme.textSecondary }]}>
+            <Text style={styles.doctorItemEmail}>
               {doctor.email}
             </Text>
           )}
@@ -220,7 +239,7 @@ const ChatListScreen = ({ navigation }) => {
         <Ionicons
           name="chevron-forward"
           size={20}
-          color={theme.textSecondary}
+          color={TEXT_SECONDARY}
         />
       </View>
     </PressableButton>
@@ -228,15 +247,14 @@ const ChatListScreen = ({ navigation }) => {
 
   return (
     <Animated.View style={[styles.container, screenStyle]}>
-      <LinearGradient
-        colors={theme.gradient || [theme.bg, theme.bg]}
-        style={styles.gradient}
-      >
-        <ScreenHeader
-          title="Messages"
-          rightIcon="create-outline"
-          onRightPress={handleNewChat}
-        />
+      <View style={styles.gradient}>
+        <View style={styles.headerWrapper}>
+          <ScreenHeader
+            title="Messages"
+            rightIcon="create-outline"
+            onRightPress={handleNewChat}
+          />
+        </View>
 
         {loading ? (
           <SkeletonList count={6} style={styles.skeletonContainer} />
@@ -257,8 +275,8 @@ const ChatListScreen = ({ navigation }) => {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
-                tintColor={theme.primary}
-                colors={[theme.primary]}
+                tintColor={PRIMARY_COLOR}
+                colors={[PRIMARY_COLOR]}
               />
             }
           >
@@ -275,14 +293,14 @@ const ChatListScreen = ({ navigation }) => {
           title="Start New Conversation"
         >
           <View style={styles.sheetContent}>
-            <Text style={[styles.sheetSubtitle, { color: theme.textSecondary }]}>
+            <Text style={styles.sheetSubtitle}>
               Select a doctor to start chatting
             </Text>
 
             {doctorsLoading ? (
               <SkeletonList count={4} />
             ) : doctors.length === 0 ? (
-              <Text style={[styles.noDoctorsText, { color: theme.textSecondary }]}>
+              <Text style={styles.noDoctorsText}>
                 No doctors available
               </Text>
             ) : (
@@ -295,7 +313,14 @@ const ChatListScreen = ({ navigation }) => {
             )}
           </View>
         </BottomSheet>
-      </LinearGradient>
+      </View>
+
+      <FAB
+        icon="add"
+        onPress={handleNewChat}
+        style={styles.fab}
+        color={PRIMARY_COLOR}
+      />
     </Animated.View>
   );
 };
@@ -303,49 +328,63 @@ const ChatListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: BG_COLOR,
   },
   gradient: {
     flex: 1,
+  },
+  headerWrapper: {
+    paddingHorizontal: 20,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 100,
     paddingTop: 8,
   },
   skeletonContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 8,
   },
   conversationCard: {
-    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    marginBottom: 16,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
   },
   cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
+    padding: 16,
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 14,
+    marginRight: 16,
   },
   unreadBadge: {
     position: 'absolute',
     top: -4,
     right: -4,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FF6B6B',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 5,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   unreadText: {
     color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontFamily: 'Urbanist_700Bold',
   },
   cardBody: {
     flex: 1,
@@ -354,20 +393,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   doctorName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: PRIMARY_COLOR,
     flex: 1,
     marginRight: 8,
   },
   doctorNameUnread: {
-    fontWeight: '700',
+    fontFamily: 'Urbanist_700Bold',
   },
   timeText: {
     fontSize: 12,
-    fontWeight: '400',
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+  },
+  timeTextUnread: {
+    color: PRIMARY_COLOR,
+    fontFamily: 'Urbanist_700Bold',
   },
   cardFooter: {
     flexDirection: 'row',
@@ -376,48 +421,72 @@ const styles = StyleSheet.create({
   },
   previewText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
     flex: 1,
     marginRight: 8,
   },
+  previewTextUnread: {
+    color: PRIMARY_COLOR,
+    fontFamily: 'Urbanist_700Bold',
+  },
   // Bottom Sheet
   sheetContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 110,
   },
   sheetSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
+    fontSize: 15,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+    marginBottom: 20,
   },
   doctorsList: {
-    maxHeight: 350,
+    flex: 1,
   },
   doctorItem: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   doctorItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
   doctorItemInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
   },
   doctorItemName: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontFamily: 'Urbanist_700Bold',
+    color: PRIMARY_COLOR,
   },
   doctorItemEmail: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 14,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+    marginTop: 4,
   },
   noDoctorsText: {
-    fontSize: 14,
+    fontSize: 15,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
     textAlign: 'center',
     paddingVertical: 24,
+  },
+  fab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 130,
   },
 });
 

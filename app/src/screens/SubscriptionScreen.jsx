@@ -9,6 +9,7 @@ import {
   PressableButton,
   EmptyState,
   SkeletonList,
+  PageLoader,
 } from '../components/ui';
 import { useScreenAnimation } from '../hooks/useAnimations';
 import { getPlans } from '../api/config';
@@ -174,7 +175,7 @@ const SubscriptionScreen = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
-          <SkeletonList count={3} />
+          <PageLoader />
         ) : error ? (
           <EmptyState
             icon="card-outline"

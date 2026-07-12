@@ -2,6 +2,7 @@ const Patient = require('../models/Patient');
 const User = require('../models/User');
 const DoctorPatient = require('../models/DoctorPatient');
 const Appointment = require('../models/Appointment');
+const DoctorProfile = require('../models/DoctorProfile');
 const paginate = require('../utils/pagination');
 const auditService = require('./auditService');
 const { NotFoundError, ConflictError } = require('../utils/apiError');
@@ -121,8 +122,18 @@ const getMyStats = async (userId, scope = {}) => {
     Appointment.countDocuments({ patientId: patient._id, status: APPOINTMENT_STATUS.COMPLETED }),
     Appointment.countDocuments({ patientId: patient._id, status: APPOINTMENT_STATUS.CANCELLED }),
     Appointment.find({ patientId: patient._id, status: APPOINTMENT_STATUS.SCHEDULED, dateTime: { $gte: new Date() } })
-      .sort({ dateTime: 1 }).limit(5).populate('doctorId', 'name email').lean(),
+      .sort({ dateTime: 1 }).limit(5).populate('doctorId', 'name email avatar').lean(),
   ]);
+
+  if (upcoming.length > 0) {
+    const doctorIds = upcoming.map((apt) => apt.doctorId?._id).filter(Boolean);
+    const profiles = await DoctorProfile.find({ userId: { $in: doctorIds } }).select('userId specialization').lean();
+    const specialtyByDoctorId = {};
+    profiles.forEach((p) => { specialtyByDoctorId[p.userId.toString()] = p.specialization; });
+    upcoming.forEach((apt) => {
+      if (apt.doctorId) apt.doctorId.specialty = specialtyByDoctorId[apt.doctorId._id.toString()] || '';
+    });
+  }
 
   return { hasProfile: true, profile: patient, upcomingCount, completedCount, cancelledCount, upcomingAppointments: upcoming };
 };

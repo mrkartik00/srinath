@@ -327,7 +327,7 @@ const RemindersScreen = ({ navigation }) => {
       colors={theme.gradient}
       style={styles.container}
     >
-      <Animated.View style={[styles.content, screenAnimation]}>
+      <Animated.View style={[styles.content, { opacity: screenAnimation.fadeAnim, transform: [{ translateY: screenAnimation.slideAnim }] }]}>
         <ScreenHeader
           title="Reminders"
           subtitle="Today's schedule"

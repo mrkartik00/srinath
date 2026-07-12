@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import PressableButton from './PressableButton';
 
 /**
  * SegmentedControl — iOS-style segmented picker.
@@ -19,17 +18,23 @@ export default function SegmentedControl({ segments = [], activeIndex = 0, onCha
       {segments.map((label, i) => {
         const active = i === activeIndex;
         return (
-          <PressableButton
+          <TouchableOpacity
             key={label}
             onPress={() => onChange?.(i)}
-            hapticType="selection"
-            style={[styles.segment, active && [styles.activeSegment, { backgroundColor: theme.card }]]}
-            scaleTo={0.97}
+            activeOpacity={0.9}
+            style={[
+              styles.segment,
+              active && [styles.activeSegment, { backgroundColor: theme.card }]
+            ]}
           >
-            <Text style={[styles.label, { color: active ? theme.primary : theme.textMuted }, active && styles.activeLabel]}>
+            <Text style={[
+              styles.label,
+              { color: active ? theme.primary : theme.textMuted },
+              active && styles.activeLabel
+            ]}>
               {label}
             </Text>
-          </PressableButton>
+          </TouchableOpacity>
         );
       })}
     </View>
@@ -57,6 +62,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  label: { fontSize: 14, fontWeight: '500' },
-  activeLabel: { fontWeight: '600' },
+  label: { fontSize: 14, fontFamily: 'Urbanist_600SemiBold' },
+  activeLabel: { fontFamily: 'Urbanist_700Bold' },
 });

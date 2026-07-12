@@ -7,7 +7,6 @@
 export { default as GlassCard } from './GlassCard';
 export { default as PressableButton } from './PressableButton';
 export { default as FloatingGlassNav } from './FloatingGlassNav';
-export { default as DrawerMenu } from './DrawerMenu';
 export { default as ScreenHeader } from './ScreenHeader';
 export { default as SectionHeader } from './SectionHeader';
 export { default as StatusBadge } from './StatusBadge';
@@ -19,3 +18,5 @@ export { default as Avatar } from './Avatar';
 export { default as BottomSheet } from './BottomSheet';
 export { default as Chip } from './Chip';
 export { default as FAB } from './FAB';
+export { default as PageLoader } from './PageLoader';
+export { default as Logo } from './Logo';

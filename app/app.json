@@ -71,7 +71,8 @@
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for video consultations"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/withAndroidColors"
     ],
     "experiments": {},
     "extra": {

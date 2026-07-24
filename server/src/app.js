@@ -7,8 +7,6 @@ const { defaultLimiter } = require('./middleware/rateLimiter');
 const errorHandler = require('./middleware/errorHandler');
 const routes = require('./routes');
 
-const path = require('path');
-
 // Register event listeners
 require('./events/listeners/notificationEvents');
 require('./events/listeners/appointmentEvents');
@@ -20,9 +18,7 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Security headers
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" }
-}));
+app.use(helmet());
 
 // CORS
 app.use(
@@ -41,9 +37,6 @@ app.use(requestLogger);
 
 // Rate limiting
 app.use('/api', defaultLimiter);
-
-// Serve local static upload files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/v1', routes);

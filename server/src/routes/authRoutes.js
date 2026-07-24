@@ -47,6 +47,9 @@ const avatarUpload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+router.post('/avatar', protect, avatarUpload.single('avatar'), asyncHandler(async (req, res) => {
+  if (!req.file) return apiResponse.error(res, 'No image uploaded', 400);
+
   // 1. Process background removal (extract subject, make background transparent)
   let processedBuffer;
   try {

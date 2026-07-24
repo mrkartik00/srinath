@@ -56,7 +56,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.DROPLET_HOST }}
-          port: ${{ secrets.DROPLET_SSH_PORT || 22 }}
+          port: 20011
           username: ${{ env.USERNAME }}
           key: ${{ secrets.DROPLET_SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}

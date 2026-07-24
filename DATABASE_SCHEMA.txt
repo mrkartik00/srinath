@@ -189,7 +189,7 @@ SUPER ADMIN ──manages──► DOCTORS ◄──M:N──► PATIENTS
 │ Doctor       │ 5174 │ doctor       │ Primary (own patients/appts/rx/chat)    │
 │ Patient      │ 5173 │ patient      │ Primary (own data, all assigned doctors)│
 │ Mobile App   │ Expo │ patient      │ Same as Patient portal                  │
-│ Server API   │ 5001 │ —            │ Shared backend serving all portals      │
+│ Server API   │ 4000 │ —            │ Shared backend serving all portals      │
 └──────────────┴──────┴──────────────┴─────────────────────────────────────────┘
 
 

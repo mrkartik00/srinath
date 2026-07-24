@@ -187,19 +187,11 @@ function ParticipantTile({ participantId, isLocal = false, label, large = false 
 
   const name = label || displayName || 'Participant';
 
-  // Build a MediaStream URL for RTCView from the participant's webcam track.
-  let streamURL = null;
-  if (webcamOn && webcamStream) {
-    const mediaStream = new MediaStream();
-    mediaStream.addTrack(webcamStream.track);
-    streamURL = mediaStream.toURL();
-  }
-
   return (
     <View style={[styles.tile, large && styles.tileLarge]}>
-      {streamURL ? (
+      {webcamOn && webcamStream ? (
         <RTCView
-          streamURL={streamURL}
+          streamURL={new MediaStream([webcamStream.track]).toURL()}
           objectFit="cover"
           style={styles.rtcView}
           mirror={isLocal}

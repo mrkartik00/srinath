@@ -477,10 +477,10 @@ export default function AppointmentDetail() {
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {apt.status === 'scheduled' ? (
+                  {(apt.status === 'scheduled' || apt.status === 'in_progress') ? (
                     <>
                       {/* Join Video Call button for virtual appointments */}
-                      {(apt.type === 'virtual' || apt.type === 'VIRTUAL') && (apt.status === 'scheduled' || apt.status === 'in_progress') && (
+                      {(apt.type === 'virtual' || apt.type === 'VIRTUAL') && (
                         <button
                           onClick={handleJoinVideoCall}
                           disabled={joiningCall}
@@ -501,51 +501,55 @@ export default function AppointmentDetail() {
                             opacity: joiningCall ? 0.7 : 1,
                           }}
                         >
-                          {joiningCall ? '⏳ Connecting...' : '📹 Join Video Call'}
+                          {joiningCall ? '⏳ Connecting...' : apt.status === 'in_progress' ? '📹 Join Video Call (Live)' : '📹 Join Video Call'}
                         </button>
                       )}
 
-                      <Link
-                        to="/book-appointment"
-                        style={{
-                          display: 'block',
-                          textAlign: 'center',
-                          background: '#253a5a',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '14px 24px',
-                          borderRadius: '50px',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          textDecoration: 'none',
-                          boxShadow: '0 4px 12px rgba(37,58,90,0.15)',
-                          transition: 'all 0.3s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#1c304d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = '#253a5a'; e.currentTarget.style.transform = 'none'; }}
-                      >
-                        Reschedule Appointment
-                      </Link>
+                      {apt.status === 'scheduled' && (
+                        <Link
+                          to="/book-appointment"
+                          style={{
+                            display: 'block',
+                            textAlign: 'center',
+                            background: '#253a5a',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '14px 24px',
+                            borderRadius: '50px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            textDecoration: 'none',
+                            boxShadow: '0 4px 12px rgba(37,58,90,0.15)',
+                            transition: 'all 0.3s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#1c304d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = '#253a5a'; e.currentTarget.style.transform = 'none'; }}
+                        >
+                          Reschedule Appointment
+                        </Link>
+                      )}
 
-                      <button
-                        onClick={handleCancel}
-                        style={{
-                          background: 'transparent',
-                          color: '#C62828',
-                          border: '1.5px solid rgba(198,40,40,0.3)',
-                          padding: '13px 24px',
-                          borderRadius: '50px',
-                          fontSize: '14px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.3s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#C62828'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#C62828'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C62828'; e.currentTarget.style.borderColor = 'rgba(198,40,40,0.3)'; }}
-                      >
-                        Cancel Appointment
-                      </button>
+                      {apt.status === 'scheduled' && (
+                        <button
+                          onClick={handleCancel}
+                          style={{
+                            background: 'transparent',
+                            color: '#C62828',
+                            border: '1.5px solid rgba(198,40,40,0.3)',
+                            padding: '13px 24px',
+                            borderRadius: '50px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.3s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = '#C62828'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#C62828'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C62828'; e.currentTarget.style.borderColor = 'rgba(198,40,40,0.3)'; }}
+                        >
+                          Cancel Appointment
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
@@ -579,7 +583,7 @@ export default function AppointmentDetail() {
                         fontWeight: 500,
                         marginTop: '8px'
                       }}>
-                        This consultation is already {apt.status}.
+                        This consultation is already {apt.status?.replace('_', ' ')}.
                       </div>
                     </>
                   )}

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
-import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '../context/ThemeContext';
 import {
   ScreenHeader,
@@ -88,19 +87,14 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
       haptics.medium();
       const response = await joinVideoCall(id);
       const { token, roomId } = response.data;
-      // Open the video call in the in-app browser using the web client
-      // The web VideoRoom handles WebRTC via VideoSDK
-      const clientUrl = 'https://janki.care';
       const patientName = appointment?.patientId?.userId?.name || 'Patient';
-      // Use the guest join page which works great in mobile browsers
-      const videoUrl = `${clientUrl}/join/mobile-auth?token=${encodeURIComponent(token)}&roomId=${encodeURIComponent(roomId)}&name=${encodeURIComponent(patientName)}`;
-      await WebBrowser.openBrowserAsync(videoUrl, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-        toolbarColor: '#0f172a',
-        controlsColor: '#ffffff',
+      // Navigate to the native in-app video call screen
+      navigation.navigate('VideoCall', {
+        token,
+        roomId,
+        participantName: patientName,
+        appointmentId: id,
       });
-      // Refresh appointment after returning from browser
-      fetchAppointment();
     } catch (error) {
       const msg = typeof error === 'string' ? error : error?.message || 'Unable to join video call';
       Alert.alert('Video Call', msg);

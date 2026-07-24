@@ -1,0 +1,426 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  StatusBar,
+  SafeAreaView,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  MeetingProvider,
+  useMeeting,
+  useParticipant,
+  RTCView,
+  MediaStream,
+} from '@videosdk.live/react-native-sdk';
+import haptics from '../utils/haptics';
+
+/**
+ * VideoCallScreen — native in-app video consultation (patient side).
+ * Route params: { token, roomId, participantName, appointmentId }
+ *
+ * Uses @videosdk.live/react-native-sdk (WebRTC). Requires a development
+ * build — does NOT run in Expo Go.
+ *
+ * Layout: full-screen remote (doctor) video + small local PIP + controls.
+ */
+export default function VideoCallScreen({ route, navigation }) {
+  const { token, roomId, participantName } = route.params || {};
+
+  if (!token || !roomId) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#f87171" />
+        <Text style={styles.errorText}>Missing video session credentials</Text>
+        <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.errorButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <MeetingProvider
+      config={{
+        meetingId: roomId,
+        micEnabled: true,
+        webcamEnabled: true,
+        name: participantName || 'Patient',
+      }}
+      token={token}
+    >
+      <MeetingView onLeave={() => navigation.goBack()} participantName={participantName} />
+    </MeetingProvider>
+  );
+}
+
+function MeetingView({ onLeave, participantName }) {
+  const [joined, setJoined] = useState(false);
+  const [error, setError] = useState(null);
+
+  const {
+    join,
+    leave,
+    toggleMic,
+    toggleWebcam,
+    participants,
+    localParticipant,
+    localMicOn,
+    localWebcamOn,
+  } = useMeeting({
+    onMeetingJoined: () => setJoined(true),
+    onMeetingLeft: () => onLeave?.(),
+    onError: (err) => {
+      setError(err?.message || err?.code || 'Video connection error');
+    },
+  });
+
+  useEffect(() => {
+    join();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Remote participants (the doctor)
+  const participantIds = [...participants.keys()];
+  const remoteId = participantIds.find((id) => id !== localParticipant?.id) || null;
+
+  const handleLeave = () => {
+    haptics.medium();
+    leave();
+    onLeave?.();
+  };
+
+  const handleToggleMic = () => {
+    haptics.light();
+    toggleMic();
+  };
+
+  const handleToggleCam = () => {
+    haptics.light();
+    toggleWebcam();
+  };
+
+  if (!joined) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" />
+        <ActivityIndicator size="large" color="#22c55e" />
+        <Text style={styles.loadingText}>Connecting to your doctor…</Text>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
+      {error && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>⚠️ {error}</Text>
+        </View>
+      )}
+
+      {/* Remote (doctor) video — full screen */}
+      <View style={styles.remoteContainer}>
+        {remoteId ? (
+          <ParticipantTile participantId={remoteId} large label="Doctor" />
+        ) : (
+          <View style={styles.waitingContainer}>
+            <View style={styles.pulseCircle}>
+              <Ionicons name="medical" size={32} color="#22c55e" />
+            </View>
+            <Text style={styles.waitingTitle}>Connecting to doctor…</Text>
+            <Text style={styles.waitingSubtitle}>
+              Please wait, the doctor will join shortly
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Local (self) video — PIP */}
+      {localParticipant && (
+        <View style={styles.localPip}>
+          <ParticipantTile
+            participantId={localParticipant.id}
+            isLocal
+            label={participantName || 'You'}
+          />
+        </View>
+      )}
+
+      {/* Controls */}
+      <SafeAreaView style={styles.controlsContainer}>
+        <View style={styles.controlsBar}>
+          <TouchableOpacity
+            style={[styles.controlButton, !localMicOn && styles.controlButtonOff]}
+            onPress={handleToggleMic}
+          >
+            <Ionicons name={localMicOn ? 'mic' : 'mic-off'} size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.controlButton, !localWebcamOn && styles.controlButtonOff]}
+            onPress={handleToggleCam}
+          >
+            <Ionicons name={localWebcamOn ? 'videocam' : 'videocam-off'} size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.leaveButton} onPress={handleLeave}>
+            <Ionicons
+              name="call"
+              size={24}
+              color="#fff"
+              style={{ transform: [{ rotate: '135deg' }] }}
+            />
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+function ParticipantTile({ participantId, isLocal = false, label, large = false }) {
+  const { webcamStream, webcamOn, micOn, displayName } = useParticipant(participantId);
+
+  const name = label || displayName || 'Participant';
+
+  // Build a MediaStream URL for RTCView from the participant's webcam track.
+  let streamURL = null;
+  if (webcamOn && webcamStream) {
+    const mediaStream = new MediaStream();
+    mediaStream.addTrack(webcamStream.track);
+    streamURL = mediaStream.toURL();
+  }
+
+  return (
+    <View style={[styles.tile, large && styles.tileLarge]}>
+      {streamURL ? (
+        <RTCView
+          streamURL={streamURL}
+          objectFit="cover"
+          style={styles.rtcView}
+          mirror={isLocal}
+        />
+      ) : (
+        <View style={styles.avatarContainer}>
+          <View style={[styles.avatar, large && styles.avatarLarge]}>
+            <Text style={[styles.avatarText, large && styles.avatarTextLarge]}>
+              {getInitials(name)}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Name overlay */}
+      <View style={styles.nameOverlay}>
+        {!micOn && <Ionicons name="mic-off" size={12} color="#fff" />}
+        <Text style={styles.nameText}>{isLocal ? 'You' : name}</Text>
+      </View>
+    </View>
+  );
+}
+
+function getInitials(name) {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: '#94a3b8',
+    fontSize: 15,
+    marginTop: 8,
+  },
+  errorContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+    padding: 24,
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  errorButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderRadius: 10,
+    marginTop: 8,
+  },
+  errorButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  errorBanner: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    backgroundColor: '#dc2626',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+  },
+  errorBannerText: {
+    color: '#fff',
+    fontSize: 13,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  remoteContainer: {
+    flex: 1,
+  },
+  waitingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    padding: 24,
+  },
+  pulseCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  waitingTitle: {
+    color: '#e2e8f0',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  waitingSubtitle: {
+    color: '#64748b',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  localPip: {
+    position: 'absolute',
+    top: 60,
+    right: 16,
+    width: 110,
+    height: 160,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)',
+    zIndex: 10,
+    backgroundColor: '#1e293b',
+  },
+  tile: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#1e293b',
+    position: 'relative',
+  },
+  tileLarge: {
+    flex: 1,
+  },
+  rtcView: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  avatarContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#22c55e',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarLarge: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  avatarTextLarge: {
+    fontSize: 36,
+  },
+  nameOverlay: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+  },
+  nameText: {
+    color: '#fff',
+    fontSize: 12,
+  },
+  controlsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  controlsBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 20,
+    paddingVertical: 20,
+    paddingBottom: 32,
+  },
+  controlButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#334155',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  controlButtonOff: {
+    backgroundColor: '#ef4444',
+  },
+  leaveButton: {
+    width: 64,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#dc2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

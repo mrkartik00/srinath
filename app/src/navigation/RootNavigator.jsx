@@ -20,6 +20,7 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
+import VideoCallScreen from '../screens/VideoCallScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -68,6 +69,11 @@ export default function RootNavigator() {
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen
+            name="VideoCall"
+            component={VideoCallScreen}
+            options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+          />
         </Stack.Navigator>
       ) : (
         <AuthStack />

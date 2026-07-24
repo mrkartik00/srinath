@@ -3,9 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { cancelAppointment } from '../api/endpoints/appointment';
 import { joinCall } from '../api/endpoints/video';
+import VideoRoom from '../components/video/VideoRoom';
 import api from '../api/axios';
 import { Spinner } from '../components/ui';
-import VideoRoom from '../components/video/VideoRoom';
 
 const STATUS_STYLES = {
   scheduled: { bg: '#253a5a', color: '#ffffff', label: 'Scheduled' },
@@ -22,7 +22,7 @@ export default function AppointmentDetail() {
   const [apt, setApt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [videoSession, setVideoSession] = useState(null); // { token, roomId }
-  const [joiningCall, setJoiningCall] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -40,6 +40,23 @@ export default function AppointmentDetail() {
     fetchAppointmentDetails();
   }, [id]);
 
+  const handleJoinCall = async () => {
+    setVideoLoading(true);
+    try {
+      const res = await joinCall(id);
+      setVideoSession({ token: res.data.token, roomId: res.data.roomId });
+    } catch (err) {
+      toast.error(err.message || 'Unable to join the video call');
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const handleCallEnd = () => {
+    setVideoSession(null);
+    fetchAppointmentDetails();
+  };
+
   const handleCancel = async () => {
     const reason = prompt('Enter cancellation reason:');
     if (!reason) return;
@@ -52,37 +69,6 @@ export default function AppointmentDetail() {
     }
   };
 
-  const handleJoinVideoCall = async () => {
-    setJoiningCall(true);
-    try {
-      const res = await joinCall(id);
-      const data = res.data?.data || res.data;
-      setVideoSession({ token: data.token, roomId: data.roomId });
-    } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Could not join video call';
-      toast.error(msg);
-    } finally {
-      setJoiningCall(false);
-    }
-  };
-
-  const handleCallEnd = () => {
-    setVideoSession(null);
-    fetchAppointmentDetails();
-  };
-
-  // If in active video call, show full-screen VideoRoom
-  if (videoSession) {
-    return (
-      <VideoRoom
-        token={videoSession.token}
-        roomId={videoSession.roomId}
-        participantName={apt?.patientId?.name || 'Patient'}
-        onCallEnd={handleCallEnd}
-      />
-    );
-  }
-
   if (loading) {
     return (
       <div style={{ background: '#8fbec8', minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
@@ -92,6 +78,19 @@ export default function AppointmentDetail() {
   }
 
   if (!apt) return null;
+
+  // Video call overlay takes over the full screen when active
+  if (videoSession) {
+    return (
+      <VideoRoom
+        token={videoSession.token}
+        roomId={videoSession.roomId}
+        participantName={apt.patientId?.userId?.name || 'Patient'}
+        onCallEnd={handleCallEnd}
+        onTokenExpired={handleJoinCall}
+      />
+    );
+  }
 
   const statusInfo = STATUS_STYLES[apt.status] || STATUS_STYLES.scheduled;
   const dateObj = new Date(apt.dateTime);
@@ -477,79 +476,81 @@ export default function AppointmentDetail() {
                 </h4>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {(apt.status === 'scheduled' || apt.status === 'in_progress') ? (
+                  {/* Join Video Call — shown when a virtual call is live */}
+                  {apt.type === 'virtual' && apt.video?.status === 'live' && (
+                    <button
+                      onClick={handleJoinCall}
+                      disabled={videoLoading}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        background: '#22c55e',
+                        color: '#ffffff',
+                        border: 'none',
+                        padding: '14px 24px',
+                        borderRadius: '50px',
+                        fontSize: '14px',
+                        fontWeight: 700,
+                        cursor: videoLoading ? 'wait' : 'pointer',
+                        boxShadow: '0 4px 12px rgba(34,197,94,0.25)',
+                        transition: 'all 0.3s',
+                      }}
+                      onMouseEnter={e => { if (!videoLoading) e.currentTarget.style.background = '#16a34a'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = '#22c55e'; }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7" />
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                      </svg>
+                      {videoLoading ? 'Connecting...' : 'Join Video Call'}
+                    </button>
+                  )}
+
+                  {apt.status === 'scheduled' ? (
                     <>
-                      {/* Join Video Call button for virtual appointments */}
-                      {(apt.type === 'virtual' || apt.type === 'VIRTUAL') && (
-                        <button
-                          onClick={handleJoinVideoCall}
-                          disabled={joiningCall}
-                          style={{
-                            display: 'block',
-                            textAlign: 'center',
-                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '14px 24px',
-                            borderRadius: '50px',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: joiningCall ? 'not-allowed' : 'pointer',
-                            textDecoration: 'none',
-                            boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
-                            transition: 'all 0.3s',
-                            opacity: joiningCall ? 0.7 : 1,
-                          }}
-                        >
-                          {joiningCall ? '⏳ Connecting...' : apt.status === 'in_progress' ? '📹 Join Video Call (Live)' : '📹 Join Video Call'}
-                        </button>
-                      )}
+                      <Link
+                        to="/book-appointment"
+                        style={{
+                          display: 'block',
+                          textAlign: 'center',
+                          background: '#253a5a',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '14px 24px',
+                          borderRadius: '50px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          boxShadow: '0 4px 12px rgba(37,58,90,0.15)',
+                          transition: 'all 0.3s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#1c304d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#253a5a'; e.currentTarget.style.transform = 'none'; }}
+                      >
+                        Reschedule Appointment
+                      </Link>
 
-                      {apt.status === 'scheduled' && (
-                        <Link
-                          to="/book-appointment"
-                          style={{
-                            display: 'block',
-                            textAlign: 'center',
-                            background: '#253a5a',
-                            color: '#ffffff',
-                            border: 'none',
-                            padding: '14px 24px',
-                            borderRadius: '50px',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            textDecoration: 'none',
-                            boxShadow: '0 4px 12px rgba(37,58,90,0.15)',
-                            transition: 'all 0.3s',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#1c304d'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = '#253a5a'; e.currentTarget.style.transform = 'none'; }}
-                        >
-                          Reschedule Appointment
-                        </Link>
-                      )}
-
-                      {apt.status === 'scheduled' && (
-                        <button
-                          onClick={handleCancel}
-                          style={{
-                            background: 'transparent',
-                            color: '#C62828',
-                            border: '1.5px solid rgba(198,40,40,0.3)',
-                            padding: '13px 24px',
-                            borderRadius: '50px',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            transition: 'all 0.3s',
-                          }}
-                          onMouseEnter={e => { e.currentTarget.style.background = '#C62828'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#C62828'; }}
-                          onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C62828'; e.currentTarget.style.borderColor = 'rgba(198,40,40,0.3)'; }}
-                        >
-                          Cancel Appointment
-                        </button>
-                      )}
+                      <button
+                        onClick={handleCancel}
+                        style={{
+                          background: 'transparent',
+                          color: '#C62828',
+                          border: '1.5px solid rgba(198,40,40,0.3)',
+                          padding: '13px 24px',
+                          borderRadius: '50px',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#C62828'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.borderColor = '#C62828'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#C62828'; e.currentTarget.style.borderColor = 'rgba(198,40,40,0.3)'; }}
+                      >
+                        Cancel Appointment
+                      </button>
                     </>
                   ) : (
                     <>
@@ -583,7 +584,7 @@ export default function AppointmentDetail() {
                         fontWeight: 500,
                         marginTop: '8px'
                       }}>
-                        This consultation is already {apt.status?.replace('_', ' ')}.
+                        This consultation is already {apt.status}.
                       </div>
                     </>
                   )}

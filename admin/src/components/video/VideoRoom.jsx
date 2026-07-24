@@ -1,12 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MeetingProvider, useMeeting } from '@videosdk.live/react-sdk';
 import VideoTile from './VideoTile';
 import VideoControls from './VideoControls';
 
-function MeetingView({ onCallEnd }) {
-  const { participants, localParticipant, join, leave } = useMeeting({
+function MeetingView({ onCallEnd, onExpired }) {
+  const [meetingError, setMeetingError] = useState(null);
+  const { participants, localParticipant, join, leave, meetingId } = useMeeting({
+    onMeetingJoined: () => {
+      // eslint-disable-next-line no-console
+      console.log('[VideoSDK] meeting joined:', meetingId);
+    },
     onMeetingLeft: () => {
       if (onCallEnd) onCallEnd();
+    },
+    onParticipantJoined: (p) => {
+      // eslint-disable-next-line no-console
+      console.log('[VideoSDK] participant joined:', p?.id);
+    },
+    onError: (err) => {
+      // eslint-disable-next-line no-console
+      console.error('[VideoSDK] error:', err);
+      // 4002 = token empty/invalid/expired → transparently refresh + rejoin.
+      if (err?.code === 4002 || err?.code === '4002') {
+        setMeetingError('Session expired — reconnecting…');
+        onExpired?.();
+      } else {
+        setMeetingError(err?.message || err?.code || 'Video connection error');
+      }
     },
   });
   const [joined, setJoined] = useState(false);
@@ -38,6 +58,15 @@ function MeetingView({ onCallEnd }) {
 
   return (
     <div style={styles.meetingContainer}>
+      {meetingError && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
+          background: '#dc2626', color: '#fff', padding: '10px 16px',
+          fontSize: 13, textAlign: 'center', fontWeight: 500,
+        }}>
+          ⚠️ Video error: {meetingError}
+        </div>
+      )}
       {/* Video Grid */}
       <div style={styles.grid}>
         {/* Local participant (doctor) */}
@@ -71,7 +100,9 @@ function MeetingView({ onCallEnd }) {
   );
 }
 
-export default function VideoRoom({ token, roomId, onCallEnd }) {
+export default function VideoRoom({ token, roomId, onCallEnd, onTokenExpired }) {
+  const refreshCount = useRef(0);
+
   if (!token || !roomId) {
     return (
       <div style={styles.overlay}>
@@ -85,9 +116,16 @@ export default function VideoRoom({ token, roomId, onCallEnd }) {
     );
   }
 
+  const handleExpired = async () => {
+    if (!onTokenExpired || refreshCount.current >= 3) return;
+    refreshCount.current += 1;
+    await onTokenExpired();
+  };
+
   return (
     <div style={styles.overlay}>
       <MeetingProvider
+        key={token}
         config={{
           meetingId: roomId,
           micEnabled: true,
@@ -97,7 +135,7 @@ export default function VideoRoom({ token, roomId, onCallEnd }) {
         }}
         token={token}
       >
-        <MeetingView onCallEnd={onCallEnd} />
+        <MeetingView onCallEnd={onCallEnd} onExpired={handleExpired} />
       </MeetingProvider>
     </div>
   );

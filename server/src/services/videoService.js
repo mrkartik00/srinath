@@ -65,13 +65,21 @@ const generateAuthToken = ({ roomId, participantId, role, ttlSeconds }) => {
   const permissions = role === 'host' ? PERMISSIONS.HOST : PERMISSIONS.GUEST;
   const ttl = Math.min(ttlSeconds || config.VIDEOSDK.tokenTtlSeconds, 7200);
 
+  // NOTE: We scope the token to `roomId` but deliberately omit both
+  // `participantId` and a `roles` field.
+  //   • `participantId`: VideoSDK requires the client to join with the exact
+  //     same id; our MeetingProvider configs don't set it.
+  //   • `roles: ['rtc']`: this RESTRICTS the token to the RTC/SFU layer and
+  //     causes the client SDK's internal `GET /v2/rooms/validate/:id` REST
+  //     call (made during join()) to fail with 401 ("use role `crawler`"),
+  //     so join() silently fails and each side sees only its local camera.
+  // A plain token (apikey + permissions + version + roomId) validates AND
+  // joins correctly — verified against the live VideoSDK API.
   const payload = {
     apikey: config.VIDEOSDK.apiKey,
     permissions,
     version: 2,
     roomId,
-    participantId,
-    roles: ['rtc'],
   };
 
   return jwt.sign(payload, config.VIDEOSDK.secret, {

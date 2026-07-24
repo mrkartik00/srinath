@@ -1,18 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MeetingProvider, useMeeting } from '@videosdk.live/react-sdk';
 import VideoTile from './VideoTile';
 import VideoControls from './VideoControls';
 
 /**
  * VideoRoom — patient-side video consultation room.
- * Props: { token, roomId, onCallEnd, participantName }
+ * Props: { token, roomId, onCallEnd, participantName, onTokenExpired }
  * Uses MeetingProvider from @videosdk.live/react-sdk.
  * Layout: large remote video + small local PIP, controls at bottom.
  * Responsive — works on mobile browsers.
+ *
+ * `onTokenExpired` (optional async) is invoked when the SDK reports an
+ * expired/invalid token (error 4002). The parent should re-fetch a fresh
+ * token; changing the `token` prop remounts the meeting via `key`.
  */
-export default function VideoRoom({ token, roomId, onCallEnd, participantName }) {
+export default function VideoRoom({ token, roomId, onCallEnd, participantName, onTokenExpired }) {
+  const refreshCount = useRef(0);
+
+  // Guard: never hand an empty meetingId/token to the SDK (would 4002/crash).
+  if (!token || !roomId) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 10000, background: '#0f172a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, color: '#f87171' }}>
+        <p style={{ fontSize: 16 }}>Missing video session credentials.</p>
+        <button onClick={onCallEnd} style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontSize: 14, cursor: 'pointer' }}>Close</button>
+      </div>
+    );
+  }
+
+  const handleExpired = async () => {
+    if (!onTokenExpired || refreshCount.current >= 3) return;
+    refreshCount.current += 1;
+    await onTokenExpired();
+  };
+
   return (
     <MeetingProvider
+      key={token}
       config={{
         meetingId: roomId,
         micEnabled: true,
@@ -22,15 +45,35 @@ export default function VideoRoom({ token, roomId, onCallEnd, participantName })
       }}
       token={token}
     >
-      <VideoRoomInner onCallEnd={onCallEnd} participantName={participantName} />
+      <VideoRoomInner onCallEnd={onCallEnd} participantName={participantName} onExpired={handleExpired} />
     </MeetingProvider>
   );
 }
 
-function VideoRoomInner({ onCallEnd, participantName }) {
+function VideoRoomInner({ onCallEnd, participantName, onExpired }) {
+  const [meetingError, setMeetingError] = useState(null);
   const { join, participants, localParticipant, meetingId } = useMeeting({
+    onMeetingJoined: () => {
+      // eslint-disable-next-line no-console
+      console.log('[VideoSDK] meeting joined:', meetingId);
+    },
     onMeetingLeft: () => {
       onCallEnd?.();
+    },
+    onParticipantJoined: (p) => {
+      // eslint-disable-next-line no-console
+      console.log('[VideoSDK] participant joined:', p?.id);
+    },
+    onError: (err) => {
+      // eslint-disable-next-line no-console
+      console.error('[VideoSDK] error:', err);
+      // 4002 = token empty/invalid/expired → transparently refresh + rejoin.
+      if (err?.code === 4002 || err?.code === '4002') {
+        setMeetingError('Session expired — reconnecting…');
+        onExpired?.();
+      } else {
+        setMeetingError(err?.message || err?.code || 'Video connection error');
+      }
     },
   });
   const [joined, setJoined] = useState(false);
@@ -138,6 +181,16 @@ function VideoRoomInner({ onCallEnd, participantName }) {
           50% { transform: scale(1.2); opacity: 0.4; }
         }
       `}</style>
+
+      {meetingError && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
+          background: '#dc2626', color: '#fff', padding: '10px 16px',
+          fontSize: 13, textAlign: 'center', fontWeight: 500,
+        }}>
+          ⚠️ Video error: {meetingError}
+        </div>
+      )}
 
       {/* Video Area */}
       <div style={videoAreaStyle}>

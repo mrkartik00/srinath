@@ -1,68 +1,22 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useParticipant } from '@videosdk.live/react-sdk';
+import { useMemo } from 'react';
+import { useParticipant, VideoPlayer, AudioPlayer } from '@videosdk.live/react-sdk';
 
 /**
  * VideoTile — renders a single participant's video/audio stream.
- * Shows avatar when camera is off, name overlay, and handles screen share.
+ * Uses the SDK's VideoPlayer (video/screen-share) and AudioPlayer (mic) which
+ * automatically consume and render the participant's streams. Shows an avatar
+ * when the camera is off and a name overlay.
  */
 export default function VideoTile({ participantId, isLocal = false, label, large = false }) {
   const {
-    webcamStream,
-    micStream,
     webcamOn,
     micOn,
     isLocal: isLocalParticipant,
     displayName,
-    screenShareStream,
     screenShareOn,
   } = useParticipant(participantId);
 
-  const videoRef = useRef(null);
-  const audioRef = useRef(null);
-  const screenShareRef = useRef(null);
-
-  // Attach webcam stream
-  useEffect(() => {
-    if (videoRef.current) {
-      if (webcamOn && webcamStream) {
-        const mediaStream = new MediaStream();
-        mediaStream.addTrack(webcamStream.track);
-        videoRef.current.srcObject = mediaStream;
-        videoRef.current.play().catch(() => {});
-      } else {
-        videoRef.current.srcObject = null;
-      }
-    }
-  }, [webcamStream, webcamOn]);
-
-  // Attach audio stream (only for remote participants)
-  useEffect(() => {
-    if (audioRef.current && !isLocal) {
-      if (micOn && micStream) {
-        const mediaStream = new MediaStream();
-        mediaStream.addTrack(micStream.track);
-        audioRef.current.srcObject = mediaStream;
-        audioRef.current.play().catch(() => {});
-      } else {
-        audioRef.current.srcObject = null;
-      }
-    }
-  }, [micStream, micOn, isLocal]);
-
-  // Attach screen share stream
-  useEffect(() => {
-    if (screenShareRef.current) {
-      if (screenShareOn && screenShareStream) {
-        const mediaStream = new MediaStream();
-        mediaStream.addTrack(screenShareStream.track);
-        screenShareRef.current.srcObject = mediaStream;
-        screenShareRef.current.play().catch(() => {});
-      } else {
-        screenShareRef.current.srcObject = null;
-      }
-    }
-  }, [screenShareStream, screenShareOn]);
-
+  const local = isLocal || isLocalParticipant;
   const name = label || displayName || 'Participant';
   const initials = useMemo(() => {
     return name
@@ -86,7 +40,7 @@ export default function VideoTile({ participantId, isLocal = false, label, large
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    transform: isLocal ? 'scaleX(-1)' : 'none',
+    transform: local ? 'scaleX(-1)' : 'none',
   };
 
   const avatarStyle = {
@@ -123,33 +77,41 @@ export default function VideoTile({ participantId, isLocal = false, label, large
     display: 'flex',
     alignItems: 'center',
     gap: 6,
+    zIndex: 5,
   };
+
+  const fill = { width: '100%', height: '100%' };
 
   return (
     <div style={containerStyle}>
-      {/* Screen share takes priority */}
-      {screenShareOn && screenShareStream ? (
-        <video
-          ref={screenShareRef}
-          autoPlay
-          playsInline
-          style={{ ...videoStyle, transform: 'none', objectFit: 'contain', background: '#000' }}
+      {/* Screen share takes priority, then webcam, then avatar */}
+      {screenShareOn ? (
+        <VideoPlayer
+          participantId={participantId}
+          type="share"
+          containerStyle={fill}
+          videoStyle={{ ...fill, objectFit: 'contain', background: '#000' }}
         />
-      ) : webcamOn && webcamStream ? (
-        <video ref={videoRef} autoPlay playsInline muted={isLocal} style={videoStyle} />
+      ) : webcamOn ? (
+        <VideoPlayer
+          participantId={participantId}
+          type="video"
+          containerStyle={fill}
+          videoStyle={videoStyle}
+        />
       ) : (
         <div style={avatarStyle}>
           <div style={initialsStyle}>{initials}</div>
         </div>
       )}
 
-      {/* Audio element for remote participants */}
-      {!isLocal && <audio ref={audioRef} autoPlay playsInline />}
+      {/* Audio for remote participants only (never local — avoids echo) */}
+      {!local && <AudioPlayer participantId={participantId} type="audio" />}
 
       {/* Name overlay */}
       <div style={nameOverlayStyle}>
         {!micOn && <span style={{ fontSize: 10 }}>🔇</span>}
-        <span>{isLocal ? 'You' : name}</span>
+        <span>{local ? 'You' : name}</span>
       </div>
     </div>
   );

@@ -62,12 +62,27 @@ export default function VideoJoinPage() {
 
   // Active video call
   if (session) {
+    const refreshSession = async () => {
+      try {
+        const response = await guestJoin(roomCode, session.participantName || name.trim() || 'Patient');
+        const data = response.data || response;
+        setSession({
+          token: data.token,
+          roomId: data.roomId,
+          participantName: data.participantName || session.participantName,
+        });
+      } catch {
+        // If refresh fails, drop back to the join form.
+        setSession(null);
+      }
+    };
     return (
       <VideoRoom
         token={session.token}
         roomId={session.roomId}
         participantName={session.participantName}
         onCallEnd={handleCallEnd}
+        onTokenExpired={refreshSession}
       />
     );
   }

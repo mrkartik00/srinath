@@ -36,6 +36,7 @@ import PaymentsPage from '../pages/Payments';
 import VIPPage from '../pages/VIP';
 import HealthFeedPage from '../pages/HealthFeed';
 import VideoJoinPage from '../pages/VideoJoin';
+import VideoRoomDirect from '../pages/VideoRoomDirect';
 
 export default function AppRouter() {
   return (
@@ -82,6 +83,7 @@ export default function AppRouter() {
 
           {/* ─── Public Video Join (no auth required) ─── */}
           <Route path="/join/:roomCode" element={<VideoJoinPage />} />
+          <Route path="/video-room" element={<VideoRoomDirect />} />
 
           {/* ─── Catch-all ─── */}
           <Route path="*" element={<Navigate to="/" replace />} />

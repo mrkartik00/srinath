@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
+import * as WebBrowser from 'expo-web-browser';
 import { useTheme } from '../context/ThemeContext';
 import {
   ScreenHeader,
@@ -12,6 +13,7 @@ import {
 } from '../components/ui';
 import { useScreenAnimation } from '../hooks/useAnimations';
 import { getAppointmentById, cancelAppointment } from '../api/appointments';
+import { joinVideoCall } from '../api/video';
 import haptics from '../utils/haptics';
 
 const BG_COLOR = '#F5F7FA';
@@ -28,12 +30,26 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelSheet, setShowCancelSheet] = useState(false);
+  const [joiningCall, setJoiningCall] = useState(false);
 
   const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
 
   useEffect(() => {
     fetchAppointment();
   }, [id]);
+
+  // Auto-refresh every 5s when waiting for doctor to start the video call
+  useEffect(() => {
+    if (!appointment) return;
+    const isWaiting = appointment.type === 'virtual' && 
+      (appointment.status === 'scheduled' || appointment.status === 'in_progress') &&
+      appointment.video?.status !== 'live';
+    
+    if (!isWaiting) return;
+
+    const interval = setInterval(fetchAppointment, 5000);
+    return () => clearInterval(interval);
+  }, [appointment?.status, appointment?.video?.status]);
 
   const fetchAppointment = async () => {
     try {
@@ -63,6 +79,33 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
       Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleJoinVideoCall = async () => {
+    try {
+      setJoiningCall(true);
+      haptics.medium();
+      const response = await joinVideoCall(id);
+      const { token, roomId } = response.data;
+      // Open the video call in the in-app browser using the web client
+      // The web VideoRoom handles WebRTC via VideoSDK
+      const clientUrl = 'https://janki.care';
+      const patientName = appointment?.patientId?.userId?.name || 'Patient';
+      // Use the guest join page which works great in mobile browsers
+      const videoUrl = `${clientUrl}/join/mobile-auth?token=${encodeURIComponent(token)}&roomId=${encodeURIComponent(roomId)}&name=${encodeURIComponent(patientName)}`;
+      await WebBrowser.openBrowserAsync(videoUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        toolbarColor: '#0f172a',
+        controlsColor: '#ffffff',
+      });
+      // Refresh appointment after returning from browser
+      fetchAppointment();
+    } catch (error) {
+      const msg = typeof error === 'string' ? error : error?.message || 'Unable to join video call';
+      Alert.alert('Video Call', msg);
+    } finally {
+      setJoiningCall(false);
     }
   };
 
@@ -214,6 +257,32 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
             </View>
           ) : null}
 
+          {/* Join Video Call Button */}
+          {appointment.type === 'virtual' && appointment.video?.status === 'live' && (
+            <PressableButton
+              onPress={handleJoinVideoCall}
+              disabled={joiningCall}
+              style={styles.joinCallButton}
+            >
+              <Ionicons name="videocam" size={20} color="#FFFFFF" />
+              <Text style={styles.joinCallButtonText}>
+                {joiningCall ? 'Connecting...' : 'Join Video Call'}
+              </Text>
+            </PressableButton>
+          )}
+
+          {/* Waiting for doctor indicator */}
+          {appointment.type === 'virtual' && 
+           (appointment.status === 'scheduled' || appointment.status === 'in_progress') && 
+           appointment.video?.status !== 'live' && (
+            <View style={styles.waitingCard}>
+              <Ionicons name="videocam-outline" size={24} color={TEXT_SECONDARY} />
+              <Text style={styles.waitingText}>
+                Your doctor will start the video call when ready
+              </Text>
+            </View>
+          )}
+
           {/* Cancel Button */}
           {appointment.status === 'scheduled' && (
             <PressableButton
@@ -350,6 +419,42 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 16,
     marginTop: 12,
+  },
+  joinCallButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 16,
+    marginTop: 12,
+    backgroundColor: '#16a34a',
+    shadowColor: '#16a34a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  joinCallButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Urbanist_700Bold',
+  },
+  waitingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: BLUE_LIGHT,
+    padding: 16,
+    borderRadius: 16,
+    marginTop: 12,
+  },
+  waitingText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: TEXT_SECONDARY,
+    lineHeight: 20,
   },
   cancelButtonText: {
     fontSize: 16,

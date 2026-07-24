@@ -18,5 +18,7 @@ router.use('/config', require('./configRoutes'));
 router.use('/chat', require('./chatRoutes'));
 router.use('/devices', require('./deviceRoutes'));
 router.use('/vault', require('./vaultRoutes'));
+router.use('/appointments', require('./videoRoutes'));
+router.use('/video', require('./videoGuestRoutes'));
 
 module.exports = router;

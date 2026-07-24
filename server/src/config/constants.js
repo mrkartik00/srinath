@@ -126,6 +126,17 @@ const HEALTH_UPDATE_CATEGORY = {
   CONDITION_SPECIFIC: 'condition_specific',
 };
 
+const VIDEO_STATUS = {
+  NONE: 'none',
+  LIVE: 'live',
+  ENDED: 'ended',
+};
+
+const VIDEO_ROLE = {
+  HOST: 'host',
+  GUEST: 'guest',
+};
+
 const AUDIT_ACTIONS = {
   DOCTOR_CREATED: 'doctor.created',
   DOCTOR_DEACTIVATED: 'doctor.deactivated',
@@ -148,6 +159,9 @@ const AUDIT_ACTIONS = {
   VAULT_DELETED: 'vault.deleted',
   AI_ESCALATED: 'ai.escalated',
   CONVERSATION_ESCALATED: 'conversation.escalated',
+  VIDEO_STARTED: 'video.started',
+  VIDEO_ENDED: 'video.ended',
+  VIDEO_JOINED: 'video.joined',
 };
 
 const GENDERS = ['male', 'female', 'other'];
@@ -178,6 +192,8 @@ module.exports = {
   VAULT_DOCUMENT_CATEGORY,
   HEALTH_UPDATE_CATEGORY,
   AUDIT_ACTIONS,
+  VIDEO_STATUS,
+  VIDEO_ROLE,
   GENDERS,
   BLOOD_GROUPS,
   PAGINATION,

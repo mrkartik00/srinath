@@ -43,6 +43,9 @@ env:
   DO_SPACES_SECRET_KEY: ${{ secrets.DO_SPACES_SECRET_KEY }}
   ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
   ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+  VIDEOSDK_ENABLED: ${{ secrets.VIDEOSDK_ENABLED }}
+  VIDEOSDK_API_KEY: ${{ secrets.VIDEOSDK_API_KEY }}
+  VIDEOSDK_SECRET: ${{ secrets.VIDEOSDK_SECRET }}
 
 jobs:
   deploy:
@@ -62,7 +65,7 @@ jobs:
           passphrase: ${{ secrets.DROPLET_SSH_PASSPHRASE }}
           timeout: 120s
           command_timeout: 45m
-          envs: HOST,USERNAME,PROJECT_DIR,NODE_ENV,PORT,MONGODB_URI,JWT_SECRET,JWT_REFRESH_SECRET,JWT_ACCESS_EXPIRES_IN,JWT_REFRESH_EXPIRES_IN,CLIENT_URL,ADMIN_URL,SUPER_ADMIN_URL,REDIS_URL,RATE_LIMIT_WINDOW_MS,RATE_LIMIT_MAX,RAZORPAY_ENABLED,RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET,RAZORPAY_WEBHOOK_SECRET,AI_PROVIDER,GEMINI_API_KEY,AI_MODEL,AI_MAX_TOKENS,BREVO_API_KEY,BREVO_SENDER_EMAIL,BREVO_SENDER_NAME,STORAGE_DRIVER,DO_SPACES_ACCESS_KEY,DO_SPACES_SECRET_KEY,ADMIN_EMAIL,ADMIN_PASSWORD
+          envs: HOST,USERNAME,PROJECT_DIR,NODE_ENV,PORT,MONGODB_URI,JWT_SECRET,JWT_REFRESH_SECRET,JWT_ACCESS_EXPIRES_IN,JWT_REFRESH_EXPIRES_IN,CLIENT_URL,ADMIN_URL,SUPER_ADMIN_URL,REDIS_URL,RATE_LIMIT_WINDOW_MS,RATE_LIMIT_MAX,RAZORPAY_ENABLED,RAZORPAY_KEY_ID,RAZORPAY_KEY_SECRET,RAZORPAY_WEBHOOK_SECRET,AI_PROVIDER,GEMINI_API_KEY,AI_MODEL,AI_MAX_TOKENS,BREVO_API_KEY,BREVO_SENDER_EMAIL,BREVO_SENDER_NAME,STORAGE_DRIVER,DO_SPACES_ACCESS_KEY,DO_SPACES_SECRET_KEY,ADMIN_EMAIL,ADMIN_PASSWORD,VIDEOSDK_ENABLED,VIDEOSDK_API_KEY,VIDEOSDK_SECRET
           script: |
             set -euo pipefail
 
@@ -125,6 +128,10 @@ jobs:
               echo "FEATURE_VAULT=true"
               echo "FEATURE_DOCTOR_APPROVAL=true"
               echo "FEATURE_PATIENT_SUBSCRIPTION=false"
+              echo "VIDEOSDK_ENABLED=$VIDEOSDK_ENABLED"
+              echo "VIDEOSDK_API_KEY=$VIDEOSDK_API_KEY"
+              echo "VIDEOSDK_SECRET=$VIDEOSDK_SECRET"
+              echo "VIDEOSDK_API_BASE=https://api.videosdk.live"
             } > $PROJECT_DIR/server/.env
             chmod 600 $PROJECT_DIR/server/.env
             echo "✅ .env written"
@@ -141,6 +148,8 @@ jobs:
             ln -sf ../../node_modules/engine.io-client admin/node_modules/engine.io-client 2>/dev/null || true
             ln -sf ../../node_modules/socket.io-parser client/node_modules/socket.io-parser 2>/dev/null || true
             ln -sf ../../node_modules/socket.io-parser admin/node_modules/socket.io-parser 2>/dev/null || true
+            ln -sf ../../node_modules/@videosdk.live client/node_modules/@videosdk.live 2>/dev/null || true
+            ln -sf ../../node_modules/@videosdk.live admin/node_modules/@videosdk.live 2>/dev/null || true
 
             # ── 5. Build all frontends ──────────────────────────────────────
             echo "🏗️ Building Client (janki.care)"

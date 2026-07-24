@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import IncomingCallBanner from '../video/IncomingCallBanner';
 import {
   LayoutGrid,
   Calendar,
@@ -127,6 +128,7 @@ export default function PortalLayout() {
 
   return (
     <>
+    <IncomingCallBanner />
     {/* Guest Login Banner */}
     {!user && (
       <div style={{

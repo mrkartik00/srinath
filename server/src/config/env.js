@@ -67,6 +67,16 @@ module.exports = {
     maxTokensPerResponse: parseInt(process.env.AI_MAX_TOKENS, 10) || 1024,
   },
 
+  // Video Consultations (Phase 9 virtual appointments).
+  VIDEOSDK: {
+    enabled: bool(process.env.VIDEOSDK_ENABLED, false),
+    apiKey: process.env.VIDEOSDK_API_KEY || null,
+    secret: process.env.VIDEOSDK_SECRET || null,
+    apiBase: process.env.VIDEOSDK_API_BASE || 'https://api.videosdk.live',
+    // Max token TTL in seconds (cap at 2 hours for security)
+    tokenTtlSeconds: parseInt(process.env.VIDEOSDK_TOKEN_TTL, 10) || 7200,
+  },
+
   // Brevo (transactional email for OTP verification)
   BREVO: {
     apiKey: process.env.BREVO_API_KEY || null,

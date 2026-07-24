@@ -2,18 +2,22 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { getAppointmentById, completeAppointment, cancelAppointment } from '../api/endpoints/appointments';
+import { startCall, joinCall, endCall } from '../api/endpoints/video';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Spinner } from '../components/ui/Spinner';
+import VideoRoom from '../components/video/VideoRoom';
 
-const statusVariant = { scheduled: 'scheduled', completed: 'completed', cancelled: 'cancelled', no_show: 'warning' };
+const statusVariant = { scheduled: 'scheduled', completed: 'completed', cancelled: 'cancelled', no_show: 'warning', in_progress: 'scheduled' };
 
 export default function AppointmentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [apt, setApt] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [videoSession, setVideoSession] = useState(null); // { token, roomId }
+  const [videoLoading, setVideoLoading] = useState(false);
 
   const fetch = () => {
     getAppointmentById(id)
@@ -35,6 +39,60 @@ export default function AppointmentDetail() {
     try { await cancelAppointment(id, reason); toast.success('Cancelled'); fetch(); }
     catch (err) { toast.error(err.message); }
   };
+
+  const handleStartCall = async () => {
+    setVideoLoading(true);
+    try {
+      const res = await startCall(id);
+      const data = res.data?.data || res.data;
+      setVideoSession({ token: data.token, roomId: data.roomId });
+      toast.success('Video call started! Patient has been notified.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to start video call');
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const handleJoinCall = async () => {
+    setVideoLoading(true);
+    try {
+      const res = await joinCall(id);
+      const data = res.data?.data || res.data;
+      setVideoSession({ token: data.token, roomId: data.roomId });
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to join video call');
+    } finally {
+      setVideoLoading(false);
+    }
+  };
+
+  const handleEndCall = async () => {
+    try {
+      await endCall(id);
+      toast.success('Video call ended');
+    } catch (err) {
+      // Non-fatal — room may have already ended
+    }
+    setVideoSession(null);
+    fetch();
+  };
+
+  const handleCallEnd = () => {
+    setVideoSession(null);
+    fetch();
+  };
+
+  // If in active video call, show full-screen VideoRoom
+  if (videoSession) {
+    return (
+      <VideoRoom
+        token={videoSession.token}
+        roomId={videoSession.roomId}
+        onCallEnd={handleCallEnd}
+      />
+    );
+  }
 
   if (loading) return <Spinner size="lg" />;
   if (!apt) return null;
@@ -89,9 +147,31 @@ export default function AppointmentDetail() {
       </div>
 
       {apt.status === 'scheduled' && (
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          {/* Video Call Actions for virtual appointments */}
+          {(apt.type === 'virtual' || apt.type === 'VIRTUAL') && (
+            <Button
+              onClick={handleStartCall}
+              disabled={videoLoading}
+              style={{ background: '#22c55e', color: '#fff', border: 'none' }}
+            >
+              {videoLoading ? '⏳ Starting...' : '📹 Start Video Call'}
+            </Button>
+          )}
           <Button onClick={handleComplete}>✓ Mark Completed</Button>
           <Button variant="danger" onClick={handleCancel}>Cancel Appointment</Button>
+        </div>
+      )}
+      {apt.status === 'in_progress' && (apt.type === 'virtual' || apt.type === 'VIRTUAL') && (
+        <div className="flex gap-3 flex-wrap">
+          <Button
+            onClick={handleJoinCall}
+            disabled={videoLoading}
+            style={{ background: '#22c55e', color: '#fff', border: 'none' }}
+          >
+            {videoLoading ? '⏳ Joining...' : '📹 Rejoin Video Call'}
+          </Button>
+          <Button variant="danger" onClick={handleEndCall}>End Video Call</Button>
         </div>
       )}
     </div>

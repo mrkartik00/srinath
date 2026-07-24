@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
+import { SocketProvider } from '../context/SocketContext';
 import ProtectedRoute from './ProtectedRoute';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Login from '../pages/Login';
@@ -24,6 +25,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SocketProvider>
         <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -48,6 +50,7 @@ export default function AppRouter() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

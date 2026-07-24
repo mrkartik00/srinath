@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { cancelAppointment } from '../api/endpoints/appointment';
+import { joinCall } from '../api/endpoints/video';
 import api from '../api/axios';
 import { Spinner } from '../components/ui';
+import VideoRoom from '../components/video/VideoRoom';
 
 const STATUS_STYLES = {
   scheduled: { bg: '#253a5a', color: '#ffffff', label: 'Scheduled' },
@@ -19,6 +21,8 @@ export default function AppointmentDetail() {
   const navigate = useNavigate();
   const [apt, setApt] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [videoSession, setVideoSession] = useState(null); // { token, roomId }
+  const [joiningCall, setJoiningCall] = useState(false);
 
   const fetchAppointmentDetails = async () => {
     try {
@@ -47,6 +51,37 @@ export default function AppointmentDetail() {
       toast.error(err.message || 'Failed to cancel appointment');
     }
   };
+
+  const handleJoinVideoCall = async () => {
+    setJoiningCall(true);
+    try {
+      const res = await joinCall(id);
+      const data = res.data?.data || res.data;
+      setVideoSession({ token: data.token, roomId: data.roomId });
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Could not join video call';
+      toast.error(msg);
+    } finally {
+      setJoiningCall(false);
+    }
+  };
+
+  const handleCallEnd = () => {
+    setVideoSession(null);
+    fetchAppointmentDetails();
+  };
+
+  // If in active video call, show full-screen VideoRoom
+  if (videoSession) {
+    return (
+      <VideoRoom
+        token={videoSession.token}
+        roomId={videoSession.roomId}
+        participantName={apt?.patientId?.name || 'Patient'}
+        onCallEnd={handleCallEnd}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -444,6 +479,32 @@ export default function AppointmentDetail() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {apt.status === 'scheduled' ? (
                     <>
+                      {/* Join Video Call button for virtual appointments */}
+                      {(apt.type === 'virtual' || apt.type === 'VIRTUAL') && (apt.status === 'scheduled' || apt.status === 'in_progress') && (
+                        <button
+                          onClick={handleJoinVideoCall}
+                          disabled={joiningCall}
+                          style={{
+                            display: 'block',
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '14px 24px',
+                            borderRadius: '50px',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            cursor: joiningCall ? 'not-allowed' : 'pointer',
+                            textDecoration: 'none',
+                            boxShadow: '0 4px 12px rgba(34,197,94,0.3)',
+                            transition: 'all 0.3s',
+                            opacity: joiningCall ? 0.7 : 1,
+                          }}
+                        >
+                          {joiningCall ? '⏳ Connecting...' : '📹 Join Video Call'}
+                        </button>
+                      )}
+
                       <Link
                         to="/book-appointment"
                         style={{

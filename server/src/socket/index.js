@@ -6,6 +6,7 @@ const Conversation = require('../models/Conversation');
 const Message = require('../models/Message');
 const pushService = require('../services/pushService');
 const aiChatService = require('../services/aiChatService');
+const eventBus = require('../events/eventBus');
 const logger = require('../config/logger');
 const { withOptionalTransaction } = require('../utils/dbUtils');
 const { ROLES, CONVERSATION_STATUS } = require('../config/constants');
@@ -133,7 +134,7 @@ const initializeSocket = (server) => {
         // Push notification if recipient is OFFLINE
         const recipientId = isDoctor ? conversation.patientId.toString() : conversation.doctorId.toString();
         if (!onlineUsers.has(recipientId)) {
-          pushService.sendChatNotification(recipientId, socket.user.name, body.trim().slice(0, 80), conversationId).catch(() => { });
+          pushService.sendChatNotification(recipientId, socket.user.name, body.trim().slice(0, 80), conversationId).catch(() => {});
         } else {
           io.to(`user:${recipientId}`).emit('notification:message', { conversationId, senderName: socket.user.name, preview: body.trim().slice(0, 50) });
         }
@@ -184,6 +185,48 @@ const initializeSocket = (server) => {
       messageCooldowns.delete(userId);
       logger.info(`Socket disconnected: ${userId}`);
     });
+  });
+
+  // ── Video Call Signaling (via EventBus) ─────────────────────────────────
+  // These listeners react to server-side events from videoConsultService
+  // and push real-time notifications to the relevant user rooms.
+
+  eventBus.on('appointment.video_started', ({ appointmentId, patientUserId, doctorName, guestLink }) => {
+    if (!patientUserId) return;
+    logger.info(`Video: call started for appointment ${appointmentId}, notifying patient ${patientUserId}`);
+
+    const payload = { appointmentId, doctorName, guestLink };
+
+    // Real-time socket emit to patient
+    io.to(`user:${patientUserId}`).emit('video:incoming', payload);
+
+    // Push notification fallback if patient is offline
+    if (!isUserOnline(patientUserId)) {
+      pushService.sendToUser(
+        patientUserId,
+        `📹 Video Consultation`,
+        `Dr. ${doctorName} is ready for your video consultation`,
+        { type: 'video_call', appointmentId, guestLink }
+      ).catch((err) => logger.error('Video push notification failed:', err.message));
+    }
+  });
+
+  eventBus.on('appointment.video_ended', ({ appointmentId, doctorUserId, patientUserId, finalStatus }) => {
+    logger.info(`Video: call ended for appointment ${appointmentId}, status: ${finalStatus}`);
+
+    const payload = { appointmentId, finalStatus };
+
+    // Notify both participants
+    if (doctorUserId) io.to(`user:${doctorUserId}`).emit('video:ended', payload);
+    if (patientUserId) io.to(`user:${patientUserId}`).emit('video:ended', payload);
+  });
+
+  eventBus.on('appointment.video_participant_joined', ({ appointmentId, userId, role, doctorUserId, patientUserId }) => {
+    logger.info(`Video: ${role} ${userId} joined appointment ${appointmentId}`);
+    const payload = { appointmentId, userId, role };
+    // Emit only to the two participants (not a global broadcast)
+    if (doctorUserId) io.to(`user:${doctorUserId}`).emit('video:participant_joined', payload);
+    if (patientUserId) io.to(`user:${patientUserId}`).emit('video:participant_joined', payload);
   });
 
   return io;

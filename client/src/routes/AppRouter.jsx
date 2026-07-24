@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '../context/AuthContext';
+import { SocketProvider } from '../context/SocketContext';
 import ProtectedRoute, { GuestRoute } from './ProtectedRoute';
 
 // Layouts
@@ -34,11 +35,13 @@ import ChatPage from '../pages/Chat';
 import PaymentsPage from '../pages/Payments';
 import VIPPage from '../pages/VIP';
 import HealthFeedPage from '../pages/HealthFeed';
+import VideoJoinPage from '../pages/VideoJoin';
 
 export default function AppRouter() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <SocketProvider>
         <Toaster position="top-right" />
         <Routes>
           {/* ─── Public / Marketing Routes ─── */}
@@ -77,9 +80,13 @@ export default function AppRouter() {
             <Route path="/payments" element={<ProtectedRoute><PaymentsPage /></ProtectedRoute>} />
           </Route>
 
+          {/* ─── Public Video Join (no auth required) ─── */}
+          <Route path="/join/:roomCode" element={<VideoJoinPage />} />
+
           {/* ─── Catch-all ─── */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   );

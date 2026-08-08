@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, ScrollView, Text, StyleSheet, Alert, Animated, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
@@ -12,43 +12,26 @@ import {
 } from '../components/ui';
 import { useScreenAnimation } from '../hooks/useAnimations';
 import { getAppointmentById, cancelAppointment } from '../api/appointments';
-import { joinVideoCall } from '../api/video';
 import haptics from '../utils/haptics';
 
-const BG_COLOR = '#F5F7FA';
-const PRIMARY_COLOR = '#223263';
-const TEXT_SECONDARY = '#8F9BB3';
-const BLUE_LIGHT = '#EEF2F8';
+
 
 const AppointmentDetailScreen = ({ route, navigation }) => {
-  const { id } = route.params;
+  const id = route.params?.id || route.params?.appointmentId;
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const { fadeAnim, slideAnim } = useScreenAnimation();
 
   const [appointment, setAppointment] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelSheet, setShowCancelSheet] = useState(false);
-  const [joiningCall, setJoiningCall] = useState(false);
 
   const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
 
   useEffect(() => {
     fetchAppointment();
   }, [id]);
-
-  // Auto-refresh every 5s when waiting for doctor to start the video call
-  useEffect(() => {
-    if (!appointment) return;
-    const isWaiting = appointment.type === 'virtual' && 
-      (appointment.status === 'scheduled' || appointment.status === 'in_progress') &&
-      appointment.video?.status !== 'live';
-    
-    if (!isWaiting) return;
-
-    const interval = setInterval(fetchAppointment, 5000);
-    return () => clearInterval(interval);
-  }, [appointment?.status, appointment?.video?.status]);
 
   const fetchAppointment = async () => {
     try {
@@ -62,6 +45,14 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleJoinVideo = () => {
+    haptics.medium();
+    navigation.navigate('VideoCall', {
+      appointmentId: id,
+      doctorName: appointment?.doctorId?.name || 'Doctor',
+    });
+  };
+
   const handleCancelPress = () => {
     haptics.heavy();
     setShowCancelSheet(true);
@@ -70,36 +61,24 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   const handleConfirmCancel = async () => {
     try {
       setCancelling(true);
-      await cancelAppointment(id, { reason: 'Patient cancelled' });
+      await cancelAppointment(id, { cancellationReason: 'Patient cancelled', reason: 'Patient cancelled' });
       haptics.success();
       setShowCancelSheet(false);
       navigation.goBack();
     } catch (error) {
-      Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
+      const msg =
+        (Array.isArray(error) && error.join('\n')) ||
+        (typeof error === 'string' && error) ||
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to cancel appointment. Please try again.';
+      if (Platform.OS === 'web') {
+        alert(msg);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } finally {
       setCancelling(false);
-    }
-  };
-
-  const handleJoinVideoCall = async () => {
-    try {
-      setJoiningCall(true);
-      haptics.medium();
-      const response = await joinVideoCall(id);
-      const { token, roomId } = response.data;
-      const patientName = appointment?.patientId?.userId?.name || 'Patient';
-      // Navigate to the native in-app video call screen
-      navigation.navigate('VideoCall', {
-        token,
-        roomId,
-        participantName: patientName,
-        appointmentId: id,
-      });
-    } catch (error) {
-      const msg = typeof error === 'string' ? error : error?.message || 'Unable to join video call';
-      Alert.alert('Video Call', msg);
-    } finally {
-      setJoiningCall(false);
     }
   };
 
@@ -116,6 +95,38 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
     });
   };
 
+  const getEffectiveAppointmentStatus = (apt) => {
+    if (!apt) return 'scheduled';
+    if (apt.status === 'cancelled') return 'cancelled';
+    if (apt.status === 'completed') return 'completed';
+    if (apt.video?.status === 'ended' || apt.video?.endedAt) return 'completed';
+
+    const nowTime = Date.now();
+    const startTime = new Date(apt.dateTime).getTime();
+    const duration = (apt.duration || 30) * 60000;
+    const endTime = startTime + duration;
+
+    if (nowTime > endTime) {
+      return 'completed';
+    }
+
+    return apt.status;
+  };
+
+  const canJoinCall = (apt) => {
+    if (!apt) return false;
+    const st = getEffectiveAppointmentStatus(apt);
+    if (st === 'completed' || st === 'cancelled' || apt.video?.status === 'ended') return false;
+    if (apt.video?.status === 'live' || apt.status === 'in_progress') return true;
+
+    const nowTime = Date.now();
+    const startTime = new Date(apt.dateTime).getTime();
+    const duration = (apt.duration || 30) * 60000;
+    const endTime = startTime + duration;
+
+    return nowTime >= startTime - 5 * 60000 && nowTime <= endTime;
+  };
+
   const formatDuration = (minutes) => {
     if (!minutes) return '';
     if (minutes < 60) return `${minutes} min`;
@@ -127,7 +138,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   if (!fontsLoaded) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -148,7 +159,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
       <View style={styles.container}>
         <ScreenHeader title="Appointment" onBack={() => navigation.goBack()} />
         <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={TEXT_SECONDARY} />
+          <Ionicons name="alert-circle-outline" size={48} color={theme.textSecondary} />
           <Text style={styles.emptyText}>
             Appointment not found
           </Text>
@@ -169,7 +180,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           {/* Status Badge */}
           <View style={styles.statusContainer}>
-            <StatusBadge status={appointment.status} size="md" />
+            <StatusBadge status={getEffectiveAppointmentStatus(appointment)} size="md" />
           </View>
 
           {/* Appointment Info Card */}
@@ -179,7 +190,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
             </Text>
 
             <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={20} color={PRIMARY_COLOR} />
+              <Ionicons name="calendar-outline" size={20} color={theme.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>
                   Date & Time
@@ -191,7 +202,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="person-outline" size={20} color={PRIMARY_COLOR} />
+              <Ionicons name="person-outline" size={20} color={theme.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>
                   Doctor
@@ -203,7 +214,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="medical-outline" size={20} color={PRIMARY_COLOR} />
+              <Ionicons name="medical-outline" size={20} color={theme.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>
                   Type
@@ -215,7 +226,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
             </View>
 
             <View style={styles.infoRow}>
-              <Ionicons name="time-outline" size={20} color={PRIMARY_COLOR} />
+              <Ionicons name="time-outline" size={20} color={theme.primary} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>
                   Duration
@@ -228,7 +239,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
 
             {appointment.reason ? (
               <View style={styles.infoRow}>
-                <Ionicons name="document-text-outline" size={20} color={PRIMARY_COLOR} />
+                <Ionicons name="document-text-outline" size={20} color={theme.primary} />
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>
                     Reason
@@ -252,29 +263,16 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
           ) : null}
 
           {/* Join Video Call Button */}
-          {appointment.type === 'virtual' && appointment.video?.status === 'live' && (
+          {canJoinCall(appointment) && (
             <PressableButton
-              onPress={handleJoinVideoCall}
-              disabled={joiningCall}
-              style={styles.joinCallButton}
+              onPress={handleJoinVideo}
+              style={styles.joinVideoButton}
             >
-              <Ionicons name="videocam" size={20} color="#FFFFFF" />
-              <Text style={styles.joinCallButtonText}>
-                {joiningCall ? 'Connecting...' : 'Join Video Call'}
+              <Ionicons name="videocam" size={22} color="#FFFFFF" />
+              <Text style={styles.joinVideoButtonText}>
+                Join Video Consultation
               </Text>
             </PressableButton>
-          )}
-
-          {/* Waiting for doctor indicator */}
-          {appointment.type === 'virtual' && 
-           (appointment.status === 'scheduled' || appointment.status === 'in_progress') && 
-           appointment.video?.status !== 'live' && (
-            <View style={styles.waitingCard}>
-              <Ionicons name="videocam-outline" size={24} color={TEXT_SECONDARY} />
-              <Text style={styles.waitingText}>
-                Your doctor will start the video call when ready
-              </Text>
-            </View>
           )}
 
           {/* Cancel Button */}
@@ -316,7 +314,7 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
 
           <PressableButton
             onPress={() => setShowCancelSheet(false)}
-            style={[styles.keepButton, { borderColor: PRIMARY_COLOR }]}
+            style={[styles.keepButton, { borderColor: theme.primary }]}
           >
             <Text style={styles.keepButtonText}>
               Keep Appointment
@@ -328,10 +326,10 @@ const AppointmentDetailScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
+    backgroundColor: theme.bg,
   },
   scrollView: {
     flex: 1,
@@ -354,18 +352,18 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
   },
   statusContainer: {
     alignItems: 'center',
     marginVertical: 20,
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     padding: 24,
     marginBottom: 20,
     borderRadius: 24,
-    shadowColor: PRIMARY_COLOR,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.06,
     shadowRadius: 24,
@@ -374,7 +372,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginBottom: 20,
   },
   infoRow: {
@@ -389,7 +387,7 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 12,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginBottom: 4,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -397,13 +395,33 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 16,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.text,
   },
   notesText: {
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     lineHeight: 24,
+  },
+  joinVideoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 16,
+    backgroundColor: '#22c55e',
+    marginBottom: 12,
+    shadowColor: '#22c55e',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  joinVideoButtonText: {
+    fontSize: 16,
+    fontFamily: 'Urbanist_700Bold',
+    color: '#FFFFFF',
   },
   cancelButton: {
     flexDirection: 'row',
@@ -412,43 +430,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 18,
     borderRadius: 16,
-    marginTop: 12,
-  },
-  joinCallButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 18,
-    borderRadius: 16,
-    marginTop: 12,
-    backgroundColor: '#16a34a',
-    shadowColor: '#16a34a',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  joinCallButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Urbanist_700Bold',
-  },
-  waitingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: BLUE_LIGHT,
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 12,
-  },
-  waitingText: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
-    lineHeight: 20,
+    marginTop: 4,
   },
   cancelButtonText: {
     fontSize: 16,
@@ -463,13 +445,13 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 22,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginTop: 8,
   },
   sheetDescription: {
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 12,
@@ -495,7 +477,7 @@ const styles = StyleSheet.create({
   keepButtonText: {
     fontSize: 16,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
 });
 

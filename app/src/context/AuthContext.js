@@ -11,18 +11,47 @@ export function AuthProvider({ children }) {
   const [justLoggedIn, setJustLoggedIn] = useState(false);
 
   useEffect(() => {
+    let active = true;
     (async () => {
-      const token = await AsyncStorage.getItem('token');
-      if (token) {
-        try {
-          const res = await getMe();
-          setUser(res.data);
-        } catch {
-          await AsyncStorage.multiRemove(['token', 'user']);
+      try {
+        const [token, storedUser] = await Promise.all([
+          AsyncStorage.getItem('token'),
+          AsyncStorage.getItem('user'),
+        ]);
+
+        if (storedUser && active) {
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {}
         }
+
+        if (token && active) {
+          // Validate token in background with a 4s timeout
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 4000);
+          try {
+            const res = await getMe({ signal: controller.signal });
+            clearTimeout(timer);
+            if (active && res?.data) {
+              setUser(res.data);
+              await AsyncStorage.setItem('user', JSON.stringify(res.data));
+            }
+          } catch (err) {
+            clearTimeout(timer);
+            // Only clear session if server explicitly returned 401 unauthorized
+            if (err?.response?.status === 401 && active) {
+              await AsyncStorage.multiRemove(['token', 'user']);
+              setUser(null);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Auth init warning:', err);
+      } finally {
+        if (active) setLoading(false);
       }
-      setLoading(false);
     })();
+    return () => { active = false; };
   }, []);
 
   // A 401 from the API means the token is no longer valid on the server

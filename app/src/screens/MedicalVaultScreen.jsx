@@ -10,6 +10,8 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -37,9 +39,10 @@ import {
 import haptics from '../utils/haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../api/axios';
 
 // --- Helpers ---
 
@@ -101,6 +104,7 @@ const MedicalVaultScreen = ({ navigation }) => {
   const [uploadTitle, setUploadTitle] = useState('');
   const [uploadCategory, setUploadCategory] = useState('other');
   const [uploadDescription, setUploadDescription] = useState('');
+  const [downloadingDocId, setDownloadingDocId] = useState(null);
 
   const filteredDocuments =
     selectedCategory === 'all'
@@ -139,42 +143,63 @@ const MedicalVaultScreen = ({ navigation }) => {
   // --- Document Actions ---
 
   const handleDocumentTap = async (doc) => {
+    if (downloadingDocId) return;
     haptics.light();
+    setDownloadingDocId(doc._id);
+
     try {
-      const response = await getDocumentDownloadUrl(doc._id);
-      const url = response?.data?.url || response?.url;
-      if (!url) {
-        Alert.alert('Error', 'No download URL was returned for this document.');
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        Alert.alert('Error', 'You must be logged in to download files.');
         return;
       }
 
-      // The /raw fallback route (used when no cloud storage is configured)
-      // requires the same Bearer auth as every other request — presigned
-      // cloud URLs are self-authenticating and ignore this header.
-      const token = await AsyncStorage.getItem('token');
-      const fileUri = FileSystem.documentDirectory + doc.fileName;
-      const downloadResult = await FileSystem.downloadAsync(url, fileUri, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      });
+      // 1. Fetch download URL details from the backend
+      const downloadRes = await getDocumentDownloadUrl(doc._id);
+      
+      let targetUrl = '';
+      let downloadOptions = {};
 
-      if (downloadResult.status === 200) {
+      if (downloadRes.data?.url) {
+        // DigitalOcean Spaces was used: download from the pre-signed S3 URL directly
+        targetUrl = downloadRes.data.url;
+      } else {
+        // Local storage / Dev fallback: stream binary response from our server
+        targetUrl = `${API_BASE_URL}/api/v1/vault/documents/${doc._id}/download`;
+        downloadOptions.headers = { Authorization: `Bearer ${token}` };
+      }
+
+      const cleanName = (doc.fileName || doc.title || 'document').replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const fileUri = `${FileSystem.documentDirectory || FileSystem.cacheDirectory}${cleanName}`;
+
+      const downloadResult = await FileSystem.downloadAsync(targetUrl, fileUri, downloadOptions);
+
+      if (downloadResult?.status === 200 && downloadResult?.uri) {
         haptics.success();
+        if (Platform.OS === 'web') {
+          window.open(downloadResult.uri, '_blank');
+          return;
+        }
         const canShare = await Sharing.isAvailableAsync();
         if (canShare) {
-          await Sharing.shareAsync(downloadResult.uri);
+          await Sharing.shareAsync(downloadResult.uri, { UTI: doc.mimeType, mimeType: doc.mimeType });
+        } else {
+          Alert.alert('Downloaded', 'File saved to your device.');
         }
       } else {
-        Alert.alert('Error', `Download failed (status ${downloadResult.status}).`);
+        haptics.error();
+        Alert.alert('Download Failed', `Server returned status ${downloadResult?.status || 'unknown'}.`);
       }
     } catch (error) {
       haptics.error();
       const msg =
         (Array.isArray(error) && error.join('\n')) ||
         (typeof error === 'string' && error) ||
-        error?.response?.data?.message ||
         error?.message ||
         'Failed to download document.';
-      Alert.alert('Error', msg);
+      Alert.alert('Download Failed', msg);
+    } finally {
+      setDownloadingDocId(null);
     }
   };
 
@@ -279,12 +304,37 @@ const MedicalVaultScreen = ({ navigation }) => {
     setUploadProgress(0);
 
     try {
+      const uri = file.uri;
+      const nameToCheck = file.fileName || file.name || file.uri || '';
+      const extension = nameToCheck.includes('.') ? nameToCheck.split('.').pop().toLowerCase() : 'jpg';
+      
+      let mimeType = file.mimeType || file.type || 'application/octet-stream';
+      if (extension === 'jpg' || extension === 'jpeg') {
+        mimeType = 'image/jpeg';
+      } else if (extension === 'png') {
+        mimeType = 'image/png';
+      } else if (extension === 'pdf') {
+        mimeType = 'application/pdf';
+      } else if (extension === 'dcm') {
+        mimeType = 'application/dicom';
+      }
+
+      const fileName = file.fileName || file.name || `document_${Date.now()}.${extension}`;
+      console.log('Vault Upload File Info:', { uri, fileName, mimeType });
+
       const formData = new FormData();
-      formData.append('file', {
-        uri: file.uri,
-        name: file.fileName || file.name || 'document',
-        type: file.mimeType || file.type || 'application/octet-stream',
-      });
+
+      if (uri.startsWith('blob:') || uri.startsWith('http')) {
+        // Web (Expo Web) — blob: URLs are browser-internal references.
+        // Must fetch the actual blob and pass a real File/Blob object.
+        const blobResponse = await fetch(uri);
+        const blob = await blobResponse.blob();
+        const fileObj = new File([blob], fileName, { type: mimeType });
+        formData.append('file', fileObj);
+      } else {
+        // Native (Android / iOS) — pass the RN-style file descriptor.
+        formData.append('file', { uri, name: fileName, type: mimeType });
+      }
       formData.append('title', details?.title || file.fileName || file.name || 'Untitled Document');
       formData.append('category', details?.category || 'other');
       if (details?.description) formData.append('description', details.description);
@@ -409,12 +459,17 @@ const MedicalVaultScreen = ({ navigation }) => {
             <TouchableOpacity
               onPress={() => handleDocumentTap(doc)}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              disabled={downloadingDocId === doc._id}
             >
-              <Ionicons
-                name="cloud-download-outline"
-                size={22}
-                color={theme.primary}
-              />
+              {downloadingDocId === doc._id ? (
+                <ActivityIndicator size="small" color={theme.primary} />
+              ) : (
+                <Ionicons
+                  name="cloud-download-outline"
+                  size={22}
+                  color={theme.primary}
+                />
+              )}
             </TouchableOpacity>
           </View>
         </GlassCard>

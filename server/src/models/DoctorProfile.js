@@ -14,6 +14,12 @@ const doctorProfileSchema = new mongoose.Schema(
     clinicName: { type: String, trim: true, default: '' },
     clinicAddress: { type: String, trim: true, default: '' },
     aboutMe: { type: String, trim: true, default: '' },
+    testimonials: [{
+      authorName: { type: String, required: true, trim: true, maxlength: 100 },
+      text: { type: String, required: true, trim: true, maxlength: 500 },
+      rating: { type: Number, min: 1, max: 5, default: null },
+      createdAt: { type: Date, default: Date.now },
+    }],
     documents: [{
       name: { type: String, required: true },
       fileKey: { type: String, required: true },

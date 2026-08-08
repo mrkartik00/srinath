@@ -513,6 +513,162 @@
   background: #1e2e48;
 }
 
+/* ─── Average Rating ─── */
+.dd-avg-rating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dd-avg-rating-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+/* ─── Star Icons ─── */
+.dd-star-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.dd-star-clickable:hover {
+  transform: scale(1.15);
+  transition: transform 0.15s;
+}
+
+/* ─── Testimonials ─── */
+.dd-testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.dd-testimonial-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.dd-testimonial-text {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 8px 0 12px 0;
+  font-style: italic;
+}
+
+.dd-testimonial-author {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1f36;
+  margin: 0;
+}
+
+/* ─── Reviews ─── */
+.dd-reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dd-review-item {
+  border-bottom: 1px solid #eaedf1;
+  padding-bottom: 16px;
+}
+
+.dd-review-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dd-review-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.dd-review-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1f36;
+}
+
+.dd-review-text {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Review Form ─── */
+.dd-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dd-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dd-form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a1f36;
+}
+
+.dd-review-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid #eaedf1;
+  font-size: 14px;
+  color: #1a2b30;
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.dd-review-textarea:focus {
+  border-color: #3b82f6;
+}
+
+.dd-review-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.dd-review-error {
+  font-size: 13px;
+  color: #ef4444;
+  margin: 0;
+}
+
+.dd-review-success {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.dd-review-success p {
+  font-size: 14px;
+  color: #065f46;
+  margin: 0;
+  line-height: 1.5;
+}
+
 /* Responsive */
 @media (max-width: 992px) {
   .dd-container {

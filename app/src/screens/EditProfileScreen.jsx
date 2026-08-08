@@ -29,6 +29,7 @@ import {
 import haptics from '../utils/haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
+import { removeImageBackground } from '../utils/removeBg';
 
 const GENDER_OPTIONS = ['male', 'female', 'other'];
 const BLOOD_GROUP_OPTIONS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
@@ -177,10 +178,22 @@ export default function EditProfileScreen({ navigation }) {
 
   const doUploadAvatar = async (uri) => {
     try {
+      let uploadUri = uri;
+      if (user?.role === 'doctor') {
+        uploadUri = await removeImageBackground(uri);
+      }
       const formData = new FormData();
-      formData.append('avatar', { uri, type: 'image/jpeg', name: 'avatar.jpg' });
+      if (uploadUri.startsWith('blob:') || uploadUri.startsWith('http')) {
+        // Web (Expo Web) — resolve blob URL to actual Blob/File
+        const blobRes = await fetch(uploadUri);
+        const blob = await blobRes.blob();
+        formData.append('avatar', new File([blob], 'avatar.png', { type: 'image/png' }));
+      } else {
+        // Native
+        formData.append('avatar', { uri: uploadUri, type: 'image/png', name: 'avatar.png' });
+      }
       const res = await uploadAvatar(formData);
-      setAvatarUrl(res.data?.avatar || uri);
+      setAvatarUrl(res.data?.avatar || uploadUri);
       haptics.success();
     } catch (err) {
       haptics.error();

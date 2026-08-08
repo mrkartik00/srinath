@@ -20,7 +20,7 @@ import {
 import { useScreenAnimation } from '../hooks/useAnimations';
 import { getPrescriptionPdfUrl } from '../api/prescriptions';
 import haptics from '../utils/haptics';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

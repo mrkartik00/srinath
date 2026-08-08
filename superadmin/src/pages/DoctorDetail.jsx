@@ -8,12 +8,23 @@ export default function DoctorDetail() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [activity, setActivity] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [avgRating, setAvgRating] = useState(null);
+  const [reviewCount, setReviewCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
-    Promise.all([api.get(`/api/v1/superadmin/doctors/${id}`), api.get(`/api/v1/superadmin/doctors/${id}/activity`)])
-      .then(([d, a]) => { setData(d.data); setActivity(a.data); })
+    Promise.all([api.get(`/api/v1/superadmin/doctors/${id}`), api.get(`/api/v1/superadmin/doctors/${id}/activity`), api.get(`/api/v1/config/doctors/${id}`)])
+      .then(([d, a, pub]) => {
+        setData(d.data);
+        setActivity(a.data);
+        setTestimonials(pub.data?.testimonials || []);
+        setReviews(pub.data?.reviews || []);
+        setAvgRating(pub.data?.avgRating || null);
+        setReviewCount(pub.data?.reviewCount || 0);
+      })
       .catch(() => navigate('/doctors'))
       .finally(() => setLoading(false));
   }, [id]);
@@ -68,6 +79,56 @@ export default function DoctorDetail() {
               <div key={a._id} className="flex justify-between text-xs">
                 <span className="text-[#1e293b] font-medium">{a.action}</span>
                 <span className="text-[#94a3b8]">{new Date(a.timestamp).toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <h3 className="text-sm font-semibold text-[#1e293b] mb-4">Testimonials</h3>
+        {testimonials.length === 0 ? <p className="text-sm text-[#64748b] py-4 border-t border-gray-100">No testimonials yet</p> : (
+          <div className="space-y-4 border-t border-gray-100 pt-4">
+            {testimonials.map((t, idx) => (
+              <div key={t._id || idx} className="border border-gray-100 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[#1e293b]">{t.authorName || 'Anonymous'}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <span key={star} className={`text-sm ${star <= (t.rating || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-[#64748b]">{t.text}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-[#1e293b]">Reviews</h3>
+          {reviewCount > 0 && (
+            <span className="text-xs text-[#64748b]">{reviewCount} review{reviewCount !== 1 ? 's' : ''} • Avg {avgRating?.toFixed(1) || '—'} ★</span>
+          )}
+        </div>
+        {reviews.length === 0 ? <p className="text-sm text-[#64748b] py-4 border-t border-gray-100">No reviews yet</p> : (
+          <div className="space-y-4 border-t border-gray-100 pt-4">
+            {reviews.map((r, idx) => (
+              <div key={r._id || idx} className="border border-gray-100 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-[#1e293b]">{r.patientName || 'Patient'}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <span key={star} className={`text-sm ${star <= (r.rating || 0) ? 'text-yellow-400' : 'text-gray-200'}`}>★</span>
+                      ))}
+                    </div>
+                    <span className="text-xs text-[#94a3b8]">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-[#64748b]">{r.text}</p>
               </div>
             ))}
           </div>

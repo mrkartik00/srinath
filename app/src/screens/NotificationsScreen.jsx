@@ -7,6 +7,7 @@ import {
   Animated,
   StyleSheet,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,6 +41,14 @@ export default function NotificationsScreen({ navigation }) {
     loadNotifications();
   }, []);
 
+  useEffect(() => {
+    if (notifications.length > 0) {
+      setTimeout(() => {
+        triggerStagger(notifications.length);
+      }, 50);
+    }
+  }, [notifications]);
+
   const requestPermissionsAndRegister = async () => {
     try {
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
@@ -66,7 +75,10 @@ export default function NotificationsScreen({ navigation }) {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        setNotifications(parsed);
+        const markedRead = parsed.map((n) => ({ ...n, read: true }));
+        setNotifications(markedRead);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(markedRead));
+        DeviceEventEmitter.emit('notifications_updated');
       } else {
         setNotifications([]);
       }
@@ -91,6 +103,7 @@ export default function NotificationsScreen({ navigation }) {
     setNotifications(updated);
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      DeviceEventEmitter.emit('notifications_updated');
     } catch (err) {
       console.warn('Failed to persist read state:', err);
     }

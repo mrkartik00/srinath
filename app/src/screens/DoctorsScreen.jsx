@@ -75,7 +75,7 @@ export default function DoctorsScreen({ navigation, route }) {
                   activeOpacity={0.9}
                 >
                   <View style={[styles.popularImageContainer, { backgroundColor: theme.chipBg }]}>
-                    {(!doc.image || doc.image.includes('ui-avatars.com')) && !(doc.name?.toLowerCase().includes('arun') || doc.name?.toLowerCase().includes('sharma')) ? (
+                    {(!doc.avatar || doc.avatar.includes('ui-avatars.com')) && !(doc.name?.toLowerCase().includes('arun') || doc.name?.toLowerCase().includes('sharma')) ? (
                       <View style={styles.popularEmojiContainer}>
                         <Ionicons name="person" size={54} color={theme.textSecondary} />
                       </View>
@@ -83,7 +83,7 @@ export default function DoctorsScreen({ navigation, route }) {
                       <Image 
                         source={(doc.name?.toLowerCase().includes('arun') || doc.name?.toLowerCase().includes('sharma'))
                           ? require('../../assets/images/dummy_doctor.png')
-                          : { uri: doc.image }} 
+                          : { uri: doc.avatar }} 
                         style={styles.popularImage} 
                         resizeMode="cover" 
                       />
@@ -93,9 +93,6 @@ export default function DoctorsScreen({ navigation, route }) {
                         <Ionicons name="star" size={10} color="#FFB800" />
                         <Text style={styles.ratingTextPopular}>{doc.rating || '4.8'}</Text>
                       </View>
-                      <TouchableOpacity>
-                        <Ionicons name="heart-outline" size={18} color="#FF3B30" />
-                      </TouchableOpacity>
                     </View>
                   </View>
                   <View style={styles.popularInfoPanel}>

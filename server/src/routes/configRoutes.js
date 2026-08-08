@@ -73,4 +73,57 @@ router.get('/plans', async (req, res) => {
   }
 });
 
+const asyncHandler = require('../utils/asyncHandler');
+const apiResponse = require('../utils/apiResponse');
+const { ROLES } = require('../config/constants');
+const DoctorReview = require('../models/DoctorReview');
+const { protect } = require('../middleware/auth');
+const tenantScope = require('../middleware/tenantScope');
+const { requireEmailVerified } = require('../middleware/gates');
+const { authorize } = require('../middleware/rbac');
+const DoctorProfile = require('../models/DoctorProfile');
+
+// Patient submits a review for a doctor
+router.post('/doctors/:id/reviews', protect, requireEmailVerified, authorize(ROLES.PATIENT), tenantScope, asyncHandler(async (req, res) => {
+  const config = require('../config/env');
+  if (!config.FEATURES.doctorReviews) return apiResponse.error(res, 'Reviews are not enabled', 403);
+
+  const { rating, text } = req.body;
+  if (!rating || rating < 1 || rating > 5) return apiResponse.error(res, 'Rating (1-5) is required', 400);
+
+  const User = require('../models/User');
+  const doctor = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, organizationId: req.scope.organizationId, isActive: true });
+  if (!doctor) return apiResponse.error(res, 'Doctor not found', 404);
+
+  // Upsert: one review per patient per doctor
+  const review = await DoctorReview.findOneAndUpdate(
+    { doctorId: req.params.id, patientId: req.user.id },
+    { doctorId: req.params.id, patientId: req.user.id, organizationId: req.scope.organizationId, rating, text: text || '', status: 'pending', moderatedBy: null, moderatedAt: null },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  apiResponse.success(res, review, 'Review submitted. It will be visible after doctor approval.', {}, 201);
+}));
+
+// Public doctor profile with testimonials + approved reviews + rating
+router.get('/doctors/:id', asyncHandler(async (req, res) => {
+  const User = require('../models/User');
+  const doctor = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, isActive: true }).select('name email phone avatar');
+  if (!doctor) return apiResponse.error(res, 'Doctor not found', 404);
+
+  const profile = await DoctorProfile.findOne({ userId: req.params.id }).select('-documents -accessLog -deletedAt').lean();
+  const reviews = await DoctorReview.find({ doctorId: req.params.id, status: 'approved' }).populate('patientId', 'name avatar').sort({ createdAt: -1 }).limit(50).lean();
+
+  const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null;
+
+  apiResponse.success(res, {
+    doctor: { id: doctor._id, name: doctor.name, email: doctor.email, phone: doctor.phone, avatar: doctor.avatar },
+    profile: profile || {},
+    testimonials: profile?.testimonials || [],
+    reviews,
+    avgRating: avgRating ? parseFloat(avgRating) : null,
+    reviewCount: reviews.length,
+  }, 'Doctor profile fetched');
+}));
+
 module.exports = router;

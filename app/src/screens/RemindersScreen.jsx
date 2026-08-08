@@ -77,7 +77,11 @@ const RemindersScreen = ({ navigation }) => {
   const fetchReminders = async () => {
     try {
       const response = await getTodayReminders();
-      setReminders(response.data || []);
+      const list = response.data || [];
+      setReminders(list);
+      setTimeout(() => {
+        triggerStagger(list.length);
+      }, 50);
     } catch (error) {
       console.error('Failed to fetch reminders:', error);
     } finally {
@@ -90,7 +94,11 @@ const RemindersScreen = ({ navigation }) => {
     haptics.light();
     try {
       const response = await getTodayReminders();
-      setReminders(response.data || []);
+      const list = response.data || [];
+      setReminders(list);
+      setTimeout(() => {
+        triggerStagger(list.length);
+      }, 50);
     } catch (error) {
       console.error('Failed to refresh reminders:', error);
     } finally {

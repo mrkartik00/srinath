@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   ScrollView,
@@ -7,10 +7,15 @@ import {
   Animated,
   StyleSheet,
   ActivityIndicator,
+  Platform,
+  TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import {
   PressableButton,
   ScreenHeader,
@@ -20,24 +25,26 @@ import {
   SkeletonList,
   FAB,
   PageLoader,
+  Avatar,
 } from '../components/ui';
 import { useScreenAnimation, useStaggerAnimation } from '../hooks/useAnimations';
 import { getMyAppointments } from '../api/appointments';
 import haptics from '../utils/haptics';
 
-const BG_COLOR = '#F5F7FA';
-const PRIMARY_COLOR = '#223263';
-const TEXT_SECONDARY = '#8F9BB3';
-const BLUE_LIGHT = '#EEF2F8';
+
 
 const AppointmentsScreen = ({ navigation }) => {
   const { theme } = useTheme();
+  const { user } = useAuth();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const screenAnimation = useScreenAnimation();
 
   const [selectedTab, setSelectedTab] = useState(0);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchVisible, setSearchVisible] = useState(false);
 
   const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
 
@@ -45,7 +52,7 @@ const AppointmentsScreen = ({ navigation }) => {
 
   const fetchAppointments = useCallback(async () => {
     try {
-      const response = await getMyAppointments();
+      const response = await getMyAppointments({ limit: 100 });
       let list = [];
       if (Array.isArray(response)) {
         list = response;
@@ -62,24 +69,67 @@ const AppointmentsScreen = ({ navigation }) => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchAppointments();
-  }, [fetchAppointments]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchAppointments();
+    }, [fetchAppointments])
+  );
 
-  const now = new Date();
-  const upcomingAppointments = appointments.filter((apt) => new Date(apt.dateTime) >= now);
-  const pastAppointments = appointments.filter((apt) => new Date(apt.dateTime) < now);
+  const getEffectiveAppointmentStatus = (apt) => {
+    if (!apt) return 'scheduled';
+    if (apt.status === 'cancelled') return 'cancelled';
+    if (apt.status === 'completed') return 'completed';
+    if (apt.video?.status === 'ended' || apt.video?.endedAt) return 'completed';
 
-  const filteredAppointments = selectedTab === 0 ? upcomingAppointments : pastAppointments;
-  const upcomingCount = upcomingAppointments.length;
-  const pastCount = pastAppointments.length;
+    const nowTime = Date.now();
+    const startTime = new Date(apt.dateTime).getTime();
+    const duration = (apt.duration || 30) * 60000;
+    const endTime = startTime + duration;
+
+    if (nowTime > endTime) {
+      return 'completed';
+    }
+
+    return apt.status;
+  };
+
+  const upcomingAppointments = useMemo(() => appointments
+    .filter((apt) => {
+      const st = getEffectiveAppointmentStatus(apt);
+      return st === 'scheduled' || st === 'in_progress';
+    })
+    .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime)), [appointments]);
+
+  const pastAppointments = useMemo(() => appointments
+    .filter((apt) => {
+      const st = getEffectiveAppointmentStatus(apt);
+      return st === 'completed' || st === 'cancelled';
+    })
+    .sort((a, b) => new Date(b.dateTime) - new Date(a.dateTime)), [appointments]);
+
+  const filteredAppointments = useMemo(() => {
+    let list = selectedTab === 0 ? upcomingAppointments : pastAppointments;
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(apt => {
+        const docName = (apt.doctorId?.name || '').toLowerCase();
+        const type = (apt.type || '').toLowerCase();
+        const status = (getEffectiveAppointmentStatus(apt) || '').toLowerCase();
+        const reason = (apt.reason || apt.notes || '').toLowerCase();
+        
+        return docName.includes(q) || type.includes(q) || status.includes(q) || reason.includes(q);
+      });
+    }
+    return list;
+  }, [selectedTab, upcomingAppointments, pastAppointments, searchQuery]);
 
   useEffect(() => {
     if (appointments.length > 0) {
       resetAnimations();
       triggerStagger(filteredAppointments.length);
     }
-  }, [selectedTab, appointments, filteredAppointments.length, resetAnimations, triggerStagger]);
+  }, [selectedTab, appointments, filteredAppointments.length, resetAnimations, triggerStagger, searchQuery]);
 
   const onRefresh = useCallback(async () => {
     haptics.light();
@@ -110,23 +160,37 @@ const AppointmentsScreen = ({ navigation }) => {
   const getTypeBadgeColor = (type) => {
     switch (type?.toLowerCase()) {
       case 'consultation':
-        return PRIMARY_COLOR;
+        return theme.primary;
       case 'follow-up':
-        return TEXT_SECONDARY;
+        return theme.textSecondary;
       case 'checkup':
         return theme.warning;
       default:
-        return TEXT_SECONDARY;
+        return theme.textSecondary;
     }
   };
 
   if (!fontsLoaded) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
+
+  const canJoinCall = (apt) => {
+    if (!apt) return false;
+    const st = getEffectiveAppointmentStatus(apt);
+    if (st === 'completed' || st === 'cancelled' || apt.video?.status === 'ended') return false;
+    if (apt.video?.status === 'live' || apt.status === 'in_progress') return true;
+
+    const nowTime = Date.now();
+    const startTime = new Date(apt.dateTime).getTime();
+    const duration = (apt.duration || 30) * 60000;
+    const endTime = startTime + duration;
+
+    return nowTime >= startTime - 5 * 60000 && nowTime <= endTime;
+  };
 
   const renderAppointmentCard = (appointment, index) => {
     const { date, time } = formatDateTime(appointment.dateTime);
@@ -141,31 +205,26 @@ const AppointmentsScreen = ({ navigation }) => {
                 <Ionicons
                   name="calendar-outline"
                   size={18}
-                  color={PRIMARY_COLOR}
+                  color={theme.primary}
                 />
                 <Text style={styles.dateText}>
                   {date}
                 </Text>
                 <Ionicons
                   name="time-outline"
-                  size={16}
-                  color={TEXT_SECONDARY}
+                  size={18}
+                  color={theme.primary}
                   style={styles.timeIcon}
                 />
                 <Text style={styles.timeText}>
                   {time}
                 </Text>
               </View>
-              <StatusBadge status={appointment.status} />
+              <StatusBadge status={getEffectiveAppointmentStatus(appointment)} size="sm" />
             </View>
 
             <View style={styles.cardBody}>
-              <View style={styles.doctorRow}>
-                <Ionicons
-                  name="person-outline"
-                  size={18}
-                  color={TEXT_SECONDARY}
-                />
+              <View style={styles.doctorInfo}>
                 <Text style={styles.doctorName}>
                   {appointment.doctorId?.name || 'Unknown Doctor'}
                 </Text>
@@ -193,12 +252,28 @@ const AppointmentsScreen = ({ navigation }) => {
                     <Ionicons
                       name="hourglass-outline"
                       size={14}
-                      color={TEXT_SECONDARY}
+                      color={theme.textSecondary}
                     />
                     <Text style={styles.durationText}>
                       {appointment.duration} min
                     </Text>
                   </View>
+                )}
+                {canJoinCall(appointment) && (
+                  <PressableButton
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                      haptics.medium();
+                      navigation.navigate('VideoCall', {
+                        appointmentId: appointment._id,
+                        doctorName: appointment.doctorId?.name || 'Doctor',
+                      });
+                    }}
+                    style={styles.cardJoinVideoButton}
+                  >
+                    <Ionicons name="videocam" size={14} color="#FFFFFF" />
+                    <Text style={styles.cardJoinVideoText}>Join Call</Text>
+                  </PressableButton>
                 )}
               </View>
             </View>
@@ -207,7 +282,7 @@ const AppointmentsScreen = ({ navigation }) => {
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={TEXT_SECONDARY}
+                color={theme.textSecondary}
               />
             </View>
           </View>
@@ -218,7 +293,7 @@ const AppointmentsScreen = ({ navigation }) => {
 
   const renderContent = () => {
     if (loading) {
-      return <PageLoader />;
+      return <SkeletonList count={4} />;
     }
 
     if (filteredAppointments.length === 0) {
@@ -245,13 +320,43 @@ const AppointmentsScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.content, { opacity: screenAnimation.fadeAnim, transform: [{ translateY: screenAnimation.slideAnim }] }]}>
-        <ScreenHeader title="Appointments" />
+        
+        {/* Custom Header matching Inbox */}
+        <View style={styles.customHeader}>
+          <View style={styles.headerLeft}>
+            <Avatar uri={user?.avatar} name={user?.name || 'User'} size={48} />
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.welcomeText}>Welcome Back</Text>
+              <Text style={styles.inboxText}>Appointments</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.circleIconBtn} onPress={() => setSearchVisible(!searchVisible)}>
+              <Ionicons name="search-outline" size={24} color={theme.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <SegmentedControl
-          segments={['Upcoming', 'Past']}
-          activeIndex={selectedTab}
-          onChange={setSelectedTab}
-        />
+        {searchVisible && (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={[styles.searchInput, { color: theme.text, backgroundColor: theme.card, borderColor: theme.border }]}
+              placeholder="Search appointments..."
+              placeholderTextColor={theme.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+          </View>
+        )}
+
+        <View style={styles.segmentedWrapper}>
+          <SegmentedControl
+            segments={['Upcoming', 'Past']}
+            activeIndex={selectedTab}
+            onChange={setSelectedTab}
+          />
+        </View>
 
         <ScrollView
           style={styles.scrollView}
@@ -261,8 +366,8 @@ const AppointmentsScreen = ({ navigation }) => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={PRIMARY_COLOR}
-              colors={[PRIMARY_COLOR]}
+              tintColor={theme.primary}
+              colors={[theme.primary]}
             />
           }
         >
@@ -275,41 +380,95 @@ const AppointmentsScreen = ({ navigation }) => {
         icon="add"
         onPress={handleBookAppointment}
         style={styles.fab}
-        color={PRIMARY_COLOR}
+        color={theme.primary}
       />
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
+    backgroundColor: theme.bg,
   },
   content: {
     flex: 1,
-    padding: 20,
   },
-  segmentedControl: {
-    marginBottom: 16,
+  customHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerTextContainer: {
+    marginLeft: 12,
+  },
+  welcomeText: {
+    fontSize: 13,
+    color: theme.textSecondary,
+    fontFamily: 'Urbanist_600SemiBold',
+  },
+  inboxText: {
+    fontSize: 24,
+    color: theme.text,
+    fontFamily: 'Urbanist_700Bold',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  circleIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: theme.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  searchInput: {
+    height: 46,
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    fontFamily: 'Urbanist_600SemiBold',
+    fontSize: 15,
+  },
+  segmentedWrapper: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+    paddingTop: 8,
   },
   appointmentCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 24,
     marginBottom: 16,
     padding: 18,
     position: 'relative',
-    shadowColor: PRIMARY_COLOR,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.06,
     shadowRadius: 24,
-    elevation: 8,
+    elevation: Platform.OS === 'android' ? 2 : 8,
+    borderWidth: Platform.OS === 'android' ? 1 : 0,
+    borderColor: theme.border,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -324,7 +483,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 14,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginLeft: 6,
   },
   timeIcon: {
@@ -333,21 +492,21 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginLeft: 4,
   },
   cardBody: {
     gap: 12,
   },
-  doctorRow: {
+  doctorInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
   },
   doctorName: {
     fontSize: 16,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.text,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -373,7 +532,22 @@ const styles = StyleSheet.create({
   durationText: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
+  },
+  cardJoinVideoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginLeft: 'auto',
+  },
+  cardJoinVideoText: {
+    fontSize: 13,
+    fontFamily: 'Urbanist_700Bold',
+    color: '#FFFFFF',
   },
   cardArrow: {
     position: 'absolute',

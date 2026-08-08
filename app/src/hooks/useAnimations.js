@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { Animated } from 'react-native';
+import { Animated, Platform, Easing } from 'react-native';
 
 /**
  * useScreenAnimation — provides consistent fade+slide-up entrance.
@@ -49,27 +49,32 @@ export function useStaggerAnimation(count, { staggerMs = 40, slideFrom = 15 } = 
     Array.from({ length: Math.max(count, 20) }, () => ({
       opacity: new Animated.Value(0),
       translateY: new Animated.Value(slideFrom),
+      scale: new Animated.Value(0.96),
     }))
   ).current;
 
   const triggerStagger = (itemCount) => {
     const n = itemCount || count;
     const animations = [];
+    const isAndroid = Platform.OS === 'android';
+
     for (let i = 0; i < Math.min(n, anims.length); i++) {
+      const delay = isAndroid ? Math.min(i * 35, 180) : i * staggerMs;
       animations.push(
         Animated.parallel([
           Animated.timing(anims[i].opacity, {
             toValue: 1,
-            duration: 350,
-            delay: i * staggerMs,
+            duration: isAndroid ? 240 : 350,
+            delay,
             useNativeDriver: true,
+            easing: isAndroid ? Easing.out(Easing.quad) : undefined,
           }),
           Animated.spring(anims[i].translateY, {
             toValue: 0,
-            delay: i * staggerMs,
+            delay,
             useNativeDriver: true,
-            speed: 14,
-            bounciness: 4,
+            speed: isAndroid ? 12 : 14,
+            bounciness: isAndroid ? 2 : 4,
           }),
         ])
       );
@@ -80,7 +85,9 @@ export function useStaggerAnimation(count, { staggerMs = 40, slideFrom = 15 } = 
   const getItemStyle = (index) => {
     if (index >= anims.length) return {};
     return {
-      opacity: anims[index].opacity,
+      // On Android, animating opacity on cards with elevation causes black ambient shadow bleed-through.
+      // Keeping opacity solid (1) and using slide translateY prevents the black box artifact.
+      opacity: Platform.OS === 'android' ? 1 : anims[index].opacity,
       transform: [{ translateY: anims[index].translateY }],
     };
   };
@@ -89,6 +96,7 @@ export function useStaggerAnimation(count, { staggerMs = 40, slideFrom = 15 } = 
     anims.forEach((a) => {
       a.opacity.setValue(0);
       a.translateY.setValue(slideFrom);
+      a.scale.setValue(0.96);
     });
   };
 

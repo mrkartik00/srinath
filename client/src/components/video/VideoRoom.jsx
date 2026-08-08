@@ -15,7 +15,12 @@ import VideoControls from './VideoControls';
  * token; changing the `token` prop remounts the meeting via `key`.
  */
 export default function VideoRoom({ token, roomId, onCallEnd, participantName, onTokenExpired }) {
+  // `attempt` forces a MeetingProvider remount on every recovery, even when the
+  // refetched token is byte-identical (same-second JWT issuance produces the
+  // exact same string, so keying on `token` alone would NOT remount).
+  const [attempt, setAttempt] = useState(0);
   const refreshCount = useRef(0);
+  const recovering = useRef(false);
 
   // Guard: never hand an empty meetingId/token to the SDK (would 4002/crash).
   if (!token || !roomId) {
@@ -28,14 +33,26 @@ export default function VideoRoom({ token, roomId, onCallEnd, participantName, o
   }
 
   const handleExpired = async () => {
-    if (!onTokenExpired || refreshCount.current >= 3) return;
+    // Ignore overlapping error callbacks while a recovery is already in flight.
+    if (recovering.current || refreshCount.current >= 3) return;
+    recovering.current = true;
     refreshCount.current += 1;
-    await onTokenExpired();
+
+    try {
+      // Small backoff lets the wall clock advance (so a freshly minted JWT is
+      // no longer identical) and lets the SDK tear down before we rejoin.
+      await new Promise((r) => setTimeout(r, 1200));
+      if (onTokenExpired) await onTokenExpired();
+    } finally {
+      // Bumping `attempt` remounts MeetingProvider unconditionally.
+      setAttempt((n) => n + 1);
+      recovering.current = false;
+    }
   };
 
   return (
     <MeetingProvider
-      key={token}
+      key={`${token}-${attempt}`}
       config={{
         meetingId: roomId,
         micEnabled: true,

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, Platform } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 /**
@@ -12,12 +12,14 @@ import { useTheme } from '../../context/ThemeContext';
 export default function SkeletonList({ count = 4, style }) {
   const { theme } = useTheme();
   const shimmer = useRef(new Animated.Value(0)).current;
+  const isAndroid = Platform.OS === 'android';
 
   useEffect(() => {
+    const cycleDuration = isAndroid ? 650 : 1000;
     Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
-        Animated.timing(shimmer, { toValue: 0, duration: 1000, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 1, duration: cycleDuration, useNativeDriver: true }),
+        Animated.timing(shimmer, { toValue: 0, duration: cycleDuration, useNativeDriver: true }),
       ])
     ).start();
   }, []);
@@ -27,11 +29,22 @@ export default function SkeletonList({ count = 4, style }) {
   return (
     <View style={style}>
       {Array.from({ length: count }).map((_, i) => (
-        <Animated.View key={i} style={[styles.row, { backgroundColor: theme.chipBg, opacity }]}>
-          <View style={[styles.circle, { backgroundColor: theme.border }]} />
+        <Animated.View
+          key={i}
+          style={[
+            styles.row,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+              borderWidth: isAndroid ? 1 : 0,
+              opacity,
+            },
+          ]}
+        >
+          <View style={[styles.circle, { backgroundColor: theme.chipBg }]} />
           <View style={styles.lines}>
-            <View style={[styles.lineL, { backgroundColor: theme.border }]} />
-            <View style={[styles.lineS, { backgroundColor: theme.border }]} />
+            <View style={[styles.lineL, { backgroundColor: theme.chipBg }]} />
+            <View style={[styles.lineS, { backgroundColor: theme.chipBg }]} />
           </View>
         </Animated.View>
       ))}

@@ -1,22 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import haptics from '../../utils/haptics';
 
 /**
  * ScreenHeader — large title header with optional back button & right action.
- *
- * Props:
- *   title (string) — large title text
- *   subtitle (string) — optional subtitle/description below title
- *   onBack (fn) — if provided, shows a back arrow
- *   rightIcon (string) — Ionicons name for right action
- *   onRightPress (fn) — handler for right action
- *   rightComponent (ReactNode) — custom right element
  */
 export default function ScreenHeader({ title, subtitle, onBack, rightIcon, onRightPress, rightComponent }) {
   const { theme } = useTheme();
+  const isAndroid = Platform.OS === 'android';
+  const backIcon = isAndroid ? 'arrow-back' : 'chevron-back';
 
   return (
     <View style={styles.container}>
@@ -27,7 +21,7 @@ export default function ScreenHeader({ title, subtitle, onBack, rightIcon, onRig
             style={[styles.backBtn, { backgroundColor: theme.chipBg }]}
             activeOpacity={0.7}
           >
-            <Ionicons name="chevron-back" size={22} color={theme.text} />
+            <Ionicons name={backIcon} size={isAndroid ? 20 : 22} color={theme.text} />
           </TouchableOpacity>
         )}
         <View style={styles.titleBlock}>
@@ -48,18 +42,24 @@ export default function ScreenHeader({ title, subtitle, onBack, rightIcon, onRig
   );
 }
 
+const androidTopPadding = (StatusBar.currentHeight || 28) + 10;
+
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    marginBottom: Platform.OS === 'android' ? 14 : 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : androidTopPadding,
   },
   leftRow: { flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 },
   backBtn: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   titleBlock: { flex: 1 },
-  title: { fontSize: 32, fontFamily: 'Urbanist_700Bold', letterSpacing: -0.5 },
-  subtitle: { fontSize: 14, marginTop: 2, fontFamily: 'Urbanist_600SemiBold' },
+  title: {
+    fontSize: Platform.OS === 'android' ? 26 : 32,
+    fontFamily: 'Urbanist_700Bold',
+    letterSpacing: -0.5,
+  },
+  subtitle: { fontSize: 13, marginTop: 2, fontFamily: 'Urbanist_600SemiBold' },
   rightBtn: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 });

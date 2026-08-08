@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   FlatList,
@@ -14,6 +14,7 @@ import {
   Alert,
   Image,
   Linking,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,21 +25,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import { useTheme } from '../context/ThemeContext';
-import { ScreenHeader } from '../components/ui';
-import { getMessages, createConversation, uploadChatFile, getAttachmentUrl } from '../api/chat';
+import { Avatar } from '../components/ui';
+import { getMessages, createConversation, uploadChatFile, getAttachmentUrl, shareVaultInChat } from '../api/chat';
+import { getVaultDocuments } from '../api/vault';
 import haptics from '../utils/haptics';
 import { API_BASE_URL } from '../api/axios';
 
 const SERVER_URL = API_BASE_URL;
 
-const BG_COLOR = '#F5F7FA';
-const PRIMARY_COLOR = '#223263';
-const TEXT_SECONDARY = '#8F9BB3';
-const BLUE_LIGHT = '#EEF2F8';
 
 export default function ChatScreen({ route, navigation }) {
-  const { conversationId: routeConversationId, doctorName: routeDoctorName, doctorId: routeDoctorId, doctor } = route.params || {};
+  const { conversationId: routeConversationId, doctorName: routeDoctorName, doctorId: routeDoctorId, doctorAvatar, doctor } = route.params || {};
   const { theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
   const insets = useSafeAreaInsets();
 
   const [conversationId, setConversationId] = useState(routeConversationId);
@@ -52,7 +51,16 @@ export default function ChatScreen({ route, navigation }) {
   const [hasMore, setHasMore] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [pendingAttachment, setPendingAttachment] = useState(null);
+
+  // Vault share state
+  const [vaultModalVisible, setVaultModalVisible] = useState(false);
+  const [vaultDocuments, setVaultDocuments] = useState([]);
+  const [selectedVaultIds, setSelectedVaultIds] = useState([]);
+  const [vaultLoading, setVaultLoading] = useState(false);
+  const [vaultSharing, setVaultSharing] = useState(false);
 
   const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
 
@@ -74,14 +82,19 @@ export default function ChatScreen({ route, navigation }) {
     }
   }, [isTyping]);
 
-  // Track keyboard visibility so the input bar doesn't double up its
-  // bottom safe-area padding on top of the keyboard (which already sits
-  // flush with the screen edge).
+  // Track keyboard visibility and height so we can pad the screen manually,
+  // bypassing any KeyboardAvoidingView bugs on iOS.
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-    const showSub = Keyboard.addListener(showEvent, () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardVisible(false));
+    const showSub = Keyboard.addListener(showEvent, (e) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates?.height || 0);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
@@ -134,6 +147,7 @@ export default function ChatScreen({ route, navigation }) {
 
       socket.on('connect', () => {
         socket.emit('conversation:join', conversationId);
+        socket.emit('messages:read', conversationId);
       });
 
       socket.on('message:new', (data) => {
@@ -149,6 +163,7 @@ export default function ChatScreen({ route, navigation }) {
           }
           return [...prev, msg];
         });
+        socket.emit('messages:read', conversationId);
         haptics.selection();
         scrollToBottom();
       });
@@ -182,8 +197,52 @@ export default function ChatScreen({ route, navigation }) {
   }, [loading, messages.length, scrollToBottom]);
 
   // Send message
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const body = inputText.trim();
+
+    if (pendingAttachment) {
+      if (!conversationId) return;
+      const attUri = pendingAttachment.uri;
+      const attName = pendingAttachment.fileName || `photo-${Date.now()}.jpg`;
+      const attType = pendingAttachment.mimeType || 'image/jpeg';
+
+      const formData = new FormData();
+      if (attUri.startsWith('blob:') || attUri.startsWith('http')) {
+        // Web — resolve the blob URL to a real Blob/File first
+        const blobRes = await fetch(attUri);
+        const blob = await blobRes.blob();
+        formData.append('file', new File([blob], attName, { type: attType }));
+      } else {
+        // Native — use RN-style file descriptor
+        formData.append('file', { uri: attUri, name: attName, type: attType });
+      }
+      if (body) {
+        formData.append('caption', body);
+      }
+
+      haptics.medium();
+      setUploadingAttachment(true);
+      try {
+        const res = await uploadChatFile(conversationId, formData);
+        const uploadedMessage = res.data;
+        setMessages((prev) => {
+          if (prev.some((m) => m._id === uploadedMessage._id)) return prev;
+          return [...prev, uploadedMessage];
+        });
+        haptics.success();
+        setInputText('');
+        setPendingAttachment(null);
+        scrollToBottom();
+      } catch (err) {
+        haptics.error();
+        const msg = (Array.isArray(err) && err.join('\n')) || (typeof err === 'string' && err) || 'Failed to send the photo.';
+        Alert.alert('Upload Failed', msg);
+      } finally {
+        setUploadingAttachment(false);
+      }
+      return;
+    }
+
     if (!body || !socketRef.current) return;
 
     const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -210,7 +269,7 @@ export default function ChatScreen({ route, navigation }) {
       type: 'text',
       idempotencyKey,
     });
-  }, [inputText, conversationId, scrollToBottom]);
+  }, [inputText, pendingAttachment, conversationId, scrollToBottom]);
 
   // Attach image
   const handleAttach = useCallback(async () => {
@@ -225,38 +284,63 @@ export default function ChatScreen({ route, navigation }) {
       mediaTypes: ['images'],
       quality: 0.8,
     });
-    if (result.canceled || !result.assets?.[0] || !conversationId) return;
-
-    const asset = result.assets[0];
-    const formData = new FormData();
-    formData.append('file', {
-      uri: asset.uri,
-      name: asset.fileName || `photo-${Date.now()}.jpg`,
-      type: asset.mimeType || 'image/jpeg',
-    });
-
+    if (result.canceled || !result.assets?.[0]) return;
+    
+    setPendingAttachment(result.assets[0]);
     haptics.medium();
-    setUploadingAttachment(true);
+  }, []);
+
+  // Open vault share modal
+  const handleOpenVaultShare = useCallback(async () => {
+    haptics.light();
+    setVaultModalVisible(true);
+    setSelectedVaultIds([]);
     try {
-      const res = await uploadChatFile(conversationId, formData);
-      const uploadedMessage = res.data;
-      setMessages((prev) => {
-        if (prev.some((m) => m._id === uploadedMessage._id)) return prev;
-        return [...prev, uploadedMessage];
-      });
+      setVaultLoading(true);
+      const res = await getVaultDocuments();
+      setVaultDocuments(res.data || res.documents || res || []);
+    } catch (err) {
+      console.error('Failed to fetch vault documents:', err);
+      Alert.alert('Error', 'Could not load vault documents.');
+    } finally {
+      setVaultLoading(false);
+    }
+  }, []);
+
+  // Toggle vault document selection
+  const toggleVaultSelection = useCallback((docId) => {
+    setSelectedVaultIds((prev) => {
+      if (prev.includes(docId)) return prev.filter((id) => id !== docId);
+      if (prev.length >= 5) {
+        Alert.alert('Limit Reached', 'You can share up to 5 documents at a time.');
+        return prev;
+      }
+      return [...prev, docId];
+    });
+  }, []);
+
+  // Share selected vault documents
+  const handleShareVault = useCallback(async () => {
+    if (!conversationId || selectedVaultIds.length === 0) return;
+    try {
+      setVaultSharing(true);
+      await shareVaultInChat(conversationId, selectedVaultIds);
       haptics.success();
+      setVaultModalVisible(false);
+      setSelectedVaultIds([]);
+      // Refresh messages to show shared documents
+      const res = await getMessages(conversationId);
+      const fetched = res.data || [];
+      setMessages(fetched);
       scrollToBottom();
     } catch (err) {
       haptics.error();
-      const msg =
-        (Array.isArray(err) && err.join('\n')) ||
-        (typeof err === 'string' && err) ||
-        'Failed to send the photo. Please try again.';
-      Alert.alert('Upload Failed', msg);
+      const msg = Array.isArray(err) ? err.join('\n') : (typeof err === 'string' ? err : 'Failed to share documents.');
+      Alert.alert('Share Failed', msg);
     } finally {
-      setUploadingAttachment(false);
+      setVaultSharing(false);
     }
-  }, [conversationId, scrollToBottom]);
+  }, [conversationId, selectedVaultIds, scrollToBottom]);
 
   // Typing events
   const handleFocus = useCallback(() => {
@@ -371,7 +455,7 @@ export default function ChatScreen({ route, navigation }) {
             </View>
           )}
 
-          <View style={[styles.bubble, bubbleStyle, { backgroundColor: isPatient ? PRIMARY_COLOR : '#FFFFFF' }]}>
+          <View style={[styles.bubble, bubbleStyle, { backgroundColor: isPatient ? theme.primary : theme.card }]}>
             {attachment && type === 'image' && attachment.fileUrl ? (
               <TouchableOpacity onPress={() => handleOpenAttachment(item)} activeOpacity={0.9}>
                 <Image source={{ uri: attachment.fileUrl }} style={styles.attachmentImage} resizeMode="cover" />
@@ -381,7 +465,7 @@ export default function ChatScreen({ route, navigation }) {
                 <Ionicons
                   name={type === 'image' ? 'image' : 'document-text'}
                   size={22}
-                  color={isPatient ? '#FFFFFF' : PRIMARY_COLOR}
+                  color={isPatient ? '#FFFFFF' : theme.primary}
                 />
                 <Text style={[styles.attachmentName, bodyTextStyle]} numberOfLines={1}>
                   {attachment.fileName || 'Attachment'}
@@ -400,7 +484,7 @@ export default function ChatScreen({ route, navigation }) {
               <Ionicons
                 name="checkmark-done"
                 size={14}
-                color={PRIMARY_COLOR}
+                color={theme.primary}
                 style={{ marginLeft: 4 }}
               />
             )}
@@ -428,25 +512,43 @@ export default function ChatScreen({ route, navigation }) {
   if (!fontsLoaded) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerWrapper}>
-        <ScreenHeader title={doctorName} onBack={() => navigation.goBack()} />
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
+      {/* WhatsApp-style compact header */}
+      <View style={[styles.chatHeader, { paddingTop: Math.max(insets.top, 20) }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.chatHeaderBack} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={26} color={theme.primary} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.chatHeaderAvatarTap}
+          activeOpacity={0.7}
+          onPress={() => {
+            if (doctorId) {
+              navigation.navigate('DoctorDetail', { doctor: { _id: doctorId, name: doctorName, avatar: doctorAvatar, ...(doctor || {}) } });
+            }
+          }}
+        >
+          <View style={styles.chatHeaderAvatar}>
+            <Avatar name={doctorName} size={42} uri={doctorAvatar} />
+          </View>
+          <View style={styles.chatHeaderInfo}>
+            <Text style={styles.chatHeaderName} numberOfLines={1}>{doctorName}</Text>
+            <Text style={styles.chatHeaderSub} numberOfLines={1}>Doctor</Text>
+          </View>
+        </TouchableOpacity>
       </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+            <ActivityIndicator size="large" color={theme.primary} />
           </View>
         ) : (
           <FlatList
@@ -462,52 +564,194 @@ export default function ChatScreen({ route, navigation }) {
         )}
 
         {/* Input Bar */}
-        <View style={[styles.inputBar, { paddingBottom: keyboardVisible ? 12 : Math.max(insets.bottom, 12) }]}>
-          <TouchableOpacity onPress={handleAttach} style={styles.attachBtn} disabled={uploadingAttachment}>
-            {uploadingAttachment ? (
-              <ActivityIndicator size="small" color={TEXT_SECONDARY} />
-            ) : (
-              <Ionicons name="attach" size={26} color={TEXT_SECONDARY} />
-            )}
-          </TouchableOpacity>
+        <View style={[styles.inputBarContainer, { paddingBottom: keyboardVisible && Platform.OS === 'android' ? 12 : Math.max(insets.bottom, 12) }]}>
+          <View style={styles.inputRow}>
+            <TouchableOpacity onPress={handleAttach} style={styles.attachBtn} disabled={uploadingAttachment}>
+              <Ionicons name="attach" size={26} color={theme.textSecondary} />
+            </TouchableOpacity>
 
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type a message..."
-            placeholderTextColor={TEXT_SECONDARY}
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={2000}
-            numberOfLines={4}
-            textAlignVertical="center"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-          />
+            <TouchableOpacity onPress={handleOpenVaultShare} style={styles.attachBtn} disabled={uploadingAttachment}>
+              <Ionicons name="folder-open-outline" size={24} color={theme.textSecondary} />
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleSend} disabled={!inputText.trim()}>
-            <View
-              style={[
-                styles.sendBtn,
-                { backgroundColor: inputText.trim() ? PRIMARY_COLOR : TEXT_SECONDARY + '55' }
-              ]}
-            >
-              <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
-            </View>
-          </TouchableOpacity>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Type a message..."
+              placeholderTextColor={theme.textSecondary}
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={2000}
+              numberOfLines={4}
+              textAlignVertical="center"
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
+
+            <TouchableOpacity onPress={handleSend} disabled={!inputText.trim() || uploadingAttachment}>
+              <View
+                style={[
+                  styles.sendBtn,
+                  { backgroundColor: inputText.trim() ? theme.primary : theme.textSecondary + '55' }
+                ]}
+              >
+                {uploadingAttachment ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="arrow-up" size={20} color="#FFFFFF" />
+                )}
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+      {/* Full Screen Image Preview Modal */}
+      <Modal visible={!!pendingAttachment} animationType="fade" transparent={false} onRequestClose={() => setPendingAttachment(null)}>
+        <View style={[styles.modalContainer, { paddingTop: Math.max(insets.top, 20) }]}>
+          <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setPendingAttachment(null)}>
+            <Ionicons name="close" size={28} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.modalImageWrapper}>
+            {pendingAttachment && <Image source={{ uri: pendingAttachment.uri }} style={styles.modalImage} resizeMode="contain" />}
+          </View>
+          
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <View style={[styles.modalInputRow, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+              <View style={styles.modalInputWrapper}>
+                <TextInput
+                  style={styles.modalTextInput}
+                  placeholder="Add a caption..."
+                  placeholderTextColor="#8F9BB3"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  maxLength={2000}
+                />
+              </View>
+              <TouchableOpacity onPress={handleSend} disabled={uploadingAttachment} style={styles.modalSendBtn}>
+                {uploadingAttachment ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="send" size={18} color="#FFFFFF" style={{ marginLeft: 2 }} />
+                )}
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </Modal>
+
+      {/* Vault Share Modal */}
+      <Modal visible={vaultModalVisible} animationType="slide" transparent={true} onRequestClose={() => setVaultModalVisible(false)}>
+        <View style={styles.vaultModalOverlay}>
+          <View style={[styles.vaultModalContainer, { backgroundColor: theme.card }]}>
+            <View style={styles.vaultModalHeader}>
+              <Text style={styles.vaultModalTitle}>Share from Vault</Text>
+              <TouchableOpacity onPress={() => setVaultModalVisible(false)} activeOpacity={0.7}>
+                <Ionicons name="close" size={24} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+
+            {vaultLoading ? (
+              <View style={styles.vaultLoadingContainer}>
+                <ActivityIndicator size="large" color={theme.primary} />
+              </View>
+            ) : vaultDocuments.length === 0 ? (
+              <View style={styles.vaultLoadingContainer}>
+                <Text style={styles.vaultEmptyText}>No documents in your vault.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={vaultDocuments}
+                keyExtractor={(item) => item._id || item.id}
+                style={styles.vaultList}
+                renderItem={({ item }) => {
+                  const docId = item._id || item.id;
+                  const isSelected = selectedVaultIds.includes(docId);
+                  return (
+                    <TouchableOpacity
+                      style={[styles.vaultDocRow, isSelected && { backgroundColor: theme.primary + '15' }]}
+                      onPress={() => toggleVaultSelection(docId)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.vaultCheckbox, isSelected && { backgroundColor: theme.primary, borderColor: theme.primary }]}>
+                        {isSelected && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                      </View>
+                      <Ionicons name="document-text-outline" size={20} color={theme.primary} style={{ marginRight: 10 }} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.vaultDocName} numberOfLines={1}>{item.originalName || item.fileName || item.name || 'Document'}</Text>
+                        {item.category ? <Text style={styles.vaultDocCategory}>{item.category}</Text> : null}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            )}
+
+            <View style={styles.vaultModalFooter}>
+              <Text style={styles.vaultSelectedCount}>{selectedVaultIds.length}/5 selected</Text>
+              <TouchableOpacity
+                style={[styles.vaultShareBtn, (selectedVaultIds.length === 0 || vaultSharing) && { opacity: 0.5 }]}
+                onPress={handleShareVault}
+                disabled={selectedVaultIds.length === 0 || vaultSharing}
+                activeOpacity={0.8}
+              >
+                {vaultSharing ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.vaultShareBtnText}>Share</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
+    backgroundColor: theme.bg,
   },
-  headerWrapper: {
-    paddingHorizontal: 16,
+  chatHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    backgroundColor: theme.card,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  chatHeaderBack: {
+    width: 38,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+  },
+  chatHeaderAvatar: {
+    marginRight: 10,
+  },
+  chatHeaderInfo: {
+    flex: 1,
+  },
+  chatHeaderName: {
+    fontSize: 17,
+    fontFamily: 'Urbanist_700Bold',
+    color: theme.text,
+    letterSpacing: -0.3,
+  },
+  chatHeaderSub: {
+    fontSize: 13,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: theme.textSecondary,
+    marginTop: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -536,7 +780,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
-    shadowColor: PRIMARY_COLOR,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -557,7 +801,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   bubbleText: {
-    color: PRIMARY_COLOR,
+    color: theme.text,
     fontSize: 16,
     fontFamily: 'Urbanist_600SemiBold',
     lineHeight: 22,
@@ -586,7 +830,7 @@ const styles = StyleSheet.create({
   systemText: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     fontStyle: 'italic',
   },
   // Meta (time + read receipt)
@@ -602,18 +846,18 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 12,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
   },
   // AI icon
   aiIcon: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 6,
-    shadowColor: PRIMARY_COLOR,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
@@ -630,23 +874,25 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: TEXT_SECONDARY,
+    backgroundColor: theme.textSecondary,
   },
   typingText: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginLeft: 6,
   },
   // Input bar
-  inputBar: {
+  inputBarContainer: {
+    backgroundColor: theme.card,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: 12,
     paddingTop: 12,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: BLUE_LIGHT,
   },
   attachBtn: {
     padding: 8,
@@ -662,13 +908,67 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     fontFamily: 'Urbanist_600SemiBold',
-    backgroundColor: BG_COLOR,
-    color: PRIMARY_COLOR,
+    backgroundColor: theme.bg,
+    color: theme.text,
   },
   sendBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 10,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  modalCloseBtn: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 20,
+  },
+  modalImageWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalImage: {
+    width: '100%',
+    height: '100%',
+  },
+  modalInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: '#111111',
+  },
+  modalInputWrapper: {
+    flex: 1,
+    backgroundColor: '#222222',
+    borderRadius: 22,
+    minHeight: 44,
+    maxHeight: 120,
+    justifyContent: 'center',
+  },
+  modalTextInput: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Urbanist_600SemiBold',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  modalSendBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 10,
@@ -682,13 +982,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: BLUE_LIGHT,
-    shadowColor: PRIMARY_COLOR,
+    borderColor: theme.border,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 5,
@@ -697,6 +997,106 @@ const styles = StyleSheet.create({
   loadOlderText: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
+  },
+  // Tappable avatar header
+  chatHeaderAvatarTap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  // Vault share modal
+  vaultModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  vaultModalContainer: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '70%',
+    paddingTop: 16,
+  },
+  vaultModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+  },
+  vaultModalTitle: {
+    fontSize: 18,
+    fontFamily: 'Urbanist_700Bold',
+    color: theme.text,
+  },
+  vaultLoadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vaultEmptyText: {
+    fontSize: 15,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: theme.textSecondary,
+  },
+  vaultList: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  vaultDocRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  vaultCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: theme.textSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  vaultDocName: {
+    fontSize: 14,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: theme.text,
+  },
+  vaultDocCategory: {
+    fontSize: 12,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: theme.textSecondary,
+    marginTop: 2,
+  },
+  vaultModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  vaultSelectedCount: {
+    fontSize: 14,
+    fontFamily: 'Urbanist_600SemiBold',
+    color: theme.textSecondary,
+  },
+  vaultShareBtn: {
+    backgroundColor: theme.primary,
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+  },
+  vaultShareBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontFamily: 'Urbanist_700Bold',
   },
 });

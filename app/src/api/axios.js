@@ -7,18 +7,21 @@ import { emitUnauthorized } from '../utils/authEvents';
 const PORT = 5001;
 
 function resolveBaseUrl() {
+  // 1. Environment variable override (set during build or in .env)
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
+
+  // 2. Configured production/staging URL from app.json (e.g. https://api.janki.care)
   const configured = Constants.expoConfig?.extra?.apiUrl;
+  if (configured) return configured;
 
-  // If an explicit non-localhost URL is set, always honor it (prod/staging).
-  if (configured && !/localhost|127\.0\.0\.1/.test(configured)) return configured;
-
-  // Derive the dev machine's host from the Expo packager (works on
-  // simulator, Android emulator, and physical devices on the same network).
+  // 3. Dev fallback: derive host from Expo packager if no production API configured
   const hostUri = Constants.expoConfig?.hostUri || Constants.expoGoConfig?.debuggerHost;
   const host = hostUri?.split(':')[0];
-  if (host) return `http://${host}:${PORT}`;
+  if (__DEV__ && host) return `http://${host}:${PORT}`;
 
-  // Fallbacks if the dev host can't be determined.
+  // 4. Last-resort fallbacks
   if (Platform.OS === 'android') return `http://10.0.2.2:${PORT}`;
   return `http://localhost:${PORT}`;
 }
@@ -33,6 +36,14 @@ const api = axios.create({
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  // If the payload is FormData, strip the default Content-Type header so the
+  // platform can append its own boundary parameter (e.g. multipart/form-data)
+  if (config.data instanceof FormData) {
+    if (config.headers) {
+      delete config.headers['Content-Type'];
+    }
+  }
   return config;
 });
 

@@ -9,32 +9,136 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  MeetingProvider,
-  useMeeting,
-  useParticipant,
-  RTCView,
-  MediaStream,
-} from '@videosdk.live/react-native-sdk';
+import { NativeModules } from 'react-native';
 import haptics from '../utils/haptics';
+
+import { joinVideoCall } from '../api/video';
+
+// Check if native WebRTC C++ binary is compiled into the app (Dev Build / Standalone)
+const hasNativeWebRTC = Boolean(NativeModules.WebRTCModule);
+
+let MeetingProvider = null;
+let useMeeting = null;
+let useParticipant = null;
+let RTCView = null;
+let MediaStream = null;
+
+if (hasNativeWebRTC) {
+  try {
+    const videoSDK = require('@videosdk.live/react-native-sdk');
+    MeetingProvider = videoSDK.MeetingProvider;
+    useMeeting = videoSDK.useMeeting;
+    useParticipant = videoSDK.useParticipant;
+    RTCView = videoSDK.RTCView;
+    MediaStream = videoSDK.MediaStream;
+  } catch (err) {
+    console.warn('Failed to load VideoSDK components:', err.message);
+  }
+}
 
 /**
  * VideoCallScreen — native in-app video consultation (patient side).
- * Route params: { token, roomId, participantName, appointmentId }
- *
- * Uses @videosdk.live/react-native-sdk (WebRTC). Requires a development
- * build — does NOT run in Expo Go.
- *
- * Layout: full-screen remote (doctor) video + small local PIP + controls.
+ * Route params: { appointmentId, token, roomId, participantName, doctorName }
  */
 export default function VideoCallScreen({ route, navigation }) {
-  const { token, roomId, participantName } = route.params || {};
+  const { 
+    token: initialToken, 
+    roomId: initialRoomId, 
+    appointmentId, 
+    participantName, 
+    doctorName 
+  } = route.params || {};
 
-  if (!token || !roomId) {
+  const [session, setSession] = useState({
+    token: initialToken || null,
+    roomId: initialRoomId || null,
+  });
+  const [loading, setLoading] = useState(!initialToken || !initialRoomId);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  useEffect(() => {
+    if (session.token && session.roomId) {
+      setLoading(false);
+      return;
+    }
+
+    if (!appointmentId) {
+      setErrorMsg('Missing appointment ID or session credentials.');
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    async function fetchSession() {
+      try {
+        setLoading(true);
+        setErrorMsg(null);
+        const response = await joinVideoCall(appointmentId);
+        
+        // Handle all response formats (axios interceptor unwrapped vs raw)
+        const token = response?.data?.token || response?.token || response?.data?.data?.token;
+        const roomId = response?.data?.roomId || response?.roomId || response?.data?.data?.roomId;
+
+        if (isMounted) {
+          if (token && roomId) {
+            setSession({ token, roomId });
+          } else {
+            setErrorMsg(response?.message || 'Failed to get video session credentials.');
+          }
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Failed to fetch video call credentials:', err);
+          const serverMsg = typeof err === 'string' ? err : (err?.response?.data?.message || err?.message);
+          setErrorMsg(serverMsg || 'Could not join video session.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [appointmentId, initialToken, initialRoomId, session.token, session.roomId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" />
+        <ActivityIndicator size="large" color="#22c55e" />
+        <Text style={styles.loadingText}>Initializing video room...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (errorMsg || !session.token || !session.roomId) {
     return (
       <SafeAreaView style={styles.errorContainer}>
+        <StatusBar barStyle="light-content" />
         <Ionicons name="alert-circle-outline" size={48} color="#f87171" />
-        <Text style={styles.errorText}>Missing video session credentials</Text>
+        <Text style={styles.errorText}>{errorMsg || 'Missing video session credentials'}</Text>
+        <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.errorButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  if (!hasNativeWebRTC || !MeetingProvider) {
+    return (
+      <SafeAreaView style={styles.errorContainer}>
+        <StatusBar barStyle="light-content" />
+        <Ionicons name="videocam-off-outline" size={48} color="#94a3b8" />
+        <Text style={styles.errorText}>Video Consultation Requires Development Build</Text>
+        <Text style={[styles.errorText, { fontSize: 13, color: '#64748b', marginTop: 4 }]}>
+          Native WebRTC video calls are not supported inside the standard Expo Go app.
+          Please use a native development build or run via Web.
+        </Text>
         <TouchableOpacity style={styles.errorButton} onPress={() => navigation.goBack()}>
           <Text style={styles.errorButtonText}>Go Back</Text>
         </TouchableOpacity>
@@ -45,14 +149,14 @@ export default function VideoCallScreen({ route, navigation }) {
   return (
     <MeetingProvider
       config={{
-        meetingId: roomId,
+        meetingId: session.roomId,
         micEnabled: true,
         webcamEnabled: true,
         name: participantName || 'Patient',
       }}
-      token={token}
+      token={session.token}
     >
-      <MeetingView onLeave={() => navigation.goBack()} participantName={participantName} />
+      <MeetingView onLeave={() => navigation.goBack()} participantName={participantName || doctorName} />
     </MeetingProvider>
   );
 }

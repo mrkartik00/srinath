@@ -173,13 +173,104 @@ router.get('/attachments/:messageId/download', protect, requireEmailVerified, te
   const isParticipant = conversation.patientId.toString() === req.user.id.toString() || conversation.doctorId.toString() === req.user.id.toString();
   if (!isParticipant && req.user.role !== ROLES.SUPER_ADMIN) return apiResponse.error(res, 'Access denied', 403);
 
-  const attachment = message.attachments[0];
+  const attachmentIndex = parseInt(req.query.index) || 0;
+  const attachment = message.attachments[attachmentIndex];
+  if (!attachment) return apiResponse.error(res, 'Attachment not found', 404);
+
+  let fileKey = attachment.fileKey;
+
+  // If sourced from vault, verify the vault doc still exists
+  if (attachment.source === 'vault' && attachment.vaultDocumentId) {
+    const VaultDocument = require('../models/VaultDocument');
+    const vaultDoc = await VaultDocument.findById(attachment.vaultDocumentId);
+    if (!vaultDoc) return apiResponse.error(res, 'Original vault document has been deleted', 404);
+    fileKey = vaultDoc.fileKey;
+  }
+
   try {
-    const url = await spaces.getPresignedDownloadUrl(attachment.fileKey);
+    const url = await spaces.getPresignedDownloadUrl(fileKey);
     apiResponse.success(res, { url, fileName: attachment.fileName, mimeType: attachment.mimeType }, 'Download URL generated');
   } catch {
     apiResponse.error(res, 'File not accessible', 500);
   }
+}));
+
+// ── Share vault document(s) in chat ──────────────────────────────────────────
+router.post('/conversations/:id/share-vault', protect, requireEmailVerified, tenantScope, requireActiveSubscription, asyncHandler(async (req, res) => {
+  const config = require('../config/env');
+  if (!config.FEATURES.vaultChatShare) return apiResponse.error(res, 'Vault chat sharing is not enabled', 403);
+
+  const { vaultDocumentIds, caption } = req.body;
+  if (!vaultDocumentIds || !Array.isArray(vaultDocumentIds) || vaultDocumentIds.length === 0) {
+    return apiResponse.error(res, 'At least one vault document ID is required', 400);
+  }
+  if (vaultDocumentIds.length > 5) return apiResponse.error(res, 'Maximum 5 documents per share', 400);
+
+  const conversation = await Conversation.findById(req.params.id);
+  if (!conversation) return apiResponse.error(res, 'Conversation not found', 404);
+  if (conversation.organizationId.toString() !== req.user.organizationId.toString()) return apiResponse.error(res, 'Access denied', 403);
+
+  const isParticipant = conversation.patientId.toString() === req.user.id.toString() || conversation.doctorId.toString() === req.user.id.toString();
+  if (!isParticipant) return apiResponse.error(res, 'Not a participant', 403);
+
+  // Only patient can share their own vault docs
+  if (req.user.role !== ROLES.PATIENT) return apiResponse.error(res, 'Only patients can share vault documents', 403);
+
+  const VaultDocument = require('../models/VaultDocument');
+  const vaultDocs = await VaultDocument.find({
+    _id: { $in: vaultDocumentIds },
+    patientId: req.user.id,
+    organizationId: req.scope.organizationId,
+  });
+
+  if (vaultDocs.length !== vaultDocumentIds.length) return apiResponse.error(res, 'One or more vault documents not found or not owned by you', 404);
+
+  const isDoctor = conversation.doctorId.toString() === req.user.id;
+
+  const message = await withOptionalTransaction(async (session) => {
+    const opts = session ? { session } : {};
+
+    const updatedConv = await Conversation.findByIdAndUpdate(
+      conversation._id,
+      {
+        $inc: { messageSeq: 1, ...(isDoctor ? { unreadByPatient: 1 } : { unreadByDoctor: 1 }) },
+        $set: { lastMessageAt: new Date(), lastMessagePreview: `📋 Shared ${vaultDocs.length} vault document${vaultDocs.length > 1 ? 's' : ''}` },
+      },
+      { new: true, select: 'messageSeq', ...opts }
+    );
+
+    const attachments = vaultDocs.map(doc => ({
+      fileKey: doc.fileKey,
+      fileUrl: doc.fileUrl || null,
+      fileName: doc.fileName,
+      mimeType: doc.mimeType,
+      size: doc.fileSize,
+      source: 'vault',
+      vaultDocumentId: doc._id,
+    }));
+
+    const [created] = await Message.create([{
+      conversationId: conversation._id,
+      senderId: req.user.id,
+      senderRole: req.user.role,
+      body: caption || `Shared ${vaultDocs.length} document${vaultDocs.length > 1 ? 's' : ''} from Medical Vault`,
+      type: MESSAGE_TYPE.DOCUMENT,
+      sequence: updatedConv.messageSeq,
+      attachments,
+    }], opts);
+
+    return created;
+  });
+
+  // Log access (non-blocking, outside transaction)
+  const VaultDocument2 = require('../models/VaultDocument');
+  VaultDocument2.updateMany(
+    { _id: { $in: vaultDocumentIds } },
+    { $push: { accessLog: { userId: req.user.id, role: 'patient', accessedAt: new Date() } } }
+  ).catch(() => {});
+
+  const populated = await Message.findById(message._id).populate('senderId', 'name role');
+  apiResponse.success(res, populated, 'Vault documents shared', {}, 201);
 }));
 
 module.exports = router;

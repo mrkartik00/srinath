@@ -168,17 +168,17 @@ export default function BookAppointmentScreen({ navigation, route }) {
       }).start();
     } catch (err) {
       haptics.error();
-      // The axios interceptor already unwraps failed requests into a plain
-      // string or an array of validation errors (see api/axios.js), not an
-      // Error/AxiosError — so check those shapes directly instead of
-      // err.response/err.message, which a string or array never has.
       const msg =
         (Array.isArray(err) && err.join('\n')) ||
         (typeof err === 'string' && err) ||
         err?.response?.data?.message ||
         err?.message ||
         'Something went wrong. Please try again.';
-      Alert.alert('Booking Failed', msg);
+      if (Platform.OS === 'web') {
+        alert(`Booking Failed: ${msg}`);
+      } else {
+        Alert.alert('Booking Failed', msg);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -314,94 +314,156 @@ export default function BookAppointmentScreen({ navigation, route }) {
             </View>
 
             <Text style={[styles.slotsLabel, { color: theme.textMuted, marginBottom: 8, fontSize: 13 }]}>Select Date</Text>
-            <TouchableOpacity
-              style={[styles.pickerBar, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}
-              onPress={() => { haptics.selection(); setShowDatePicker(!showDatePicker); }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="calendar-outline" size={20} color={theme.primary} style={styles.pickerIcon} />
-              <Text style={[styles.pickerBarText, { color: theme.text }]}>
-                {selectedDateObj.fullDate ? `${selectedDateObj.day}, ${selectedDateObj.month} ${selectedDateObj.date}, ${selectedDateObj.year}` : 'Select Date'}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={(() => {
-                  const d = new Date(selectedDateObj.fullDate);
-                  return isNaN(d.getTime()) ? new Date() : d;
-                })()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                themeVariant="light"
-                minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
-                  setShowDatePicker(false);
-                  if (selectedDate) {
-                    setSelectedDateObj(buildDateObj(selectedDate.toISOString().split('T')[0]));
+            {Platform.OS === 'web' ? (
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={selectedDateObj.fullDate || ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setSelectedDateObj(buildDateObj(e.target.value));
                   }
                 }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: `1px solid ${theme.textMuted}30`,
+                  backgroundColor: `${theme.textMuted}08`,
+                  color: theme.text,
+                  fontSize: '15px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
               />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.pickerBar, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}
+                  onPress={() => { haptics.selection(); setShowDatePicker(!showDatePicker); }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="calendar-outline" size={20} color={theme.primary} style={styles.pickerIcon} />
+                  <Text style={[styles.pickerBarText, { color: theme.text }]}>
+                    {selectedDateObj.fullDate ? `${selectedDateObj.day}, ${selectedDateObj.month} ${selectedDateObj.date}, ${selectedDateObj.year}` : 'Select Date'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={16} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={(() => {
+                      const d = new Date(selectedDateObj.fullDate);
+                      return isNaN(d.getTime()) ? new Date() : d;
+                    })()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    themeVariant="light"
+                    minimumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      setShowDatePicker(false);
+                      if (selectedDate) {
+                        setSelectedDateObj(buildDateObj(selectedDate.toISOString().split('T')[0]));
+                      }
+                    }}
+                  />
+                )}
+              </>
             )}
 
             <Text style={[styles.slotsLabel, { color: theme.textMuted, marginBottom: 8, marginTop: 12, fontSize: 13 }]}>Select Time</Text>
-            <TouchableOpacity
-              style={[styles.pickerBar, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}
-              onPress={() => { haptics.selection(); setShowTimePicker(!showTimePicker); }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="time-outline" size={20} color={theme.primary} style={styles.pickerIcon} />
-              <Text style={[styles.pickerBarText, { color: theme.text }]}>
-                {selectedTime}
-              </Text>
-              <Ionicons name="chevron-down" size={16} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
+            {Platform.OS === 'web' ? (
+              <input
+                type="time"
+                value={selectedTimeVal || ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const time24 = e.target.value;
+                    const [hStr, mStr] = time24.split(':');
+                    const h = parseInt(hStr, 10);
+                    const mm = mStr;
+                    let hour12 = h % 12;
+                    hour12 = hour12 ? hour12 : 12;
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    const displayTime = `${hour12}:${mm} ${ampm}`;
+                    setSelectedTime(displayTime);
+                    setSelectedTimeVal(time24);
+                  }
+                }}
+                style={{
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: `1px solid ${theme.textMuted}30`,
+                  backgroundColor: `${theme.textMuted}08`,
+                  color: theme.text,
+                  fontSize: '15px',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.pickerBar, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}
+                  onPress={() => { haptics.selection(); setShowTimePicker(!showTimePicker); }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="time-outline" size={20} color={theme.primary} style={styles.pickerIcon} />
+                  <Text style={[styles.pickerBarText, { color: theme.text }]}>
+                    {selectedTime}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={theme.textMuted} style={{ marginLeft: 'auto' }} />
+                </TouchableOpacity>
 
-            {showTimePicker && (
-              <View style={[styles.spinnerContainer, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}>
-                <DateTimePicker
-                  value={(() => {
-                    const d = new Date(selectedDateObj.fullDate || new Date());
-                    const [h, m] = selectedTimeVal.split(':').map(Number);
-                    d.setHours(h || 9);
-                    d.setMinutes(m || 0);
-                    return isNaN(d.getTime()) ? new Date() : d;
-                  })()}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="light"
-                  is24Hour={false}
-                  minuteInterval={30}
-                  onChange={(event, selectedTimeValDate) => {
-                    if (Platform.OS === 'android') {
-                      setShowTimePicker(false);
-                    }
-                    if (selectedTimeValDate) {
-                      const hh = selectedTimeValDate.getHours().toString().padStart(2, '0');
-                      const mm = selectedTimeValDate.getMinutes().toString().padStart(2, '0');
-                      const time24 = `${hh}:${mm}`;
+                {showTimePicker && (
+                  <View style={[styles.spinnerContainer, { backgroundColor: `${theme.textMuted}08`, borderColor: `${theme.textMuted}20` }]}>
+                    <DateTimePicker
+                      value={(() => {
+                        const d = new Date(selectedDateObj.fullDate || new Date());
+                        const [h, m] = selectedTimeVal.split(':').map(Number);
+                        d.setHours(h || 9);
+                        d.setMinutes(m || 0);
+                        return isNaN(d.getTime()) ? new Date() : d;
+                      })()}
+                      mode="time"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      themeVariant="light"
+                      is24Hour={false}
+                      minuteInterval={30}
+                      onChange={(event, selectedTimeValDate) => {
+                        if (Platform.OS === 'android') {
+                          setShowTimePicker(false);
+                        }
+                        if (selectedTimeValDate) {
+                          const hh = selectedTimeValDate.getHours().toString().padStart(2, '0');
+                          const mm = selectedTimeValDate.getMinutes().toString().padStart(2, '0');
+                          const time24 = `${hh}:${mm}`;
 
-                      let hour12 = selectedTimeValDate.getHours() % 12;
-                      hour12 = hour12 ? hour12 : 12;
-                      const ampm = selectedTimeValDate.getHours() >= 12 ? 'PM' : 'AM';
-                      const displayTime = `${hour12}:${mm} ${ampm}`;
+                          let hour12 = selectedTimeValDate.getHours() % 12;
+                          hour12 = hour12 ? hour12 : 12;
+                          const ampm = selectedTimeValDate.getHours() >= 12 ? 'PM' : 'AM';
+                          const displayTime = `${hour12}:${mm} ${ampm}`;
 
-                      setSelectedTime(displayTime);
-                      setSelectedTimeVal(time24);
-                    }
-                  }}
-                />
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity
-                    style={[styles.doneBtn, { backgroundColor: theme.primary }]}
-                    onPress={() => { haptics.selection(); setShowTimePicker(false); }}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.doneBtnText}>Confirm Time</Text>
-                  </TouchableOpacity>
+                          setSelectedTime(displayTime);
+                          setSelectedTimeVal(time24);
+                        }
+                      }}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <TouchableOpacity
+                        style={[styles.doneBtn, { backgroundColor: theme.primary }]}
+                        onPress={() => { haptics.selection(); setShowTimePicker(false); }}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.doneBtnText}>Confirm Time</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 )}
-              </View>
+              </>
             )}
           </GlassCard>
 

@@ -3,11 +3,10 @@ import { View, TouchableOpacity, StyleSheet, Platform, Text } from 'react-native
 import { Feather } from '@expo/vector-icons';
 import { useFonts, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import haptics from '../../utils/haptics';
-
-const PRIMARY_COLOR = '#223263';
-const TEXT_SECONDARY = '#8F9BB3';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function FloatingGlassNav({ state, navigation }) {
+  const { theme } = useTheme();
   const [fontsLoaded] = useFonts({ Urbanist_700Bold });
 
   const tabs = [
@@ -21,20 +20,28 @@ export default function FloatingGlassNav({ state, navigation }) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.pill}>
+      <View style={[styles.pill, {
+        backgroundColor: theme.card,
+        borderColor: theme.glassBorder,
+        shadowColor: theme.shadow,
+      }]}>
         {tabs.map((tab, i) => {
           const active = state.index === i;
           return (
             <TouchableOpacity
               key={tab.name}
-              style={active ? styles.tabBtnActive : styles.tabBtn}
+              style={[
+                active
+                  ? [styles.tabBtnActive, { backgroundColor: theme.primary }]
+                  : [styles.tabBtn, { backgroundColor: theme.chipBg }],
+              ]}
               onPress={() => { haptics.selection(); navigation.navigate(tab.name); }}
               activeOpacity={0.8}
             >
-              <Feather 
-                name={tab.icon} 
-                size={20} 
-                color={active ? '#FFFFFF' : PRIMARY_COLOR} 
+              <Feather
+                name={tab.icon}
+                size={20}
+                color={active ? '#FFFFFF' : theme.primary}
               />
               {active && (
                 <Text style={[styles.tabLabel, fontStyle]}>
@@ -50,43 +57,38 @@ export default function FloatingGlassNav({ state, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    position: 'absolute', 
-    bottom: Platform.OS === 'ios' ? 34 : 20, 
-    left: 20, 
-    right: 20, 
-    alignItems: 'center' 
+  container: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 34 : 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
   },
-  pill: { 
-    flexDirection: 'row', 
-    backgroundColor: '#FFFFFF',
-    borderRadius: 36, 
-    paddingVertical: 10, 
-    paddingHorizontal: 12, 
+  pill: {
+    flexDirection: 'row',
+    borderRadius: 36,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    shadowColor: '#223263', 
-    shadowOffset: { width: 0, height: 12 }, 
-    shadowOpacity: 0.12, 
-    shadowRadius: 24, 
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
     elevation: 10,
     borderWidth: 1,
-    borderColor: '#EEF2F8',
   },
-  tabBtn: { 
+  tabBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F5F7FA',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabBtnActive: { 
+  tabBtnActive: {
     flexDirection: 'row',
-    alignItems: 'center', 
+    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: PRIMARY_COLOR,
     borderRadius: 24,
     paddingHorizontal: 20,
     height: 48,
@@ -95,5 +97,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     marginLeft: 8,
-  }
+  },
 });

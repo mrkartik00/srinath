@@ -13,7 +13,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
-import { useAuth } from '../context/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -25,7 +24,6 @@ const BG = '#EEF2FF';
 const BG_TRANSPARENT = 'rgba(238, 242, 255, 0)';
 
 export default function WelcomeScreen({ navigation }) {
-  const { setJustLoggedIn } = useAuth();
   const [fontsLoaded] = useFonts({ Urbanist_600SemiBold, Urbanist_700Bold });
   const knobX = useRef(new Animated.Value(0)).current;
   const [swiped, setSwiped] = useState(false);
@@ -48,8 +46,7 @@ export default function WelcomeScreen({ navigation }) {
             useNativeDriver: false,
           }).start(() => {
             setSwiped(true);
-            setJustLoggedIn(false);
-            navigation.replace('Main');
+            navigation.navigate('Login');
           });
         } else {
           Animated.spring(knobX, {

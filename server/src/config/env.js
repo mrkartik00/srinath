@@ -91,5 +91,7 @@ module.exports = {
     patientSubscriptionRequired: bool(process.env.FEATURE_PATIENT_SUBSCRIPTION, false),
     aiEnabled: bool(process.env.FEATURE_AI, false),
     vaultEnabled: bool(process.env.FEATURE_VAULT, false),
+    vaultChatShare: bool(process.env.FEATURE_VAULT_CHAT_SHARE, true),
+    doctorReviews: bool(process.env.FEATURE_DOCTOR_REVIEWS, true),
   },
 };

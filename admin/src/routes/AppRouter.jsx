@@ -20,6 +20,7 @@ import Chat from '../pages/Chat';
 import ComingSoon from '../pages/ComingSoon';
 import DoctorProfile from '../pages/DoctorProfile';
 import Availability from '../pages/Availability';
+import TestimonialsReviews from '../pages/TestimonialsReviews';
 
 export default function AppRouter() {
   return (
@@ -46,6 +47,7 @@ export default function AppRouter() {
             <Route path="medical-vault" element={<ComingSoon title="Medical Vault" icon="🗄️" />} />
             <Route path="profile" element={<DoctorProfile />} />
             <Route path="availability" element={<Availability />} />
+            <Route path="testimonials-reviews" element={<TestimonialsReviews />} />
             <Route path="subscription" element={<ComingSoon title="My Subscription" icon="💎" />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

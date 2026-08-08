@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Platform, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import AuthStack from './AuthStack';
 import MainTabs from './MainTabs';
-import SplashScreen from '../screens/SplashScreen';
 import BookAppointmentScreen from '../screens/BookAppointmentScreen';
 import AppointmentDetailScreen from '../screens/AppointmentDetailScreen';
 import PrescriptionsScreen from '../screens/PrescriptionsScreen';
@@ -19,7 +19,6 @@ import SubscriptionScreen from '../screens/SubscriptionScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import WelcomeScreen from '../screens/WelcomeScreen';
 import VideoCallScreen from '../screens/VideoCallScreen';
 
 const Stack = createNativeStackNavigator();
@@ -35,26 +34,43 @@ const navTheme = {
   },
 };
 
-const MIN_SPLASH_MS = 1600;
-
 export default function RootNavigator() {
-  const { user, loading, justLoggedIn } = useAuth();
-  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const { user, loading } = useAuth();
+  const { incomingCall, dismissIncomingCall } = useSocket();
+  const navigationRef = useRef(null);
 
+  // Handle incoming video call prompt
   useEffect(() => {
-    const timer = setTimeout(() => setMinTimeElapsed(true), MIN_SPLASH_MS);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!incomingCall || !user) return;
 
-  if (loading || !minTimeElapsed) {
-    return <SplashScreen />;
+    Alert.alert(
+      '📹 Video Consultation',
+      `Dr. ${incomingCall.doctorName || 'Doctor'} is ready for your consultation`,
+      [
+        { text: 'Later', style: 'cancel', onPress: dismissIncomingCall },
+        {
+          text: 'Join Now',
+          onPress: () => {
+            navigationRef.current?.navigate('VideoCall', {
+              appointmentId: incomingCall.appointmentId,
+              doctorName: incomingCall.doctorName,
+            });
+            dismissIncomingCall();
+          },
+        },
+      ],
+      { cancelable: false }
+    );
+  }, [incomingCall, user]);
+
+  if (loading) {
+    return null;
   }
 
   return (
-    <NavigationContainer theme={navTheme} independent={true}>
+    <NavigationContainer ref={navigationRef} theme={navTheme} independent={true}>
       {user ? (
-        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={justLoggedIn ? 'Welcome' : 'Main'}>
-          <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Main">
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="BookAppointment" component={BookAppointmentScreen} options={{ presentation: 'modal' }} />
           <Stack.Screen name="AppointmentDetail" component={AppointmentDetailScreen} />
@@ -72,7 +88,7 @@ export default function RootNavigator() {
           <Stack.Screen
             name="VideoCall"
             component={VideoCallScreen}
-            options={{ presentation: 'fullScreenModal', gestureEnabled: false }}
+            options={{ presentation: 'fullScreenModal', headerShown: false, gestureEnabled: false }}
           />
         </Stack.Navigator>
       ) : (

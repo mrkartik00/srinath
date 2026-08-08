@@ -137,6 +137,11 @@ export default function LoginScreen({ navigation }) {
               </PressableButton>
             </GlassCard>
 
+            {/* Forgot Password */}
+            <PressableButton onPress={() => { haptics.light(); navigation.navigate('ForgotPassword'); }} hapticType="light" style={styles.forgotPassword}>
+              <Text style={[styles.forgotPasswordText, { color: theme.primary }]}>Forgot Password?</Text>
+            </PressableButton>
+
             {/* Footer */}
             <PressableButton onPress={() => { haptics.light(); navigation.navigate('Register'); }} hapticType="light" style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.textMuted }]}>Don't have an account? </Text>
@@ -198,6 +203,8 @@ const styles = StyleSheet.create({
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 17 },
   btnText: { color: '#fff', fontSize: 17, fontFamily: 'Urbanist_700Bold' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
+  forgotPassword: { alignItems: 'center', marginTop: 16 },
+  forgotPasswordText: { fontSize: 14, fontFamily: 'Urbanist_600SemiBold' },
   footerText: { fontSize: 15, fontFamily: 'Urbanist_600SemiBold' },
   footerLink: { fontSize: 15, fontFamily: 'Urbanist_700Bold' },
   trust: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 32 },

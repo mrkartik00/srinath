@@ -45,6 +45,14 @@ const HealthFeedScreen = () => {
     fetchHealthUpdates();
   }, []);
 
+  useEffect(() => {
+    if (updates.length > 0) {
+      setTimeout(() => {
+        triggerStagger(updates.length);
+      }, 50);
+    }
+  }, [updates]);
+
   const fetchHealthUpdates = async (isRefresh = false) => {
     try {
       if (isRefresh) {

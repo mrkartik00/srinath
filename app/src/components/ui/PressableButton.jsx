@@ -26,7 +26,7 @@ export default function PressableButton({ onPress, style, children, hapticType =
 
   return (
     <Pressable onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut} disabled={disabled} style={outer}>
-      <Animated.View style={[inner, { flex: flex ? 1 : undefined, transform: [{ scale }] }, disabled && styles.disabled]}>
+      <Animated.View style={[inner, { transform: [{ scale }] }, flex ? { width: '100%', justifyContent: 'center' } : null, disabled && styles.disabled]}>
         {children}
       </Animated.View>
     </Pressable>

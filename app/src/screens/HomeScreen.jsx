@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -11,15 +11,22 @@ import {
   TextInput, 
   Image, 
   Dimensions,
-  ActivityIndicator
+  ActivityIndicator,
+  DeviceEventEmitter,
+  StatusBar,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFonts, Urbanist_600SemiBold, Urbanist_700Bold } from '@expo-google-fonts/urbanist';
 import api from '../api/axios';
+import { getMyAppointments } from '../api/appointments';
 import { useAuth } from '../context/AuthContext';
 import { haptics } from '../utils/haptics';
 import { PageLoader } from '../components/ui';
+import { hasUnreadNotifications } from '../utils/notificationsHelper';
+import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -90,7 +97,7 @@ const BANNERS = [
     buttonText: 'Read Now',
     colors: ['#14B8A6', '#0D9488'],
     image: require('../../assets/images/banner_health.png'),
-    route: 'HealthFeed'
+    route: 'Health'
   },
   {
     id: 'b4',
@@ -114,13 +121,15 @@ const QUICK_ACTIONS = [
   { id: 'q5', label: 'Medical\nVault', icon: 'folder-open-outline', route: 'MedicalVault' },
   { id: 'q6', label: 'Subscription', icon: 'card-outline', route: 'Subscription' },
 ];
-const BG_COLOR = '#F5F7FA';
-const PRIMARY_COLOR = '#223263'; 
-const TEXT_SECONDARY = '#8F9BB3';
-const BLUE_LIGHT = '#EEF2F8';
+// Theme-aware styles are now derived from makeStyles(theme) inside the component
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  const { incomingCall } = useSocket();
+  const { isDark, toggleTheme, theme } = useTheme();
+  const styles = useMemo(() => makeStyles(theme), [theme]);
+  const PRIMARY_COLOR = theme?.primary || '#223263';
+  const TEXT_SECONDARY = theme?.textSecondary || '#8F9BB3';
   const [stats, setStats] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [activeSpecialty, setActiveSpecialty] = useState('');
@@ -129,6 +138,24 @@ export default function HomeScreen({ navigation }) {
   const [showAllQA, setShowAllQA] = useState(false);
   const [showAllSpecialties, setShowAllSpecialties] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
+  const [upcomingApt, setUpcomingApt] = useState(null);
+
+  const checkUnread = async () => {
+    const unread = await hasUnreadNotifications();
+    setHasUnreadNotifs(unread);
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkUnread();
+    }, [])
+  );
+
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('notifications_updated', checkUnread);
+    return () => sub.remove();
+  }, []);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -197,6 +224,36 @@ export default function HomeScreen({ navigation }) {
         setAllDoctors(doctorsRes.data);
       }
     } catch {}
+
+    // Fetch upcoming appointment using the same endpoint as AppointmentsScreen
+    // so video.status and all fields are available for canJoinCall logic.
+    try {
+      const aptRes = await getMyAppointments({ limit: 20 });
+      let list = [];
+      if (Array.isArray(aptRes)) list = aptRes;
+      else if (Array.isArray(aptRes?.data)) list = aptRes.data;
+      else if (Array.isArray(aptRes?.data?.data)) list = aptRes.data.data;
+
+      const getEffectiveStatus = (apt) => {
+        if (!apt) return 'scheduled';
+        if (apt.status === 'cancelled') return 'cancelled';
+        if (apt.status === 'completed') return 'completed';
+        if (apt.video?.status === 'ended' || apt.video?.endedAt) return 'completed';
+        const nowTime = Date.now();
+        const endTime = new Date(apt.dateTime).getTime() + (apt.duration || 30) * 60000;
+        if (nowTime > endTime) return 'completed';
+        return apt.status;
+      };
+
+      const next = list
+        .filter(apt => {
+          const st = getEffectiveStatus(apt);
+          return st === 'scheduled' || st === 'in_progress';
+        })
+        .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime))[0] || null;
+
+      setUpcomingApt(next);
+    } catch {}
   };
 
   useEffect(() => {
@@ -216,21 +273,48 @@ export default function HomeScreen({ navigation }) {
     }
   }, [allDoctors]);
 
+  const s = stats || {};
+  // Use appointment from the full appointments API (same as AppointmentsScreen)
+  // so video.status is always accurate. Fall back to stats API if not yet loaded.
+  const statsApt = (s.upcomingAppointments || [])[0] || null;
+  const currentApt = upcomingApt || statsApt;
+
+  const currentDoctor = React.useMemo(() => {
+    if (!currentApt?.doctorId) return null;
+    const docId = (currentApt.doctorId._id || currentApt.doctorId || '').toString();
+    const matched = allDoctors.find(d => (d.id || d._id || '').toString() === docId);
+    return {
+      name: currentApt.doctorId.name || matched?.name || 'Doctor',
+      avatar: matched?.avatar || currentApt.doctorId.avatar || null,
+      specialty: matched?.specialty || 'General Physician'
+    };
+  }, [currentApt, allDoctors]);
+
   const onRefresh = async () => { haptics.light(); setRefreshing(true); await fetchData(); setRefreshing(false); };
 
   if (!fontsLoaded) {
     return <PageLoader />;
   }
 
-  const s = stats || {};
-  const upcoming = s.upcomingAppointments || [];
   const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
   const userName = user?.name || 'Trystan';
 
-  const currentApt = upcoming.length > 0 ? upcoming[0] : null;
   const aptDate = currentApt ? new Date(currentApt.dateTime) : null;
   const aptEndDate = currentApt ? new Date(aptDate.getTime() + (currentApt.duration || 30) * 60000) : null;
   const formatClockTime = (d) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+  // Same canJoinCall logic as AppointmentsScreen — works for early starts too.
+  const canJoinCall = (apt) => {
+    if (!apt) return false;
+    if (apt.status === 'completed' || apt.status === 'cancelled' || apt.video?.status === 'ended') return false;
+    if (apt.video?.status === 'live' || apt.status === 'in_progress') return true;
+    // Real-time socket: doctor just pressed Start Call
+    if (incomingCall?.appointmentId === apt._id) return true;
+    return false;
+  };
+
+  const isVirtualApt = currentApt?.type === 'virtual' || currentApt?.consultationType === 'video';
+  const aptCanJoin = isVirtualApt && canJoinCall(currentApt);
 
   // Specialty pills, derived entirely from the doctors actually returned by the API
   const sortedSpecialties = deriveSpecialties(allDoctors);
@@ -291,9 +375,20 @@ export default function HomeScreen({ navigation }) {
             </View>
           </View>
           <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => { haptics.light(); toggleTheme(); }}
+              style={[styles.themeBtn, { backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF' }]}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={isDark ? 'sunny' : 'moon'}
+                size={20}
+                color={isDark ? '#FFD60A' : '#223263'}
+              />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Notifications')} style={styles.bellIcon}>
               <Ionicons name="notifications-outline" size={24} color={PRIMARY_COLOR} />
-              <View style={styles.notificationDot} />
+              {hasUnreadNotifs && <View style={styles.notificationDot} />}
             </TouchableOpacity>
           </View>
         </View>
@@ -358,11 +453,13 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.searchResultSection}>
                   <Text style={styles.searchResultSectionTitle}>Doctors</Text>
                   {matchingDoctors.map(doc => (
-                    <TouchableOpacity 
-                      key={doc.id || doc._id} 
+                    <TouchableOpacity
+                      key={doc.id || doc._id}
                       style={styles.searchResultItem}
+                      activeOpacity={0.75}
                       onPress={() => {
-                        // For now don't open doctor card, we will make it afterwards.
+                        setSearchQuery('');
+                        navigation.navigate('DoctorDetail', { doctor: doc });
                       }}
                     >
                       {doc.avatar ? (
@@ -372,11 +469,21 @@ export default function HomeScreen({ navigation }) {
                           <Ionicons name="person" size={20} color={TEXT_SECONDARY} />
                         </View>
                       )}
-                      <View>
+                      <View style={{ flex: 1 }}>
                         <Text style={styles.searchResultText}>{doc.name}</Text>
                         <Text style={styles.searchResultSubtext}>{doc.specialty || 'General Physician'} • {doc.clinicAddress || 'Consult Online'}</Text>
                       </View>
-                      <Ionicons name="chevron-forward" size={16} color={TEXT_SECONDARY} style={{ marginLeft: 'auto' }} />
+                      <TouchableOpacity
+                        style={styles.searchBookBtn}
+                        activeOpacity={0.8}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          setSearchQuery('');
+                          navigation.navigate('BookAppointment', { doctorId: doc.id || doc._id, doctorName: doc.name });
+                        }}
+                      >
+                        <Text style={styles.searchBookBtnText}>Book</Text>
+                      </TouchableOpacity>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -485,14 +592,14 @@ export default function HomeScreen({ navigation }) {
                 <View style={styles.upcomingCard}>
                   <View style={styles.upcomingTopRow}>
                     <View style={styles.upcomingInfo}>
-                      <Text style={styles.doctorName}>{currentApt.doctorId?.name}</Text>
+                      <Text style={styles.doctorName}>{currentDoctor?.name}</Text>
                       <View style={styles.specialtyRow}>
                         <MaterialCommunityIcons name="stethoscope" size={16} color={TEXT_SECONDARY} />
-                        <Text style={styles.specialtyText}>{currentApt.doctorId?.specialty || 'General Physician'}</Text>
+                        <Text style={styles.specialtyText}>{currentDoctor?.specialty}</Text>
                       </View>
                     </View>
-                    {currentApt.doctorId?.avatar ? (
-                      <Image source={{ uri: currentApt.doctorId.avatar }} style={styles.upcomingImage} resizeMode="cover" />
+                    {currentDoctor?.avatar ? (
+                      <Image source={{ uri: currentDoctor.avatar }} style={styles.upcomingImage} resizeMode="cover" />
                     ) : (
                       <View style={[styles.upcomingImage, styles.upcomingImageFallback]}>
                         <Ionicons name="person" size={48} color={TEXT_SECONDARY} />
@@ -504,13 +611,13 @@ export default function HomeScreen({ navigation }) {
                     <View style={styles.dateTimeRow}>
                       <View style={styles.dateTimeLeft}>
                         <View style={styles.dateItem}>
-                          <Ionicons name="calendar-outline" size={15} color="#8F9BB3" />
+                          <Ionicons name="calendar-outline" size={15} color={theme.textSecondary} />
                           <Text style={styles.dateTimeText}>
                             {aptDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}, {aptDate.toLocaleDateString('en-US', { weekday: 'short' })}
                           </Text>
                         </View>
                         <View style={styles.dateItem}>
-                          <Ionicons name="time-outline" size={15} color="#8F9BB3" />
+                          <Ionicons name="time-outline" size={15} color={theme.textSecondary} />
                           <Text style={styles.dateTimeText}>
                             {formatClockTime(aptDate)} - {formatClockTime(aptEndDate)}
                           </Text>
@@ -518,6 +625,22 @@ export default function HomeScreen({ navigation }) {
                       </View>
                     </View>
                     <View style={styles.actionButtonsRow}>
+                      {isVirtualApt && (
+                        aptCanJoin ? (
+                          <TouchableOpacity
+                            style={[styles.detailsBtn, { backgroundColor: '#22c55e', marginRight: 10 }]}
+                            onPress={() => navigation.navigate('VideoCall', { appointmentId: currentApt._id, doctorName: currentApt.doctorId?.name })}
+                          >
+                            <Ionicons name="videocam" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                            <Text style={[styles.detailsBtnText, { color: '#FFFFFF' }]}>Join Call</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={[styles.detailsBtn, { backgroundColor: theme.chipBg, marginRight: 10 }]}>
+                            <Ionicons name="time-outline" size={16} color={theme.textSecondary} style={{ marginRight: 6 }} />
+                            <Text style={[styles.detailsBtnText, { color: theme.textSecondary }]}>Call Not Started</Text>
+                          </View>
+                        )
+                      )}
                       <TouchableOpacity
                         style={styles.detailsBtn}
                         onPress={() => navigation.navigate('AppointmentDetail', { appointmentId: currentApt._id })}
@@ -609,9 +732,6 @@ export default function HomeScreen({ navigation }) {
                           </View>
                         )}
                         <View style={[styles.popularTopIcons, { justifyContent: 'flex-end' }]}>
-                          <TouchableOpacity>
-                            <Ionicons name="heart-outline" size={18} color="#FF3B30" />
-                          </TouchableOpacity>
                         </View>
                       </View>
                       <View style={styles.popularInfoPanel}>
@@ -644,14 +764,14 @@ export default function HomeScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: BG_COLOR,
+    backgroundColor: theme.bg,
   },
   content: {
     padding: 24,
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingTop: Platform.OS === 'ios' ? 60 : (StatusBar.currentHeight || 28) + 12,
   },
   headerRow: {
     flexDirection: 'row',
@@ -673,12 +793,12 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     overflow: 'hidden',
     marginRight: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderWidth: 1.5,
-    borderColor: '#EEF2F8',
+    borderColor: theme.border,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -690,14 +810,14 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     fontSize: 14,
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     fontFamily: 'Urbanist_600SemiBold',
     marginBottom: 4,
   },
   nameText: {
     fontSize: 24,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   subActiveBadge: {
     flexDirection: 'row',
@@ -719,9 +839,9 @@ const styles = StyleSheet.create({
   subInactiveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
+    backgroundColor: theme.bg,
     borderWidth: 1,
-    borderColor: '#EAEFF8',
+    borderColor: theme.border,
     borderRadius: 8,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -730,17 +850,30 @@ const styles = StyleSheet.create({
   subInactiveText: {
     fontSize: 10,
     fontFamily: 'Urbanist_600SemiBold',
-    color: '#8F9BB3',
+    color: theme.textSecondary,
     marginLeft: 3,
   },
   bellIcon: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  themeBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
@@ -755,17 +888,17 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#FF6B6B',
     borderWidth: 2,
-    borderColor: '#FFF',
+    borderColor: theme.card,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 28,
     paddingHorizontal: 16,
     height: 56,
     marginBottom: 32,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
@@ -781,7 +914,7 @@ const styles = StyleSheet.create({
   searchInput: {
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: PRIMARY_COLOR,
+    color: theme.text,
     padding: 0,
   },
   searchPlaceholder: {
@@ -790,20 +923,20 @@ const styles = StyleSheet.create({
     right: 0,
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
   },
   filterBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BLUE_LIGHT,
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   // Banners Styles
   bannerContainer: {
     marginBottom: 24,
-    marginHorizontal: -24, // Pull out of padding
+    marginHorizontal: -24,
   },
   bannerScrollContent: {
     paddingHorizontal: 24,
@@ -896,7 +1029,7 @@ const styles = StyleSheet.create({
   sectionTitleQA: {
     fontSize: 18,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginBottom: 16,
   },
   quickActionsRow: {
@@ -907,12 +1040,12 @@ const styles = StyleSheet.create({
   },
   quickActionCard: {
     width: (width - 48 - 24) / 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 20,
     paddingVertical: 16,
     paddingHorizontal: 8,
     alignItems: 'center',
-    shadowColor: PRIMARY_COLOR,
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
@@ -923,7 +1056,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -931,7 +1064,7 @@ const styles = StyleSheet.create({
   quickActionLabel: {
     fontSize: 13,
     fontFamily: 'Urbanist_600SemiBold',
-    color: PRIMARY_COLOR,
+    color: theme.text,
     textAlign: 'center',
   },
   sectionHeader: {
@@ -943,19 +1076,19 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   seeAllText: {
     fontSize: 14,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
   },
   upcomingCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 24,
     marginBottom: 32,
     marginTop: 20,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
@@ -976,7 +1109,7 @@ const styles = StyleSheet.create({
   doctorName: {
     fontSize: 18,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginBottom: 6,
   },
   specialtyRow: {
@@ -987,7 +1120,7 @@ const styles = StyleSheet.create({
   specialtyText: {
     fontSize: 14,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
   },
   upcomingImage: {
     width: 120,
@@ -997,7 +1130,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
   },
   upcomingBottomPanel: {
-    backgroundColor: '#EBF2FC',
+    backgroundColor: theme.chipBg,
     padding: 16,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
@@ -1022,16 +1155,16 @@ const styles = StyleSheet.create({
   dateTimeText: {
     fontSize: 12,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   arrowBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -1045,7 +1178,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 22,
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1061,35 +1194,35 @@ const styles = StyleSheet.create({
   specialtyPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     padding: 8,
     paddingRight: 20,
     borderRadius: 28,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 8,
     elevation: 1,
   },
   specialtyPillActive: {
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: theme.primary,
   },
   specialtyIconBox: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BLUE_LIGHT,
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   specialtyIconBoxActive: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
   },
   specialtyLabel: {
     fontSize: 15,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   specialtyLabelActive: {
     color: '#FFFFFF',
@@ -1100,10 +1233,10 @@ const styles = StyleSheet.create({
   },
   popularCard: {
     width: 165,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 20,
     marginTop: 20,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
@@ -1112,7 +1245,7 @@ const styles = StyleSheet.create({
   popularImageContainer: {
     width: '100%',
     height: 140,
-    backgroundColor: '#EEF2F8',
+    backgroundColor: theme.chipBg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     position: 'relative',
@@ -1149,7 +1282,7 @@ const styles = StyleSheet.create({
   popularName: {
     fontSize: 14,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginBottom: 6,
   },
   popularMetaRow: {
@@ -1160,7 +1293,7 @@ const styles = StyleSheet.create({
   popularMetaText: {
     fontSize: 11,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginLeft: 5,
     flex: 1,
   },
@@ -1169,26 +1302,26 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#DEE5F2',
+    borderColor: theme.border,
     alignItems: 'center',
   },
   viewProfileText: {
     fontSize: 12,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   emptyDoctorsContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 32,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 20,
     marginBottom: 32,
   },
   emptyDoctorsText: {
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginTop: 12,
   },
   bookNowBtn: {
@@ -1196,7 +1329,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 22,
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: theme.primary,
   },
   bookNowBtnText: {
     fontSize: 14,
@@ -1204,7 +1337,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   upcomingImageFallback: {
-    backgroundColor: BLUE_LIGHT,
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1215,10 +1348,10 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   searchResultsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: theme.card,
     borderRadius: 24,
     padding: 16,
-    shadowColor: '#000',
+    shadowColor: theme.shadow,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,
     shadowRadius: 12,
@@ -1228,7 +1361,7 @@ const styles = StyleSheet.create({
   searchResultsTitle: {
     fontSize: 18,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
     marginBottom: 16,
   },
   searchResultSection: {
@@ -1237,7 +1370,7 @@ const styles = StyleSheet.create({
   searchResultSectionTitle: {
     fontSize: 14,
     fontFamily: 'Urbanist_700Bold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginBottom: 10,
     textTransform: 'uppercase',
   },
@@ -1246,13 +1379,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F3F8',
+    borderBottomColor: theme.border,
   },
   searchResultIconBox: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: BLUE_LIGHT,
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1264,20 +1397,32 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   searchResultAvatarFallback: {
-    backgroundColor: BLUE_LIGHT,
+    backgroundColor: theme.chipBg,
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchResultText: {
     fontSize: 15,
     fontFamily: 'Urbanist_700Bold',
-    color: PRIMARY_COLOR,
+    color: theme.primary,
   },
   searchResultSubtext: {
     fontSize: 12,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginTop: 2,
+  },
+  searchBookBtn: {
+    backgroundColor: theme.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginLeft: 10,
+  },
+  searchBookBtnText: {
+    fontSize: 13,
+    fontFamily: 'Urbanist_700Bold',
+    color: '#FFFFFF',
   },
   emptySearchContainer: {
     alignItems: 'center',
@@ -1287,7 +1432,7 @@ const styles = StyleSheet.create({
   emptySearchText: {
     fontSize: 15,
     fontFamily: 'Urbanist_600SemiBold',
-    color: TEXT_SECONDARY,
+    color: theme.textSecondary,
     marginTop: 12,
   },
 });

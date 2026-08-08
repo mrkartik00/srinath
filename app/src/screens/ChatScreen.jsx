@@ -395,13 +395,13 @@ export default function ChatScreen({ route, navigation }) {
 
   // Open an image/document attachment — uses the direct URL if the server
   // already returned one, otherwise fetches a presigned download link.
-  const handleOpenAttachment = useCallback(async (item) => {
-    const attachment = item.attachments?.[0];
+  const handleOpenAttachment = useCallback(async (item, index = 0) => {
+    const attachment = item.attachments?.[index];
     if (!attachment) return;
     try {
       let url = attachment.fileUrl;
       if (!url) {
-        const res = await getAttachmentUrl(item._id);
+        const res = await getAttachmentUrl(item._id, index);
         url = res.data?.url;
       }
       if (url) {
@@ -456,22 +456,25 @@ export default function ChatScreen({ route, navigation }) {
           )}
 
           <View style={[styles.bubble, bubbleStyle, { backgroundColor: isPatient ? theme.primary : theme.card }]}>
-            {attachment && type === 'image' && attachment.fileUrl ? (
-              <TouchableOpacity onPress={() => handleOpenAttachment(item)} activeOpacity={0.9}>
-                <Image source={{ uri: attachment.fileUrl }} style={styles.attachmentImage} resizeMode="cover" />
-              </TouchableOpacity>
-            ) : attachment ? (
-              <TouchableOpacity onPress={() => handleOpenAttachment(item)} style={styles.attachmentRow} activeOpacity={0.8}>
-                <Ionicons
-                  name={type === 'image' ? 'image' : 'document-text'}
-                  size={22}
-                  color={isPatient ? '#FFFFFF' : theme.primary}
-                />
-                <Text style={[styles.attachmentName, bodyTextStyle]} numberOfLines={1}>
-                  {attachment.fileName || 'Attachment'}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
+            {attachments?.length ? attachments.map((att, idx) => {
+              const isImg = (att.mimeType?.startsWith('image/') || type === 'image') && att.fileUrl;
+              return isImg ? (
+                <TouchableOpacity key={idx} onPress={() => handleOpenAttachment(item, idx)} activeOpacity={0.9}>
+                  <Image source={{ uri: att.fileUrl }} style={styles.attachmentImage} resizeMode="cover" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity key={idx} onPress={() => handleOpenAttachment(item, idx)} style={styles.attachmentRow} activeOpacity={0.8}>
+                  <Ionicons
+                    name={att.mimeType?.startsWith('image/') ? 'image' : 'document-text'}
+                    size={22}
+                    color={isPatient ? '#FFFFFF' : theme.primary}
+                  />
+                  <Text style={[styles.attachmentName, bodyTextStyle]} numberOfLines={1}>
+                    {att.fileName || 'Attachment'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }) : null}
             {body && !isAutoCaption ? <Text style={bodyTextStyle}>{body}</Text> : null}
           </View>
 

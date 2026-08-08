@@ -308,7 +308,7 @@ export default function DoctorDetailPage() {
                   {reviews.map((review, index) => (
                     <div key={review._id || index} className="dd-review-item">
                       <div className="dd-review-header">
-                        <span className="dd-review-author">{review.patientName || 'Anonymous'}</span>
+                        <span className="dd-review-author">{review.patientId?.name || review.patientName || 'Anonymous'}</span>
                         <StarRating rating={review.rating} size={14} />
                       </div>
                       <p className="dd-review-text">{review.text}</p>

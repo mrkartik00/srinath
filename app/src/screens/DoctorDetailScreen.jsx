@@ -26,7 +26,8 @@ const { width } = Dimensions.get('window');
 
 
 export default function DoctorDetailScreen({ navigation, route }) {
-  const doctor = route.params?.doctor || {};
+  const routeDoctor = route.params?.doctor || {};
+  const doctorId = routeDoctor?._id || routeDoctor?.id;
   const { theme, isDark } = useTheme();
   const styles = useMemo(() => makeStyles(theme, isDark), [theme, isDark]);
 
@@ -64,9 +65,31 @@ export default function DoctorDetailScreen({ navigation, route }) {
   const [reviewText, setReviewText] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
 
+  // Merge route params (may be minimal when opened from chat) with the full
+  // profile fetched from the API, so every entry point renders a complete
+  // profile. Route data is preferred when present, API profile fills the gaps.
+  const doctor = useMemo(() => {
+    const p = profileData?.profile || {};
+    const d = profileData?.doctor || {};
+    return {
+      ...routeDoctor,
+      _id: routeDoctor._id || routeDoctor.id || d.id,
+      name: routeDoctor.name || d.name,
+      avatar: routeDoctor.avatar || d.avatar,
+      phone: routeDoctor.phone || d.phone,
+      specialty: routeDoctor.specialty || p.specialization || 'General Physician',
+      experience: (routeDoctor.experience ?? p.experience) ?? 0,
+      qualification: routeDoctor.qualification || p.qualification || '',
+      fee: (routeDoctor.fee ?? p.consultationFee) ?? 0,
+      clinicName: routeDoctor.clinicName || p.clinicName || '',
+      clinicAddress: routeDoctor.clinicAddress || p.clinicAddress || '',
+      aboutMe: routeDoctor.aboutMe || p.aboutMe || '',
+      availableSlots: (routeDoctor.availableSlots?.length ? routeDoctor.availableSlots : p.availableSlots) || [],
+    };
+  }, [routeDoctor, profileData]);
+
   // Fetch doctor profile (testimonials, reviews, rating)
   useEffect(() => {
-    const doctorId = doctor?._id || doctor?.id;
     if (!doctorId) return;
     (async () => {
       try {
@@ -79,14 +102,13 @@ export default function DoctorDetailScreen({ navigation, route }) {
         setProfileLoading(false);
       }
     })();
-  }, [doctor]);
+  }, [doctorId]);
 
   const handleSubmitReview = async () => {
     if (reviewRating === 0) {
       Alert.alert('Rating Required', 'Please select a star rating.');
       return;
     }
-    const doctorId = doctor?._id || doctor?.id;
     if (!doctorId) return;
     try {
       setSubmittingReview(true);
@@ -491,7 +513,7 @@ export default function DoctorDetailScreen({ navigation, route }) {
             {profileData.reviews.map((r, idx) => (
               <View key={idx} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
-                  <Text style={styles.reviewPatientName}>{r.patientName || 'Patient'}</Text>
+                  <Text style={styles.reviewPatientName}>{r.patientId?.name || r.patientName || 'Patient'}</Text>
                   <View style={styles.reviewStarsRow}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <Ionicons key={star} name={star <= r.rating ? 'star' : 'star-outline'} size={14} color="#F5A623" />

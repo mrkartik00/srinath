@@ -29,22 +29,30 @@ router.get('/doctors', async (req, res) => {
   try {
     const User = require('../models/User');
     const DoctorProfile = require('../models/DoctorProfile');
+    const DoctorReview = require('../models/DoctorReview');
     const { ROLES } = require('../config/constants');
 
-    const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true }).select('name email phone avatar');
+    const doctors = await User.find({ role: ROLES.DOCTOR, isActive: true }).select('name avatar');
     const doctorIds = doctors.map(d => d._id);
     const profiles = await DoctorProfile.find({ userId: { $in: doctorIds } });
 
     const profileMap = {};
     profiles.forEach(p => { profileMap[p.userId.toString()] = p; });
 
+    // Aggregate approved-review ratings per doctor
+    const ratingAgg = await DoctorReview.aggregate([
+      { $match: { doctorId: { $in: doctorIds }, status: 'approved' } },
+      { $group: { _id: '$doctorId', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+    ]);
+    const ratingMap = {};
+    ratingAgg.forEach(r => { ratingMap[r._id.toString()] = { avgRating: parseFloat(r.avg.toFixed(1)), reviewCount: r.count }; });
+
     const result = doctors.map(doctor => {
       const profile = profileMap[doctor._id.toString()];
+      const rating = ratingMap[doctor._id.toString()] || { avgRating: null, reviewCount: 0 };
       return {
         id: doctor._id,
         name: doctor.name,
-        email: doctor.email,
-        phone: doctor.phone,
         avatar: doctor.avatar || null,
         specialty: profile ? profile.specialization : 'General Physician',
         experience: profile ? profile.experience : 0,
@@ -55,6 +63,8 @@ router.get('/doctors', async (req, res) => {
         aboutMe: profile ? profile.aboutMe : '',
         availableSlots: profile ? profile.availableSlots : [],
         timezone: profile ? profile.timezone : 'Asia/Kolkata',
+        avgRating: rating.avgRating,
+        reviewCount: rating.reviewCount,
       };
     });
 
@@ -95,6 +105,23 @@ router.post('/doctors/:id/reviews', protect, requireEmailVerified, authorize(ROL
   const doctor = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, organizationId: req.scope.organizationId, isActive: true });
   if (!doctor) return apiResponse.error(res, 'Doctor not found', 404);
 
+  // Only patients with an established relationship (assigned or has had an
+  // appointment) may review — prevents spam/abuse from unrelated patients.
+  const DoctorPatient = require('../models/DoctorPatient');
+  const rel = await DoctorPatient.findOne({ doctorId: req.params.id, patientId: req.user.id, organizationId: req.scope.organizationId });
+  let allowed = !!rel;
+  if (!allowed) {
+    // Fallback: check for any appointment (Appointment.patientId references the Patient profile)
+    const Patient = require('../models/Patient');
+    const patientProfile = await Patient.findOne({ userId: req.user.id, organizationId: req.scope.organizationId }).select('_id');
+    if (patientProfile) {
+      const Appointment = require('../models/Appointment');
+      const myAppt = await Appointment.findOne({ doctorId: req.params.id, patientId: patientProfile._id }).select('_id');
+      allowed = !!myAppt;
+    }
+  }
+  if (!allowed) return apiResponse.error(res, 'You can only review a doctor you have consulted with', 403);
+
   // Upsert: one review per patient per doctor
   const review = await DoctorReview.findOneAndUpdate(
     { doctorId: req.params.id, patientId: req.user.id },
@@ -108,16 +135,16 @@ router.post('/doctors/:id/reviews', protect, requireEmailVerified, authorize(ROL
 // Public doctor profile with testimonials + approved reviews + rating
 router.get('/doctors/:id', asyncHandler(async (req, res) => {
   const User = require('../models/User');
-  const doctor = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, isActive: true }).select('name email phone avatar');
+  const doctor = await User.findOne({ _id: req.params.id, role: ROLES.DOCTOR, isActive: true }).select('name avatar');
   if (!doctor) return apiResponse.error(res, 'Doctor not found', 404);
 
-  const profile = await DoctorProfile.findOne({ userId: req.params.id }).select('-documents -accessLog -deletedAt').lean();
+  const profile = await DoctorProfile.findOne({ userId: req.params.id }).select('-documents -deletedAt').lean();
   const reviews = await DoctorReview.find({ doctorId: req.params.id, status: 'approved' }).populate('patientId', 'name avatar').sort({ createdAt: -1 }).limit(50).lean();
 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null;
 
   apiResponse.success(res, {
-    doctor: { id: doctor._id, name: doctor.name, email: doctor.email, phone: doctor.phone, avatar: doctor.avatar },
+    doctor: { id: doctor._id, name: doctor.name, avatar: doctor.avatar },
     profile: profile || {},
     testimonials: profile?.testimonials || [],
     reviews,

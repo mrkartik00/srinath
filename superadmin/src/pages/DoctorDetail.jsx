@@ -118,7 +118,7 @@ export default function DoctorDetail() {
             {reviews.map((r, idx) => (
               <div key={r._id || idx} className="border border-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-[#1e293b]">{r.patientName || 'Patient'}</span>
+                  <span className="text-sm font-medium text-[#1e293b]">{r.patientId?.name || r.patientName || 'Patient'}</span>
                   <div className="flex items-center gap-2">
                     <div className="flex items-center gap-0.5">
                       {[1, 2, 3, 4, 5].map((star) => (

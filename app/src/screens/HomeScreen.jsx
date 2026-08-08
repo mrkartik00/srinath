@@ -343,7 +343,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.headerLeft}>
             <TouchableOpacity onPress={() => navigation.navigate('Profile')} style={styles.profileAvatarContainer}>
               <Image
-                source={{ uri: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=223263&color=fff&size=100` }}
+                source={{ uri: user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=223263&color=fff&size=100` }}
                 style={styles.profileAvatar}
               />
             </TouchableOpacity>

@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const getConversations = () => api.get('/api/v1/chat/conversations');
 export const createConversation = (doctorId) => api.post('/api/v1/chat/conversations', { doctorId });
 export const getMessages = (conversationId, params) => api.get(`/api/v1/chat/conversations/${conversationId}/messages`, { params });
-export const getAttachmentUrl = (messageId) => api.get(`/api/v1/chat/attachments/${messageId}/download`);
+export const getAttachmentUrl = (messageId, index = 0) => api.get(`/api/v1/chat/attachments/${messageId}/download`, { params: { index } });
 export const shareVaultInChat = (conversationId, vaultDocumentIds, caption) => api.post(`/api/v1/chat/conversations/${conversationId}/share-vault`, { vaultDocumentIds, caption });
 
 /**

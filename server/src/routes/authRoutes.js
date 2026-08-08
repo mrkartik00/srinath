@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { registerSchema, loginSchema } = require('../validators/authValidator');
+const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('../validators/authValidator');
 const { doctorRegisterSchema } = require('../validators/doctorRegisterValidator');
 const validate = require('../middleware/validate');
 const { protect } = require('../middleware/auth');
@@ -20,8 +20,8 @@ router.post('/send-otp', otpLimiter, otpController.sendOtp);
 router.post('/verify-otp', otpLimiter, otpController.verifyOtp);
 
 // Password reset
-router.post('/forgot-password', otpLimiter, otpController.forgotPassword);
-router.post('/reset-password', otpLimiter, otpController.resetPassword);
+router.post('/forgot-password', otpLimiter, validate(forgotPasswordSchema), otpController.forgotPassword);
+router.post('/reset-password', otpLimiter, validate(resetPasswordSchema), otpController.resetPassword);
 
 // Profile picture upload
 const multer = require('multer');

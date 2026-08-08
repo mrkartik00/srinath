@@ -40,4 +40,25 @@ const sendOtpEmail = async (email, otp) => {
   });
 };
 
-module.exports = { sendEmail, sendOtpEmail };
+const sendPasswordChangedEmail = async (email, { changedByAdmin = false } = {}) => {
+  const subject = changedByAdmin
+    ? 'Your Janki Care password was reset by an administrator'
+    : 'Your Janki Care password was changed';
+  const message = changedByAdmin
+    ? 'Your password has been reset by an administrator. If you did not expect this, please contact support immediately.'
+    : 'Your password was successfully changed. If you did not make this change, please contact support immediately.';
+
+  return sendEmail({
+    to: email,
+    subject,
+    htmlContent: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+        <h2 style="color:#2563eb;">Janki Care</h2>
+        <p>${message}</p>
+        <p style="color:#64748b;margin-top:16px;">If you did not perform this action, please secure your account immediately.</p>
+      </div>
+    `,
+  });
+};
+
+module.exports = { sendEmail, sendOtpEmail, sendPasswordChangedEmail };

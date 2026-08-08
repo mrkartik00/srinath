@@ -59,4 +59,9 @@ async function handleResponse(res) {
   return data;
 }
 
+// Auth - Forgot Password
+api.forgotPassword = (email) => api.post('/api/v1/auth/forgot-password', { email });
+api.resetPassword = (email, otp, newPassword) => api.post('/api/v1/auth/reset-password', { email, otp, newPassword });
+api.resetUserPassword = (userId, newPassword) => api.patch(`/api/v1/superadmin/users/${userId}/password`, newPassword ? { newPassword } : {});
+
 export default api;

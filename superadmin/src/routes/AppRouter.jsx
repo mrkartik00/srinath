@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import Login from '../pages/Login';
+import ForgotPassword from '../pages/ForgotPassword';
 import Dashboard from '../pages/Dashboard';
 import Doctors from '../pages/Doctors';
 import DoctorDetail from '../pages/DoctorDetail';
@@ -29,6 +30,7 @@ export default function AppRouter() {
         <Toaster position="top-right" />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="analytics" element={<Analytics />} />

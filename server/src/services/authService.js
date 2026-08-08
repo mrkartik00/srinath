@@ -1,9 +1,14 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('../config/env');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
-const { UnauthorizedError, ConflictError, NotFoundError } = require('../utils/apiError');
+const Otp = require('../models/Otp');
+const SystemLog = require('../models/analytics/SystemLog');
+const { UnauthorizedError, ConflictError, NotFoundError, BadRequestError } = require('../utils/apiError');
 const { ROLES } = require('../config/constants');
+const { withOptionalTransaction } = require('../utils/dbUtils');
+const { sendPasswordChangedEmail } = require('./brevoService');
 
 const generateToken = (user) =>
   jwt.sign(
@@ -124,4 +129,95 @@ const getMe = async (userId) => {
   return user;
 };
 
-module.exports = { register, login, getMe, generateToken, generateRefreshToken, refreshToken: refreshTokenFn };
+const requestPasswordReset = async (email) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    const SuperAdmin = require('../models/SuperAdmin');
+    const admin = await SuperAdmin.findOne({ email });
+    if (!admin) {
+      return { message: 'If the email exists, an OTP was sent' };
+    }
+  }
+
+  const otpService = require('./otpService');
+  await otpService.sendOtp(email, 'password_reset');
+
+  return { message: 'If the email exists, an OTP was sent' };
+};
+
+const MAX_OTP_ATTEMPTS = 5;
+
+const resetPassword = async (email, otp, newPassword) => {
+  const SuperAdmin = require('../models/SuperAdmin');
+
+  // 1. Resolve the account (patient/doctor User or SuperAdmin). Done outside the
+  //    transaction so a missing account fails fast without opening a session.
+  let account = await User.findOne({ email }).select('+password');
+  if (!account) {
+    account = await SuperAdmin.findOne({ email }).select('+password');
+  }
+  if (!account) throw new NotFoundError('User not found');
+
+  // 2. Load the most recent unused reset OTP and validate it.
+  const otpDoc = await Otp.findOne({ email, purpose: 'password_reset', verifiedAt: null }).sort({ createdAt: -1 });
+  if (!otpDoc) throw new BadRequestError('No OTP found. Please request a new code.');
+  if (otpDoc.expiresAt < new Date()) throw new BadRequestError('OTP expired. Please request a new code.');
+  if (otpDoc.attempts >= MAX_OTP_ATTEMPTS) throw new BadRequestError('Too many failed attempts. Please request a new code.');
+
+  // 3. On mismatch, persist the incremented attempt count OUTSIDE any transaction
+  //    so brute-force protection is not lost to a rollback on replica sets.
+  if (otpDoc.otp !== otp) {
+    otpDoc.attempts += 1;
+    await otpDoc.save();
+    const remaining = Math.max(0, MAX_OTP_ATTEMPTS - otpDoc.attempts);
+    throw new BadRequestError(`Invalid OTP. ${remaining} attempts remaining.`);
+  }
+
+  // 4. Atomically consume the OTP and set the new password so a failure in
+  //    either write rolls back both (OTP stays usable, password unchanged).
+  await withOptionalTransaction(async (session) => {
+    otpDoc.verifiedAt = new Date();
+    await otpDoc.save({ session });
+
+    account.password = newPassword;
+    await account.save({ session });
+  });
+
+  try { await sendPasswordChangedEmail(email); } catch (_) { /* non-blocking */ }
+
+  return { message: 'Password reset successful' };
+};
+
+const adminResetUserPassword = async ({ orgId, actorId, targetUserId, newPassword }) => {
+  let actualPassword = newPassword;
+  let userRef = null;
+
+  await withOptionalTransaction(async (session) => {
+    const user = await User.findOne({
+      _id: targetUserId,
+      organizationId: orgId,
+      role: { $in: [ROLES.DOCTOR, ROLES.PATIENT] },
+    }).select('+password').session(session);
+
+    if (!user) throw new NotFoundError('User not found');
+
+    if (!actualPassword) {
+      actualPassword = crypto.randomBytes(9).toString('base64url').slice(0, 12);
+    }
+
+    user.password = actualPassword;
+    await user.save({ session });
+    userRef = user;
+  });
+
+  // After transaction: log and notify (both best-effort so a failure here never
+  // hides the freshly generated password from the admin who requested it).
+  try {
+    await SystemLog.create({ actorId, action: 'user.password_reset_by_admin', target: String(targetUserId) });
+  } catch (_) { /* non-blocking */ }
+  try { await sendPasswordChangedEmail(userRef.email, { changedByAdmin: true }); } catch (_) { /* non-blocking */ }
+
+  return { password: actualPassword, userId: userRef._id, email: userRef.email };
+};
+
+module.exports = { register, login, getMe, generateToken, generateRefreshToken, refreshToken: refreshTokenFn, requestPasswordReset, resetPassword, adminResetUserPassword };

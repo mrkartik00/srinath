@@ -73,7 +73,7 @@ export default function ForgotPasswordScreen({ navigation }) {
       await api.post('/api/v1/auth/reset-password', {
         email: email.trim(),
         otp: otp.trim(),
-        password,
+        newPassword: password,
       });
       haptics.success();
       Alert.alert('Success', 'Password reset!', [
@@ -127,10 +127,10 @@ export default function ForgotPasswordScreen({ navigation }) {
                 style={[styles.input, { color: theme.text, borderColor: theme.border }]}
                 value={otp}
                 onChangeText={setOtp}
-                placeholder="4-digit OTP"
+                placeholder="6-digit OTP"
                 placeholderTextColor={theme.textMuted}
                 keyboardType="number-pad"
-                maxLength={4}
+                maxLength={6}
               />
               <Text style={[styles.label, { color: theme.textSecondary }]}>New Password</Text>
               <TextInput

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
+import ResetPasswordModal from '../components/ResetPasswordModal';
 
 export default function Patients() {
   const [patients, setPatients] = useState([]);
@@ -9,6 +10,7 @@ export default function Patients() {
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', gender: '', bloodGroup: '', dateOfBirth: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [resetUser, setResetUser] = useState(null);
 
   const fetchPatients = (s) => {
     setLoading(true);
@@ -77,6 +79,7 @@ export default function Patients() {
                 <th className="px-6 py-3 text-left">Phone</th>
                 <th className="px-6 py-3 text-left">Gender</th>
                 <th className="px-6 py-3 text-left">Blood Group</th>
+                <th className="px-6 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -87,6 +90,16 @@ export default function Patients() {
                   <td className="px-6 py-3 text-sm text-[#64748b]">{p.userId?.phone || '—'}</td>
                   <td className="px-6 py-3 text-sm text-[#64748b] capitalize">{p.gender || '—'}</td>
                   <td className="px-6 py-3 text-sm text-[#64748b]">{p.bloodGroup || '—'}</td>
+                  <td className="px-6 py-3 text-right">
+                    {p.userId?._id && (
+                      <button
+                        onClick={() => setResetUser({ _id: p.userId._id, name: p.userId.name, email: p.userId.email })}
+                        className="px-3 py-1.5 text-xs font-medium text-[#273d71] border border-[#273d71]/30 rounded-lg hover:bg-[#273d71]/5 transition"
+                      >
+                        Reset Password
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -167,6 +180,12 @@ export default function Patients() {
           </div>
         </div>
       )}
+
+      <ResetPasswordModal
+        isOpen={!!resetUser}
+        onClose={() => setResetUser(null)}
+        user={resetUser}
+      />
     </div>
   );
 }

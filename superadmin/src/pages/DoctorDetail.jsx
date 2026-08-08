@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
+import ResetPasswordModal from '../components/ResetPasswordModal';
 
 export default function DoctorDetail() {
   const { id } = useParams();
@@ -8,6 +9,7 @@ export default function DoctorDetail() {
   const [data, setData] = useState(null);
   const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
     Promise.all([api.get(`/api/v1/superadmin/doctors/${id}`), api.get(`/api/v1/superadmin/doctors/${id}/activity`)])
@@ -29,7 +31,15 @@ export default function DoctorDetail() {
           <h1 className="text-xl font-bold text-[#1e293b]">{user?.name}</h1>
           <p className="text-sm text-[#64748b]">{user?.email} • {profile?.specialization || 'No specialization'}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${user?.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{user?.isActive ? 'Active' : 'Inactive'}</span>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowResetModal(true)}
+            className="px-4 py-1.5 rounded-lg text-xs font-medium bg-[#273d71] text-white hover:bg-[#1e2f58] transition"
+          >
+            Reset Password
+          </button>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${user?.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{user?.isActive ? 'Active' : 'Inactive'}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -63,6 +73,12 @@ export default function DoctorDetail() {
           </div>
         )}
       </div>
+
+      <ResetPasswordModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        user={user ? { _id: user._id, name: user.name, email: user.email } : null}
+      />
     </div>
   );
 }

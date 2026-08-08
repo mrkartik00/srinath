@@ -4,6 +4,8 @@ const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/rbac');
 const tenantScope = require('../middleware/tenantScope');
 const { requireEmailVerified } = require('../middleware/gates');
+const validate = require('../middleware/validate');
+const { adminResetPasswordSchema } = require('../validators/authValidator');
 const c = require('../controllers/superadminController');
 const { ROLES } = require('../config/constants');
 
@@ -29,6 +31,9 @@ router.patch('/registrations/:id/reject', ...guard, c.rejectDoctor);
 // Patients (cross-doctor)
 router.get('/patients', ...guard, c.getPatients);
 router.post('/patients', ...guard, c.addPatient);
+
+// User password reset (admin)
+router.patch('/users/:id/password', ...guard, validate(adminResetPasswordSchema), c.resetUserPassword);
 
 // Appointments (platform-wide)
 router.get('/appointments', ...guard, c.getAppointments);

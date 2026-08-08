@@ -1,5 +1,6 @@
 const asyncHandler = require('../utils/asyncHandler');
 const otpService = require('../services/otpService');
+const authService = require('../services/authService');
 const apiResponse = require('../utils/apiResponse');
 const User = require('../models/User');
 
@@ -20,20 +21,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
-  const { email } = req.body;
-  const user = await User.findOne({ email });
-  if (!user) return apiResponse.success(res, {}, 'If the email exists, an OTP was sent');
-  await otpService.sendOtp(email, 'password_reset');
+  await authService.requestPasswordReset(req.body.email);
   apiResponse.success(res, {}, 'If the email exists, an OTP was sent');
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-  await otpService.verifyOtp(email, otp, 'password_reset');
-  const user = await User.findOne({ email }).select('+password');
-  if (!user) throw new Error('User not found');
-  user.password = newPassword;
-  await user.save();
+  await authService.resetPassword(req.body.email, req.body.otp, req.body.newPassword);
   apiResponse.success(res, {}, 'Password reset successful');
 });
 

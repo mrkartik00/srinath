@@ -12,6 +12,7 @@ const SubscriptionPlan = require('../models/analytics/SubscriptionPlan');
 const PlatformSettings = require('../models/analytics/PlatformSettings');
 const SystemLog = require('../models/analytics/SystemLog');
 const doctorService = require('../services/doctorService');
+const authService = require('../services/authService');
 const paginate = require('../utils/pagination');
 const { ROLES, APPOINTMENT_STATUS, DOCTOR_PATIENT_STATUS } = require('../config/constants');
 
@@ -280,6 +281,17 @@ const updateAIConfig = asyncHandler(async (req, res) => {
   apiResponse.success(res, config, 'AI config updated');
 });
 
+// === RESET USER PASSWORD ===
+const resetUserPassword = asyncHandler(async (req, res) => {
+  const result = await authService.adminResetUserPassword({
+    orgId: req.scope.organizationId,
+    actorId: req.user.id,
+    targetUserId: req.params.id,
+    newPassword: req.body.newPassword,
+  });
+  apiResponse.success(res, result, 'Password reset successful');
+});
+
 module.exports = {
   getDashboard, getDoctors, getDoctor, addDoctor, updateDoctor, deactivateDoctor, reactivateDoctor, getDoctorActivity,
   getRegistrations, approveDoctor, rejectDoctor,
@@ -287,4 +299,5 @@ module.exports = {
   getPlans, getPlanFeatures, createPlan, updatePlan, togglePlan, deletePlan,
   getSettings, upsertSetting, getLogs,
   getAIConfig, updateAIConfig,
+  resetUserPassword,
 };

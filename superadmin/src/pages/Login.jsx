@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
@@ -90,6 +90,9 @@ export default function Login() {
             >
               {loading ? 'Signing in...' : 'Sign in'}
             </button>
+            <div className="text-center mt-4">
+              <Link to='/forgot-password' className='text-sm text-[#273d71] hover:underline'>Forgot password?</Link>
+            </div>
           </form>
         </div>
       </div>

@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen({ navigation }) {
     haptics.medium();
     setLoading(true);
     try {
-      await api.post('/api/v1/auth/forgot-password', { email: email.trim() });
+      await api.post('/api/v1/auth/forgot-password', { email: email.trim(), role: 'patient' });
       haptics.selection();
       setStep(2);
     } catch (err) {
@@ -74,6 +74,7 @@ export default function ForgotPasswordScreen({ navigation }) {
         email: email.trim(),
         otp: otp.trim(),
         newPassword: password,
+        role: 'patient',
       });
       haptics.success();
       Alert.alert('Success', 'Password reset!', [

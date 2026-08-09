@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -164,6 +164,8 @@ export default function VideoCallScreen({ route, navigation }) {
 function MeetingView({ onLeave, participantName }) {
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState(null);
+  const joinTimerRef = useRef(null);
+  const joinedRef = useRef(false);
 
   const {
     join,
@@ -175,15 +177,44 @@ function MeetingView({ onLeave, participantName }) {
     localMicOn,
     localWebcamOn,
   } = useMeeting({
-    onMeetingJoined: () => setJoined(true),
+    onMeetingJoined: () => {
+      joinedRef.current = true;
+      if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
+      setError(null);
+      setJoined(true);
+    },
     onMeetingLeft: () => onLeave?.(),
     onError: (err) => {
-      setError(err?.message || err?.code || 'Video connection error');
+      // Surface the real reason so a failed connect is not an invisible hang.
+      // eslint-disable-next-line no-console
+      console.error('[VideoSDK][patient] error:', JSON.stringify(err));
+      setError(mapMeetingError(err));
     },
   });
 
+  const startJoin = () => {
+    setError(null);
+    joinedRef.current = false;
+    if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
+    // If join hasn't completed within 25s, stop the silent spinner and show a
+    // retry so the user (and logs) know the connection stalled.
+    joinTimerRef.current = setTimeout(() => {
+      if (!joinedRef.current) {
+        setError('Connection timed out. Check your network and camera/microphone permissions, then retry.');
+      }
+    }, 25000);
+    try {
+      join();
+    } catch (err) {
+      setError(mapMeetingError(err));
+    }
+  };
+
   useEffect(() => {
-    join();
+    startJoin();
+    return () => {
+      if (joinTimerRef.current) clearTimeout(joinTimerRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -193,8 +224,13 @@ function MeetingView({ onLeave, participantName }) {
 
   const handleLeave = () => {
     haptics.medium();
-    leave();
+    try { leave(); } catch (_) { /* ignore */ }
     onLeave?.();
+  };
+
+  const handleRetry = () => {
+    haptics.light();
+    startJoin();
   };
 
   const handleToggleMic = () => {
@@ -207,7 +243,26 @@ function MeetingView({ onLeave, participantName }) {
     toggleWebcam();
   };
 
+  // Not yet joined: show either a diagnosable error (with retry) or the spinner.
   if (!joined) {
+    if (error) {
+      return (
+        <SafeAreaView style={styles.errorContainer}>
+          <StatusBar barStyle="light-content" />
+          <Ionicons name="alert-circle-outline" size={48} color="#f87171" />
+          <Text style={styles.errorText}>Couldn’t connect to the call</Text>
+          <Text style={[styles.errorText, { fontSize: 13, color: '#94a3b8', marginTop: 4 }]}>{error}</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+            <TouchableOpacity style={styles.errorButton} onPress={handleRetry}>
+              <Text style={styles.errorButtonText}>Retry</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.errorButton, { backgroundColor: '#1e293b' }]} onPress={handleLeave}>
+              <Text style={styles.errorButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <StatusBar barStyle="light-content" />
@@ -326,6 +381,32 @@ function getInitials(name) {
     .join('')
     .toUpperCase()
     .slice(0, 2);
+}
+
+/**
+ * Translate a VideoSDK error into an actionable message. Common codes:
+ *  - 4001/4002/4003/4004/4005/4006: token invalid/expired/permission
+ *  - 3001/3002/3016: media (camera/mic) access denied or unavailable
+ * Falls back to the raw message/code so the on-screen text + logs are useful.
+ */
+function mapMeetingError(err) {
+  const code = err?.code ?? err?.errorCode;
+  const raw = err?.message || (code != null ? `Error ${code}` : 'Video connection error');
+  switch (String(code)) {
+    case '4001':
+    case '4002':
+    case '4003':
+    case '4004':
+    case '4005':
+    case '4006':
+      return `Session token was rejected (code ${code}). Please rejoin the call.`;
+    case '3001':
+    case '3002':
+    case '3016':
+      return 'Camera/microphone access is blocked. Enable it in iOS Settings → Janki Care, then retry.';
+    default:
+      return raw;
+  }
 }
 
 const styles = StyleSheet.create({

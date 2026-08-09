@@ -60,8 +60,9 @@ export function AuthProvider({ children }) {
   // Auth stack instead of continuing to render as if still logged in.
   useEffect(() => onUnauthorized(() => setUser(null)), []);
 
-  const loginAction = async (token, userData) => {
+  const loginAction = async (token, userData, refreshToken) => {
     await AsyncStorage.setItem('token', token);
+    if (refreshToken) await AsyncStorage.setItem('refreshToken', refreshToken);
     await AsyncStorage.setItem('user', JSON.stringify(userData));
     setJustLoggedIn(true);
     setUser(userData);
@@ -70,7 +71,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await AsyncStorage.multiRemove(['token', 'user']);
+    await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
     setUser(null);
   };
 

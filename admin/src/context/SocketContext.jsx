@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import { silentRefresh } from '../api/axios';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
@@ -43,6 +44,19 @@ export function SocketProvider({ children }) {
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
+
+    // On auth error, refresh token and reconnect
+    socket.on('connect_error', async (err) => {
+      if (err.message === 'Invalid token' || err.message === 'No token') {
+        try {
+          const newToken = await silentRefresh();
+          socket.auth = { token: newToken };
+          socket.connect();
+        } catch {
+          // Refresh failed — socket stays disconnected; axios will handle full logout
+        }
+      }
+    });
 
     // ── Video call events (global) ──────────────────────────────────────
     socket.on('video:incoming', (data) => {

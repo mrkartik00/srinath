@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { addNotification } from '../utils/notificationsHelper';
-import { API_BASE_URL } from '../api/axios';
+import { API_BASE_URL, silentRefresh } from '../api/axios';
 
 const SocketContext = createContext(null);
 
@@ -45,6 +45,19 @@ export function SocketProvider({ children }) {
 
       socket.on('connect', () => setConnected(true));
       socket.on('disconnect', () => setConnected(false));
+
+      // On auth error, refresh token and reconnect
+      socket.on('connect_error', async (err) => {
+        if (err.message === 'Invalid token' || err.message === 'No token') {
+          try {
+            const newToken = await silentRefresh();
+            socket.auth = { token: newToken };
+            socket.connect();
+          } catch {
+            // Refresh failed — socket stays disconnected; axios will handle full logout
+          }
+        }
+      });
 
       // ── Video & Notification events ──────────────────────────────────
       socket.on('video:incoming', (data) => {

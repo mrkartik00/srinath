@@ -50,14 +50,68 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res.data,
   async (error) => {
-    if (error.response?.status === 401) {
-      await AsyncStorage.multiRemove(['token', 'user']);
-      emitUnauthorized();
+    const originalRequest = error.config;
+
+    // Don't intercept refresh calls or already-retried requests
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      // Skip refresh for EMAIL_NOT_VERIFIED errors
+      if (error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
+        return Promise.reject(
+          error.response?.data?.errors || error.response?.data?.message || error.message || 'Network error'
+        );
+      }
+
+      originalRequest._retry = true;
+
+      try {
+        const newToken = await silentRefresh();
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        const retryRes = await api(originalRequest);
+        return retryRes;
+      } catch (refreshError) {
+        // Refresh failed — hard logout
+        await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
+        emitUnauthorized();
+        return Promise.reject(
+          error.response?.data?.errors || error.response?.data?.message || error.message || 'Session expired'
+        );
+      }
     }
+
     return Promise.reject(
       error.response?.data?.errors || error.response?.data?.message || error.message || 'Network error'
     );
   }
 );
 
+// Single-flight refresh: share one refresh promise across concurrent 401s
+let refreshPromise = null;
+
+async function silentRefresh() {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const rt = await AsyncStorage.getItem('refreshToken');
+      if (!rt) throw new Error('No refresh token');
+
+      const res = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, { refreshToken: rt });
+      const newToken = res.data?.data?.accessToken;
+      if (!newToken) throw new Error('No access token in response');
+
+      await AsyncStorage.setItem('token', newToken);
+      return newToken;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+export { silentRefresh };
 export default api;

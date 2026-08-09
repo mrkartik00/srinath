@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }) {
     try {
       const res = await loginApi(email, password);
       haptics.success();
-      await login(res.data.accessToken, res.data.user);
+      await login(res.data.accessToken, res.data.user, res.data.refreshToken);
     } catch (err) {
       haptics.error();
       const msg = err?.response?.data?.code || err?.response?.data?.message || '';
@@ -202,9 +202,9 @@ const styles = StyleSheet.create({
   btnWrapper: { marginTop: 8, borderRadius: 16, shadowColor: '#223263', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.25, shadowRadius: 16, elevation: 8 },
   btn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 16, paddingVertical: 17 },
   btnText: { color: '#fff', fontSize: 17, fontFamily: 'Urbanist_700Bold' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   forgotPassword: { alignItems: 'center', marginTop: 16 },
   forgotPasswordText: { fontSize: 14, fontFamily: 'Urbanist_600SemiBold' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { fontSize: 15, fontFamily: 'Urbanist_600SemiBold' },
   footerLink: { fontSize: 15, fontFamily: 'Urbanist_700Bold' },
   trust: { flexDirection: 'row', justifyContent: 'center', gap: 20, marginTop: 32 },

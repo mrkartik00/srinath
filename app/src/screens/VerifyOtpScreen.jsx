@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,11 @@ export default function VerifyOtpScreen({ route, navigation }) {
   const inputs = useRef([]);
   const { login } = useAuth();
 
+  useEffect(() => {
+    // Auto-send OTP on mount
+    sendOtp(email, 'registration').catch(() => {});
+  }, [email]);
+
   const handleChange = (text, index) => {
     const newOtp = [...otp];
     newOtp[index] = text;
@@ -26,7 +31,7 @@ export default function VerifyOtpScreen({ route, navigation }) {
     if (code.length < 6) return Alert.alert('Error', 'Enter complete OTP');
     setLoading(true);
     try {
-      await verifyOtp(email, code, 'email_verification');
+      await verifyOtp(email, code, 'registration');
       haptics.success();
       Alert.alert('Verified', 'Email verified! Please login.', [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
@@ -39,7 +44,7 @@ export default function VerifyOtpScreen({ route, navigation }) {
 
   const handleResend = async () => {
     try {
-      await sendOtp(email, 'email_verification');
+      await sendOtp(email, 'registration');
       haptics.success();
       Alert.alert('Sent', 'New OTP sent to your email');
     } catch { Alert.alert('Error', 'Could not resend OTP'); }

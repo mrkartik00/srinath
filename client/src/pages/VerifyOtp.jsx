@@ -17,9 +17,15 @@ export default function VerifyOtp() {
 
   useEffect(() => {
     if (!email) { navigate('/login'); return; }
+    // Auto-send OTP on mount
+    sendOtp(email).catch(() => {});
+  }, [email, navigate]);
+
+  useEffect(() => {
+    if (!email) return;
     const timer = countdown > 0 && setInterval(() => setCountdown(c => c - 1), 1000);
     return () => clearInterval(timer);
-  }, [countdown, email, navigate]);
+  }, [countdown, email]);
 
   const handleChange = (i, val) => {
     if (!/^\d*$/.test(val)) return;

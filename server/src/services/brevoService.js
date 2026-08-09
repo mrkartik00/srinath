@@ -61,4 +61,22 @@ const sendPasswordChangedEmail = async (email, { changedByAdmin = false } = {}) 
   });
 };
 
-module.exports = { sendEmail, sendOtpEmail, sendPasswordChangedEmail };
+const sendAccountCreatedEmail = async (email, { name, loginUrl }) => {
+  return sendEmail({
+    to: email,
+    subject: 'Your Janki Care account is ready',
+    htmlContent: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:24px;">
+        <h2 style="color:#2563eb;">Janki Care</h2>
+        <p>Hi ${name},</p>
+        <p>Your doctor account has been created by an administrator. You can now sign in to the Janki Care Doctor Portal using your registered email and the password provided by your admin.</p>
+        <div style="margin:24px 0;">
+          <a href="${loginUrl}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:bold;">Sign In to Your Account</a>
+        </div>
+        <p style="color:#64748b;font-size:13px;">If you did not expect this email, please ignore it or contact support.</p>
+      </div>
+    `,
+  });
+};
+
+module.exports = { sendEmail, sendOtpEmail, sendPasswordChangedEmail, sendAccountCreatedEmail };

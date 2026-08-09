@@ -14,7 +14,7 @@ const addDoctor = async (orgId, actorId, data) => {
   const user = await withOptionalTransaction(async (session) => {
     const opts = session ? { session } : {};
     const [u] = await User.create(
-      [{ name: data.name, email: data.email, password: data.password, phone: data.phone, role: ROLES.DOCTOR, organizationId: orgId, approvalStatus: 'approved', registrationSource: 'admin_created' }],
+      [{ name: data.name, email: data.email, password: data.password, phone: data.phone, role: ROLES.DOCTOR, organizationId: orgId, approvalStatus: 'approved', registrationSource: 'admin_created', isEmailVerified: true }],
       opts
     );
     await DoctorProfile.create(
@@ -25,6 +25,11 @@ const addDoctor = async (orgId, actorId, data) => {
   });
 
   auditService.log({ actorId, actorRole: ROLES.SUPER_ADMIN, action: AUDIT_ACTIONS.DOCTOR_CREATED, targetType: 'User', targetId: user._id, changes: { name: data.name, email: data.email } });
+
+  // Send welcome email (non-blocking)
+  const { sendAccountCreatedEmail } = require('./brevoService');
+  try { await sendAccountCreatedEmail(data.email, { name: data.name, loginUrl: 'https://doctor.jankicare.com/login' }); } catch (_) { /* non-blocking */ }
+
   return user;
 };
 

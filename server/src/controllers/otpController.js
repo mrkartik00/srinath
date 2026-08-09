@@ -14,8 +14,10 @@ const verifyOtp = asyncHandler(async (req, res) => {
   const { email, otp, purpose } = req.body;
   const result = await otpService.verifyOtp(email, otp, purpose);
 
-  // Mark user email as verified if they exist
-  await User.findOneAndUpdate({ email }, { isEmailVerified: true });
+  // Only mark email as verified for registration OTPs
+  if (!purpose || purpose === 'registration') {
+    await User.findOneAndUpdate({ email }, { isEmailVerified: true });
+  }
 
   apiResponse.success(res, result, 'Email verified successfully');
 });

@@ -16,12 +16,14 @@ const loginSchema = Joi.object({
 
 const forgotPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
+  role: Joi.string().valid(ROLES.PATIENT, ROLES.DOCTOR, ROLES.SUPER_ADMIN).optional(),
 });
 
 const resetPasswordSchema = Joi.object({
   email: Joi.string().email().required(),
   otp: Joi.string().length(6).pattern(/^[0-9]+$/).required(),
   newPassword: Joi.string().min(6).max(128).required(),
+  role: Joi.string().valid(ROLES.PATIENT, ROLES.DOCTOR, ROLES.SUPER_ADMIN).optional(),
 });
 
 const adminResetPasswordSchema = Joi.object({

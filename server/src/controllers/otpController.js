@@ -23,12 +23,12 @@ const verifyOtp = asyncHandler(async (req, res) => {
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
-  await authService.requestPasswordReset(req.body.email);
+  await authService.requestPasswordReset(req.body.email, req.body.role);
   apiResponse.success(res, {}, 'If the email exists, an OTP was sent');
 });
 
 const resetPassword = asyncHandler(async (req, res) => {
-  await authService.resetPassword(req.body.email, req.body.otp, req.body.newPassword);
+  await authService.resetPassword(req.body.email, req.body.otp, req.body.newPassword, req.body.role);
   apiResponse.success(res, {}, 'Password reset successful');
 });
 

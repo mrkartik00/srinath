@@ -129,32 +129,54 @@ const getMe = async (userId) => {
   return user;
 };
 
-const requestPasswordReset = async (email) => {
-  const user = await User.findOne({ email });
-  if (!user) {
+const requestPasswordReset = async (email, expectedRole) => {
+  const generic = { message: 'If the email exists, an OTP was sent' };
+
+  // Resolve the account, scoped to the portal's audience so a patient can't run
+  // the reset flow on the doctor portal (and vice-versa). We always return the
+  // same generic message to avoid leaking which emails exist.
+  let account = null;
+  if (expectedRole === ROLES.SUPER_ADMIN) {
     const SuperAdmin = require('../models/SuperAdmin');
-    const admin = await SuperAdmin.findOne({ email });
-    if (!admin) {
-      return { message: 'If the email exists, an OTP was sent' };
+    account = await SuperAdmin.findOne({ email });
+  } else if (expectedRole) {
+    account = await User.findOne({ email, role: expectedRole });
+  } else {
+    // No audience provided (legacy caller): fall back to any account.
+    account = await User.findOne({ email });
+    if (!account) {
+      const SuperAdmin = require('../models/SuperAdmin');
+      account = await SuperAdmin.findOne({ email });
     }
   }
+
+  if (!account) return generic;
 
   const otpService = require('./otpService');
   await otpService.sendOtp(email, 'password_reset');
 
-  return { message: 'If the email exists, an OTP was sent' };
+  return generic;
 };
 
 const MAX_OTP_ATTEMPTS = 5;
 
-const resetPassword = async (email, otp, newPassword) => {
+const resetPassword = async (email, otp, newPassword, expectedRole) => {
   const SuperAdmin = require('../models/SuperAdmin');
 
-  // 1. Resolve the account (patient/doctor User or SuperAdmin). Done outside the
-  //    transaction so a missing account fails fast without opening a session.
-  let account = await User.findOne({ email }).select('+password');
-  if (!account) {
+  // 1. Resolve the account scoped to the portal's audience. This is the real
+  //    security gate: even if an OTP was somehow obtained, a patient cannot
+  //    reset via the doctor portal because the role won't match.
+  let account = null;
+  if (expectedRole === ROLES.SUPER_ADMIN) {
     account = await SuperAdmin.findOne({ email }).select('+password');
+  } else if (expectedRole) {
+    account = await User.findOne({ email, role: expectedRole }).select('+password');
+  } else {
+    // No audience provided (legacy caller): fall back to any account.
+    account = await User.findOne({ email }).select('+password');
+    if (!account) {
+      account = await SuperAdmin.findOne({ email }).select('+password');
+    }
   }
   if (!account) throw new NotFoundError('User not found');
 

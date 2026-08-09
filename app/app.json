@@ -54,8 +54,9 @@
     "extra": {
       "apiUrl": "https://api.janki.care",
       "eas": {
-        "projectId": "aa56e40f-db91-4747-ae63-344e41e56a39"
+        "projectId": "8a84ea93-efb5-4552-af22-230c2e9de727"
       }
-    }
+    },
+    "owner": "mrkartik00"
   }
 }

@@ -19,7 +19,8 @@ async function silentRefresh() {
       if (!res.ok) throw new Error('Refresh failed');
 
       const data = await res.json();
-      const newToken = data.data.accessToken;
+      const newToken = data?.data?.accessToken;
+      if (!newToken) throw new Error('No access token in refresh response');
       localStorage.setItem('token', newToken);
       return newToken;
     } finally {
@@ -70,11 +71,11 @@ async function handleResponse(res, url, retryFn) {
   if (res.status === 401) {
     const hadToken = !!localStorage.getItem('token');
 
-    if (data.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
-      if (!retryFn && hadToken && data.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
+    if (data?.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
+      if (!retryFn && hadToken && data?.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
         hardLogout();
       }
-      const e = new Error(data.message || 'Session expired');
+      const e = new Error(data?.message || 'Session expired');
       e.response = { data, status: 401 };
       throw e;
     }
@@ -83,7 +84,7 @@ async function handleResponse(res, url, retryFn) {
       await silentRefresh();
     } catch {
       hardLogout();
-      const e = new Error(data.message || 'Session expired');
+      const e = new Error(data?.message || 'Session expired');
       e.response = { data, status: 401 };
       throw e;
     }
@@ -92,7 +93,7 @@ async function handleResponse(res, url, retryFn) {
   }
 
   if (!res.ok) {
-    const e = new Error(data.message || 'Something went wrong');
+    const e = new Error(data?.message || 'Something went wrong');
     e.response = { data, status: res.status };
     throw e;
   }

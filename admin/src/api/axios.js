@@ -19,7 +19,8 @@ async function silentRefresh() {
       if (!res.ok) throw new Error('Refresh failed');
 
       const data = await res.json();
-      const newToken = data.data.accessToken;
+      const newToken = data?.data?.accessToken;
+      if (!newToken) throw new Error('No access token in refresh response');
       localStorage.setItem('token', newToken);
       return newToken;
     } finally {
@@ -75,12 +76,12 @@ async function handleResponse(res, url, retryFn) {
 
     // Don't refresh for auth endpoints, EMAIL_NOT_VERIFIED, no token, or a
     // request that has already been retried once.
-    if (data.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
+    if (data?.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
       // A retry that still 401s means refresh didn't help — end the session.
-      if (!retryFn && hadToken && data.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
+      if (!retryFn && hadToken && data?.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
         hardLogout();
       }
-      const e = new Error(data.message || 'Session expired');
+      const e = new Error(data?.message || 'Session expired');
       e.response = { data, status: 401 };
       throw e;
     }
@@ -90,7 +91,7 @@ async function handleResponse(res, url, retryFn) {
       await silentRefresh();
     } catch {
       hardLogout();
-      const e = new Error(data.message || 'Session expired');
+      const e = new Error(data?.message || 'Session expired');
       e.response = { data, status: 401 };
       throw e;
     }
@@ -99,7 +100,7 @@ async function handleResponse(res, url, retryFn) {
   }
 
   if (!res.ok) {
-    const e = new Error(data.message || 'Something went wrong');
+    const e = new Error(data?.message || 'Something went wrong');
     e.response = { data, status: res.status };
     throw e;
   }

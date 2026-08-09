@@ -54,7 +54,9 @@ export function SocketProvider({ children }) {
             socket.auth = { token: newToken };
             socket.connect();
           } catch {
-            // Refresh failed — socket stays disconnected; axios will handle full logout
+            // Refresh failed — stop retrying with a bad token; axios will handle
+            // the full logout on the next API call.
+            socket.disconnect();
           }
         }
       });

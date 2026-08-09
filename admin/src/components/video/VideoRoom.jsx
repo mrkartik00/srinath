@@ -131,6 +131,9 @@ export default function VideoRoom({ token, roomId, onCallEnd, onTokenExpired }) 
           micEnabled: true,
           webcamEnabled: true,
           name: 'Doctor',
+          // Stable per-session id so a rejoin EVICTS the previous session
+          // instead of leaving a ghost participant (self shown twice, one frozen).
+          participantId: `host_${roomId}`,
           debugMode: false,
         }}
         token={token}

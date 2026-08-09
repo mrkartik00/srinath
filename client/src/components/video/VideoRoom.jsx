@@ -58,6 +58,9 @@ export default function VideoRoom({ token, roomId, onCallEnd, participantName, o
         micEnabled: true,
         webcamEnabled: true,
         name: participantName || 'Patient',
+        // Stable per-session id so a rejoin EVICTS the previous session
+        // instead of leaving a ghost participant (frozen duplicate tile).
+        participantId: `patient_${roomId}`,
         debugMode: false,
       }}
       token={token}

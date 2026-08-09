@@ -15,7 +15,7 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Allow Janki Care to access your camera for video consultations.",
         "NSMicrophoneUsageDescription": "Allow Janki Care to access your microphone for video consultations.",
-        "UIBackgroundModes": ["audio", "voip"]
+        "UIBackgroundModes": ["audio"]
       }
     },
     "android": {

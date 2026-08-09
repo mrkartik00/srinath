@@ -169,12 +169,15 @@ function MeetingView({ onLeave, participantName }) {
   const [error, setError] = useState(null);
   const joinTimerRef = useRef(null);
   const joinedRef = useRef(false);
+  const facingRef = useRef('front'); // current camera: 'front' | 'back'
 
   const {
     join,
     leave,
     toggleMic,
     toggleWebcam,
+    changeWebcam,
+    getWebcams,
     participants,
     localParticipant,
     localMicOn,
@@ -244,6 +247,38 @@ function MeetingView({ onLeave, participantName }) {
   const handleToggleCam = () => {
     haptics.light();
     toggleWebcam();
+  };
+
+  const handleFlipCamera = async () => {
+    haptics.light();
+    const next = facingRef.current === 'front' ? 'back' : 'front';
+    try {
+      // Prefer selecting the specific device so we control front/back explicitly.
+      if (typeof getWebcams === 'function' && typeof changeWebcam === 'function') {
+        const cams = await getWebcams();
+        const wantBack = next === 'back';
+        const target = (cams || []).find((c) => {
+          const f = String(c?.facingMode || '').toLowerCase();
+          const l = String(c?.label || '').toLowerCase();
+          return wantBack
+            ? f.includes('environment') || f.includes('back') || l.includes('back')
+            : f.includes('user') || f.includes('front') || l.includes('front');
+        });
+        if (target?.deviceId) {
+          await changeWebcam(target.deviceId);
+          facingRef.current = next;
+          return;
+        }
+      }
+      // Fallback: some SDK versions flip with a no-arg call.
+      if (typeof changeWebcam === 'function') {
+        await changeWebcam();
+        facingRef.current = next;
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[VideoSDK][patient] camera flip failed:', err?.message || err);
+    }
   };
 
   // Not yet joined: show either a diagnosable error (with retry) or the spinner.
@@ -328,6 +363,14 @@ function MeetingView({ onLeave, participantName }) {
             onPress={handleToggleCam}
           >
             <Ionicons name={localWebcamOn ? 'videocam' : 'videocam-off'} size={24} color="#fff" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.controlButton, !localWebcamOn && styles.controlButtonDisabled]}
+            onPress={handleFlipCamera}
+            disabled={!localWebcamOn}
+          >
+            <Ionicons name="camera-reverse" size={24} color="#fff" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.leaveButton} onPress={handleLeave}>
@@ -594,6 +637,9 @@ const styles = StyleSheet.create({
   },
   controlButtonOff: {
     backgroundColor: '#ef4444',
+  },
+  controlButtonDisabled: {
+    opacity: 0.4,
   },
   leaveButton: {
     width: 64,

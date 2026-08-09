@@ -1,67 +1,128 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
-const api = {
-  get: (url, params = {}) =>
-    fetch(`${API_BASE_URL}${url}?${new URLSearchParams(params)}`, { headers: getAuthHeaders() }).then(handleResponse),
-  post: (url, data) =>
-    fetch(`${API_BASE_URL}${url}`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handleResponse),
-  patch: (url, data) =>
-    fetch(`${API_BASE_URL}${url}`, { method: 'PATCH', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(handleResponse),
-  delete: (url) =>
-    fetch(`${API_BASE_URL}${url}`, { method: 'DELETE', headers: getAuthHeaders() }).then(handleResponse),
-};
+// Single-flight refresh state
+let refreshPromise = null;
+
+async function silentRefresh() {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    try {
+      const rt = localStorage.getItem('refreshToken');
+      if (!rt) throw new Error('No refresh token');
+
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+      if (!res.ok) throw new Error('Refresh failed');
+
+      const data = await res.json();
+      const newToken = data.data.accessToken;
+      localStorage.setItem('token', newToken);
+      return newToken;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
 
 function getAuthHeaders() {
   const token = localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function refreshToken() {
-  const rt = localStorage.getItem('refreshToken');
-  if (!rt) throw new Error('No refresh token');
-  const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: rt }),
-  });
-  if (!res.ok) throw new Error('Refresh failed');
-  const data = await res.json();
-  localStorage.setItem('token', data.data.accessToken);
-  return data.data.accessToken;
+// Auth endpoints must never trigger the silent-refresh/retry path.
+const AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/register-doctor',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+];
+
+function isAuthPath(url = '') {
+  return AUTH_PATHS.some((p) => url.includes(p));
 }
 
-async function handleResponse(res) {
-  const data = await res.json();
+function hardLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  localStorage.setItem('sessionExpired', 'true');
+  window.location.href = '/login';
+}
+
+async function handleResponse(res, url, retryFn) {
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('Server not reachable. Please try again.');
+  }
+
   if (res.status === 401) {
     const hadToken = !!localStorage.getItem('token');
-    if (hadToken) {
-      try {
-        await refreshToken();
-        window.location.reload();
-        return;
-      } catch {
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        localStorage.setItem('sessionExpired', 'true');
-        window.location.href = '/login';
+
+    if (data.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
+      if (!retryFn && hadToken && data.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
+        hardLogout();
       }
+      const e = new Error(data.message || 'Session expired');
+      e.response = { data, status: 401 };
+      throw e;
     }
-    const e = new Error(data.message || 'Session expired');
-    e.response = { data, status: 401 };
-    throw e;
+
+    try {
+      await silentRefresh();
+    } catch {
+      hardLogout();
+      const e = new Error(data.message || 'Session expired');
+      e.response = { data, status: 401 };
+      throw e;
+    }
+    const retryRes = await retryFn();
+    return handleResponse(retryRes, url, null);
   }
+
   if (!res.ok) {
     const e = new Error(data.message || 'Something went wrong');
     e.response = { data, status: res.status };
     throw e;
   }
+
   return data;
 }
+
+const api = {
+  get: (url, params = {}) => {
+    const doFetch = () => fetch(`${API_BASE_URL}${url}?${new URLSearchParams(params)}`, { headers: getAuthHeaders() });
+    return doFetch().then(res => handleResponse(res, url, doFetch));
+  },
+  post: (url, data) => {
+    const doFetch = () => fetch(`${API_BASE_URL}${url}`, { method: 'POST', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    return doFetch().then(res => handleResponse(res, url, doFetch));
+  },
+  patch: (url, data) => {
+    const doFetch = () => fetch(`${API_BASE_URL}${url}`, { method: 'PATCH', headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    return doFetch().then(res => handleResponse(res, url, doFetch));
+  },
+  delete: (url) => {
+    const doFetch = () => fetch(`${API_BASE_URL}${url}`, { method: 'DELETE', headers: getAuthHeaders() });
+    return doFetch().then(res => handleResponse(res, url, doFetch));
+  },
+};
 
 // Auth - Forgot Password
 api.forgotPassword = (email) => api.post('/api/v1/auth/forgot-password', { email });
 api.resetPassword = (email, otp, newPassword) => api.post('/api/v1/auth/reset-password', { email, otp, newPassword });
 api.resetUserPassword = (userId, newPassword) => api.patch(`/api/v1/superadmin/users/${userId}/password`, newPassword ? { newPassword } : {});
 
+export { silentRefresh };
 export default api;

@@ -26,9 +26,10 @@ export function AuthProvider({ children }) {
         }
 
         if (token && active) {
-          // Validate token in background with a 4s timeout
+          // Validate token in background. Timeout is generous enough to allow a
+          // silent token refresh + retry (two sequential round-trips) to finish.
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 4000);
+          const timer = setTimeout(() => controller.abort(), 8000);
           try {
             const res = await getMe({ signal: controller.signal });
             clearTimeout(timer);
@@ -38,9 +39,10 @@ export function AuthProvider({ children }) {
             }
           } catch (err) {
             clearTimeout(timer);
-            // Only clear session if server explicitly returned 401 unauthorized
+            // Only clear session if server explicitly returned 401 unauthorized.
+            // (Failed refresh already triggers a hard logout inside axios.js.)
             if (err?.response?.status === 401 && active) {
-              await AsyncStorage.multiRemove(['token', 'user']);
+              await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
               setUser(null);
             }
           }

@@ -35,39 +35,63 @@ function getAuthHeaders() {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function handleResponse(res, retryFn) {
+// Auth endpoints must never trigger the silent-refresh/retry path — a 401 here
+// is a genuine credential/verification error, not an expired session.
+const AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/register-doctor',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+];
+
+function isAuthPath(url = '') {
+  return AUTH_PATHS.some((p) => url.includes(p));
+}
+
+function hardLogout() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('user');
+  localStorage.setItem('sessionExpired', 'true');
+  window.location.href = '/login';
+}
+
+// `url` is the request path; `retryFn` re-issues the original request after a
+// successful refresh. When retryFn is null, this response is already a retry.
+async function handleResponse(res, url, retryFn) {
   let data;
   try { data = await res.json(); } catch { throw new Error('Server not reachable. Please try again.'); }
 
   if (res.status === 401) {
     const hadToken = !!localStorage.getItem('token');
 
-    // Don't try refresh for EMAIL_NOT_VERIFIED
-    if (data.code === 'EMAIL_NOT_VERIFIED' || !hadToken) {
-      const e = new Error(data.message || 'Invalid credentials');
+    // Don't refresh for auth endpoints, EMAIL_NOT_VERIFIED, no token, or a
+    // request that has already been retried once.
+    if (data.code === 'EMAIL_NOT_VERIFIED' || !hadToken || isAuthPath(url) || !retryFn) {
+      // A retry that still 401s means refresh didn't help — end the session.
+      if (!retryFn && hadToken && data.code !== 'EMAIL_NOT_VERIFIED' && !isAuthPath(url)) {
+        hardLogout();
+      }
+      const e = new Error(data.message || 'Session expired');
       e.response = { data, status: 401 };
       throw e;
     }
 
-    // Attempt silent refresh + retry
+    // Attempt silent refresh + one retry.
     try {
       await silentRefresh();
-      if (retryFn) {
-        const retryRes = await retryFn();
-        return handleResponse(retryRes, null); // don't retry again
-      }
     } catch {
-      // Refresh failed — hard logout
-      localStorage.removeItem('token');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      localStorage.setItem('sessionExpired', 'true');
-      window.location.href = '/login';
+      hardLogout();
+      const e = new Error(data.message || 'Session expired');
+      e.response = { data, status: 401 };
+      throw e;
     }
-
-    const e = new Error(data.message || 'Session expired');
-    e.response = { data, status: 401 };
-    throw e;
+    const retryRes = await retryFn();
+    return handleResponse(retryRes, url, null); // null => don't retry again
   }
 
   if (!res.ok) {
@@ -84,7 +108,7 @@ const api = {
     const doFetch = () => fetch(`${API_BASE_URL}${url}?${new URLSearchParams(params)}`, {
       headers: getAuthHeaders(),
     });
-    return doFetch().then(res => handleResponse(res, doFetch));
+    return doFetch().then(res => handleResponse(res, url, doFetch));
   },
 
   post: (url, data) => {
@@ -93,7 +117,7 @@ const api = {
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return doFetch().then(res => handleResponse(res, doFetch));
+    return doFetch().then(res => handleResponse(res, url, doFetch));
   },
 
   put: (url, data) => {
@@ -102,7 +126,7 @@ const api = {
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return doFetch().then(res => handleResponse(res, doFetch));
+    return doFetch().then(res => handleResponse(res, url, doFetch));
   },
 
   patch: (url, data) => {
@@ -111,7 +135,7 @@ const api = {
       headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    return doFetch().then(res => handleResponse(res, doFetch));
+    return doFetch().then(res => handleResponse(res, url, doFetch));
   },
 
   delete: (url) => {
@@ -119,7 +143,7 @@ const api = {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    return doFetch().then(res => handleResponse(res, doFetch));
+    return doFetch().then(res => handleResponse(res, url, doFetch));
   },
 };
 

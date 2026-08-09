@@ -47,43 +47,78 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// Auth endpoints must never trigger the silent-refresh/retry path — a 401 here
+// is a genuine credential/verification error, not an expired session.
+const AUTH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/register-doctor',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+];
+
+function isAuthPath(url = '') {
+  return AUTH_PATHS.some((p) => url.includes(p));
+}
+
+// GAP 6: ensure the hard-logout side effects run only once even if many
+// concurrent requests fail their refresh at the same time.
+let loggingOut = false;
+async function handleHardLogout() {
+  if (loggingOut) return;
+  loggingOut = true;
+  try {
+    await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
+    emitUnauthorized();
+  } finally {
+    setTimeout(() => { loggingOut = false; }, 1000);
+  }
+}
+
 api.interceptors.response.use(
   (res) => res.data,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
+    const data = error.response?.data;
 
-    // Don't intercept refresh calls or already-retried requests
+    // Silent refresh only for expired tokens on authenticated (non-auth) endpoints.
     if (
-      error.response?.status === 401 &&
+      status === 401 &&
+      originalRequest &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes('/auth/refresh')
+      !isAuthPath(originalRequest.url) &&
+      data?.code !== 'EMAIL_NOT_VERIFIED'
     ) {
-      // Skip refresh for EMAIL_NOT_VERIFIED errors
-      if (error.response?.data?.code === 'EMAIL_NOT_VERIFIED') {
-        return Promise.reject(
-          error.response?.data?.errors || error.response?.data?.message || error.message || 'Network error'
-        );
-      }
-
       originalRequest._retry = true;
 
       try {
         const newToken = await silentRefresh();
+        originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        const retryRes = await api(originalRequest);
-        return retryRes;
+        return await api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed — hard logout
-        await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
-        emitUnauthorized();
+        await handleHardLogout();
         return Promise.reject(
-          error.response?.data?.errors || error.response?.data?.message || error.message || 'Session expired'
+          data?.errors || data?.message || error.message || 'Session expired'
         );
       }
     }
 
+    // GAP 2: give the login screen a structured error so it can detect
+    // EMAIL_NOT_VERIFIED and route to the OTP screen. All other errors keep
+    // the existing string/array shape for backward compatibility.
+    if (status === 401 && data?.code === 'EMAIL_NOT_VERIFIED') {
+      const e = new Error(data.message || 'Please verify your email');
+      e.response = { data, status };
+      return Promise.reject(e);
+    }
+
     return Promise.reject(
-      error.response?.data?.errors || error.response?.data?.message || error.message || 'Network error'
+      data?.errors || data?.message || error.message || 'Network error'
     );
   }
 );
@@ -114,4 +149,39 @@ async function silentRefresh() {
 }
 
 export { silentRefresh };
+
+/**
+ * Authenticated multipart/form-data upload with silent-refresh + one retry.
+ * Uses raw fetch() (not the axios instance) so React Native can set the
+ * correct multipart boundary Content-Type automatically. On a 401 it refreshes
+ * the token once and retries; if the refresh fails it triggers a hard logout.
+ */
+export async function authedUpload(url, formData) {
+  const doUpload = async () => {
+    const token = await AsyncStorage.getItem('token');
+    return fetch(`${API_BASE_URL}${url}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+  };
+
+  let response = await doUpload();
+
+  if (response.status === 401) {
+    try {
+      await silentRefresh();
+      response = await doUpload();
+    } catch {
+      await handleHardLogout();
+    }
+  }
+
+  const json = await response.json();
+  if (!response.ok) {
+    throw json?.message || json?.errors || `Upload failed (${response.status})`;
+  }
+  return json;
+}
+
 export default api;
